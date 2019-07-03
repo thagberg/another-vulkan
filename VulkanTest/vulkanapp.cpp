@@ -485,6 +485,7 @@ namespace hvk {
 		VkExtent2D swapchainExtent,
 		VkPipeline graphicsPipeline,
 		hvk::FrameBuffers& frameBuffers, 
+		std::vector<VkBuffer>& vertexBuffers,
 		hvk::CommandBuffers& oCommandBuffers) {
 
 		oCommandBuffers.resize(frameBuffers.size());
@@ -524,7 +525,12 @@ namespace hvk {
 
 			vkCmdBeginRenderPass(thisCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 			vkCmdBindPipeline(thisCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-			vkCmdDraw(thisCommandBuffer, 3, 1, 0, 0);
+
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(thisCommandBuffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets);
+
+			// TODO: don't use global vertices vector size
+			vkCmdDraw(thisCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 			vkCmdEndRenderPass(thisCommandBuffer);
 
 			if (vkEndCommandBuffer(thisCommandBuffer) != VK_SUCCESS) {
@@ -721,7 +727,22 @@ namespace hvk {
 
 		vkBindBufferMemory(mDevice, mVertexBuffer, mVertexBufferMemory, 0);
 
-		createCommandBuffers(mDevice, mCommandPool, mRenderPass, mSwapchain.swapchainExtent, mGraphicsPipeline, mFramebuffers, mCommandBuffers);
+		void* vertexData;
+		uint32_t vertexMemorySize = sizeof(vertices[0]) * vertices.size();
+		vkMapMemory(mDevice, mVertexBufferMemory, 0, vertexMemorySize, 0, &vertexData);
+		memcpy(vertexData, vertices.data(), (size_t)vertexMemorySize);
+
+		std::vector<VkBuffer> vertexBuffers = { mVertexBuffer };
+
+		createCommandBuffers(
+			mDevice, 
+			mCommandPool, 
+			mRenderPass, 
+			mSwapchain.swapchainExtent, 
+			mGraphicsPipeline, 
+			mFramebuffers, 
+			vertexBuffers, 
+			mCommandBuffers);
 
 		mImageAvailable = createSemaphore(mDevice);
 		mRenderFinished = createSemaphore(mDevice);

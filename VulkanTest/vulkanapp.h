@@ -40,17 +40,15 @@ namespace hvk {
 		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
 			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
 
-			auto positionDesc = attributeDescriptions[0];
-			positionDesc.binding = 0;
-			positionDesc.location = 0;
-			positionDesc.format = VertexPositionFormat;
-			positionDesc.offset = offsetof(Vertex, pos);
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VertexPositionFormat;
+			attributeDescriptions[0].offset = offsetof(Vertex, pos);
 
-			auto colorDesc = attributeDescriptions[1];
-			colorDesc.binding = 0;
-			colorDesc.location = 1;
-			colorDesc.format = VertexColorFormat;
-			colorDesc.offset = offsetof(Vertex, color);
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VertexColorFormat;
+			attributeDescriptions[1].offset = offsetof(Vertex, color);
 
 			return attributeDescriptions;
 		}
