@@ -6,6 +6,8 @@
 
 #include <glm/glm.hpp>
 
+#include "vk_mem_alloc.h"
+
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
 
@@ -75,12 +77,15 @@ namespace hvk {
 		uint32_t mGraphicsIndex;
 		window_ptr mWindow;
 		VkBuffer mVertexBuffer;
+		VkBuffer mIndexBuffer;
 		VkDeviceMemory mVertexBufferMemory;
+		VmaAllocator mAllocator;
 		int mWindowWidth, mWindowHeight;
 
 		void initializeVulkan();
 		void enableVulkanValidationLayers();
 		void initializeDevice();
+		void initializeAllocator();
 		void initializeRenderer();
 		void drawFrame();
 

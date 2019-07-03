@@ -5,6 +5,9 @@
 #include <iostream>
 #include <fstream>
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include "vulkanapp.h"
 
 const std::vector<const char*> validationLayers = {
@@ -16,9 +19,14 @@ const std::vector<const char*> deviceExtensions = {
 };
 
 const std::vector<hvk::Vertex> vertices = {
-	{{0.0f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
+	{{0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}, 
 	{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}}, 
 	{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}, 
+};
+
+const std::vector<uint16_t> indices = {
+	0, 1, 2, 2, 3, 0
 };
 
 namespace hvk {
@@ -486,6 +494,7 @@ namespace hvk {
 		VkPipeline graphicsPipeline,
 		hvk::FrameBuffers& frameBuffers, 
 		std::vector<VkBuffer>& vertexBuffers,
+		std::vector<VkBuffer>& indexBuffers,
 		hvk::CommandBuffers& oCommandBuffers) {
 
 		oCommandBuffers.resize(frameBuffers.size());
@@ -528,9 +537,11 @@ namespace hvk {
 
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(thisCommandBuffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets);
+			vkCmdBindIndexBuffer(thisCommandBuffer, indexBuffers[0], 0, VK_INDEX_TYPE_UINT16);
 
 			// TODO: don't use global vertices vector size
-			vkCmdDraw(thisCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+			//vkCmdDraw(thisCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+			vkCmdDrawIndexed(thisCommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 			vkCmdEndRenderPass(thisCommandBuffer);
 
 			if (vkEndCommandBuffer(thisCommandBuffer) != VK_SUCCESS) {
@@ -673,6 +684,13 @@ namespace hvk {
 		}
 	}
 
+	void VulkanApp::initializeAllocator() {
+		VmaAllocatorCreateInfo allocatorInfo = {};
+		allocatorInfo.physicalDevice = mPhysicalDevice;
+		allocatorInfo.device = mDevice;
+		vmaCreateAllocator(&allocatorInfo, &mAllocator);
+	}
+
 	void VulkanApp::initializeRenderer() {
 		vkGetDeviceQueue(mDevice, mGraphicsIndex, 0, &mGraphicsQueue);
 
@@ -721,18 +739,49 @@ namespace hvk {
 
 		mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
 
+		/*
 		mVertexBuffer = createVertexBuffer(mDevice, vertices);
 
 		mVertexBufferMemory = allocateVertexBufferMemory(mDevice, mPhysicalDevice, mVertexBuffer);
 
 		vkBindBufferMemory(mDevice, mVertexBuffer, mVertexBufferMemory, 0);
+		*/
 
-		void* vertexData;
 		uint32_t vertexMemorySize = sizeof(vertices[0]) * vertices.size();
-		vkMapMemory(mDevice, mVertexBufferMemory, 0, vertexMemorySize, 0, &vertexData);
-		memcpy(vertexData, vertices.data(), (size_t)vertexMemorySize);
+		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		bufferInfo.size = vertexMemorySize;
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+		VmaAllocation allocation;
+		VmaAllocationInfo allocInfo;
+		VmaAllocationCreateInfo allocCreateInfo = {};
+		allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		//vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &mVertexBuffer, &allocation, nullptr);
+		vmaCreateBuffer(mAllocator, &bufferInfo, &allocCreateInfo, &mVertexBuffer, &allocation, &allocInfo);
+
+		//void* vertexData;
+		//vkMapMemory(mDevice, mVertexBufferMemory, 0, vertexMemorySize, 0, &vertexData);
+		//vmaMapMemory(mAllocator, allocation, &vertexData);
+		//memcpy(vertexData, vertices.data(), (size_t)vertexMemorySize);
+		memcpy(allocInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
+
+		uint32_t indexMemorySize = sizeof(uint16_t) * indices.size();
+		VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		iboInfo.size = indexMemorySize;
+		iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+		VmaAllocation indexAllocation;
+		VmaAllocationInfo indexAllocInfo;
+		VmaAllocationCreateInfo indexAllocCreateInfo = {};
+		indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+		indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		vmaCreateBuffer(mAllocator, &iboInfo, &indexAllocCreateInfo, &mIndexBuffer, &indexAllocation, &indexAllocInfo);
+
+		memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
 		std::vector<VkBuffer> vertexBuffers = { mVertexBuffer };
+		std::vector<VkBuffer> indexBuffers = { mIndexBuffer };
 
 		createCommandBuffers(
 			mDevice, 
@@ -742,6 +791,7 @@ namespace hvk {
 			mGraphicsPipeline, 
 			mFramebuffers, 
 			vertexBuffers, 
+			indexBuffers,
 			mCommandBuffers);
 
 		mImageAvailable = createSemaphore(mDevice);
@@ -752,6 +802,7 @@ namespace hvk {
 		initializeVulkan();
 		enableVulkanValidationLayers();
 		initializeDevice();
+		initializeAllocator();
 		initializeRenderer();
 	}
 

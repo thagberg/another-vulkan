@@ -161,6 +161,7 @@
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="vk_mem_alloc.h" />
     <ClInclude Include="vulkanapp.h" />
   </ItemGroup>
   <ItemGroup>
