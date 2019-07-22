@@ -56,6 +56,10 @@ namespace hvk {
 		}
 	};
 
+	struct UniformBufferObject {
+		glm::mat4 modelViewProj;
+	};
+
 	class VulkanApp {
 	private:
 		VkInstance mInstance;
@@ -78,7 +82,10 @@ namespace hvk {
 		window_ptr mWindow;
 		VkBuffer mVertexBuffer;
 		VkBuffer mIndexBuffer;
+		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDeviceMemory mVertexBufferMemory;
+		std::vector<VkBuffer> mUniformBuffers;
+		std::vector<VmaAllocationInfo> mUniformAllocations;
 		VmaAllocator mAllocator;
 		int mWindowWidth, mWindowHeight;
 

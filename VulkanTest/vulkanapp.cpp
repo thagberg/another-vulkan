@@ -8,6 +8,10 @@
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
 
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "vulkanapp.h"
 
 const std::vector<const char*> validationLayers = {
@@ -264,13 +268,13 @@ namespace hvk {
 		return renderPass;
 	}
 
-	VkPipelineLayout createGraphicsPipelineLayout( VkDevice device) {
+	VkPipelineLayout createGraphicsPipelineLayout(VkDevice device, VkDescriptorSetLayout layout) {
 		VkPipelineLayout pipelineLayout;
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0;
-		pipelineLayoutInfo.pSetLayouts = nullptr;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &layout;
 		pipelineLayoutInfo.pushConstantRangeCount = 0;
 		pipelineLayoutInfo.pPushConstantRanges = nullptr;
 
@@ -563,6 +567,28 @@ namespace hvk {
 		return semaphore;
 	}
 
+	VkDescriptorSetLayout createDescriptorSetLayout(VkDevice device) {
+		VkDescriptorSetLayout descriptorSetLayout;
+
+		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = {};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+
+		if (vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create Descriptor Set Layout");
+		}
+
+		return descriptorSetLayout;
+	}
+
 	VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
 		mWindowWidth(width),
 		mWindowHeight(height),
@@ -590,8 +616,17 @@ namespace hvk {
 			vkDestroyImageView(mDevice, imageView, nullptr);
 		}
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
+		vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayout, nullptr);
 		vkDestroyBuffer(mDevice, mVertexBuffer, nullptr);
-		vkFreeMemory(mDevice, mVertexBufferMemory, nullptr);
+		/*for (int i = 0; i < mUniformBuffers.size(); i++) {
+			auto ubo = mUniformBuffers[i];
+			auto allocInfo = mUniformAllocations[i];
+			vmaDestroyBuffer(mAllocator, ubo, allocInfo);
+		}*/
+		// TODO: FREE VMA BUFFER MEMORY
+		//vmaFreeMemory(mAllocator, )
+		//vkFreeMemory(mDevice, mVertexBufferMemory, nullptr);
+		//vkFreeMemory(mDevice, mIndexbu, nullptr);
 		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
 		vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
 		vkDestroyDevice(mDevice, nullptr);
@@ -731,7 +766,9 @@ namespace hvk {
 
 		mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
 
-		mPipelineLayout = createGraphicsPipelineLayout(mDevice);
+		mDescriptorSetLayout = createDescriptorSetLayout(mDevice);
+
+		mPipelineLayout = createGraphicsPipelineLayout(mDevice, mDescriptorSetLayout);
 
 		mGraphicsPipeline = createGraphicsPipeline(mDevice, mSwapchain.swapchainExtent, mRenderPass, mPipelineLayout);
 
@@ -780,6 +817,24 @@ namespace hvk {
 
 		memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
+		uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
+		VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		uboInfo.size = uboMemorySize;
+		uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		mUniformBuffers.resize(mSwapchainImages.size());
+		mUniformAllocations.resize(mSwapchainImages.size());
+
+		for (int i = 0; i < mSwapchainImages.size(); i++) {
+			VmaAllocation uniformAllocation;
+			VmaAllocationInfo uniformAllocInfo;
+			VmaAllocationCreateInfo uniformAllocCreateInfo = {};
+			uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+			uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			vmaCreateBuffer(mAllocator, &uboInfo, &uniformAllocCreateInfo, &mUniformBuffers[i], &uniformAllocation, &uniformAllocInfo);
+			mUniformAllocations.push_back(uniformAllocInfo);
+		}
+
 		std::vector<VkBuffer> vertexBuffers = { mVertexBuffer };
 		std::vector<VkBuffer> indexBuffers = { mIndexBuffer };
 
@@ -815,6 +870,18 @@ namespace hvk {
 			mImageAvailable, 
 			VK_NULL_HANDLE, 
 			&imageIndex);
+
+		// update current UBO with model view projection
+		hvk::UniformBufferObject ubo = {};
+		ubo.modelViewProj = glm::perspective(
+			glm::radians(45.0f), 
+			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height, 
+			0.1f, 
+			10.0f);
+		ubo.modelViewProj[1][1] *= -1; // Flip Y value of the clip coordinates
+		//memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
+		memcpy(mUniformAllocations[imageIndex].pMappedData, &ubo, sizeof(ubo));
+
 
 		VkSemaphore waitSemaphores[] = { mImageAvailable };
 		VkSemaphore signalSemaphores[] = { mRenderFinished };
