@@ -17,6 +17,9 @@ namespace hvk {
 	typedef std::vector<VkImage> SwapchainImages;
 	typedef std::vector<VkFramebuffer> FrameBuffers;
 	typedef std::vector<VkCommandBuffer> CommandBuffers;
+	typedef std::vector<VkDescriptorSet> DescriptorSets;
+	typedef std::vector<VkBuffer> UniformBuffers;
+	typedef std::vector<VmaAllocationInfo> UniformAllocationInfos;
 	//typedef std::shared_ptr<GLFWwindow, void(*)(GLFWwindow*)> window_ptr;
 	typedef std::shared_ptr<GLFWwindow> window_ptr;
 
@@ -84,8 +87,10 @@ namespace hvk {
 		VkBuffer mIndexBuffer;
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDeviceMemory mVertexBufferMemory;
-		std::vector<VkBuffer> mUniformBuffers;
-		std::vector<VmaAllocationInfo> mUniformAllocations;
+		VkDescriptorPool mDescriptorPool;
+		DescriptorSets mDescriptorSets;
+		UniformBuffers mUniformBuffers;
+		UniformAllocationInfos mUniformAllocations;
 		VmaAllocator mAllocator;
 		int mWindowWidth, mWindowHeight;
 

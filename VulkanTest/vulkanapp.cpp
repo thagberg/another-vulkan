@@ -354,7 +354,8 @@ namespace hvk {
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		//rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
 		rasterizer.depthBiasClamp = 0.0f;
@@ -499,7 +500,9 @@ namespace hvk {
 		hvk::FrameBuffers& frameBuffers, 
 		std::vector<VkBuffer>& vertexBuffers,
 		std::vector<VkBuffer>& indexBuffers,
-		hvk::CommandBuffers& oCommandBuffers) {
+		hvk::CommandBuffers& oCommandBuffers,
+		VkPipelineLayout pipelineLayout,
+		DescriptorSets& descriptorSets) {
 
 		oCommandBuffers.resize(frameBuffers.size());
 
@@ -543,6 +546,8 @@ namespace hvk {
 			vkCmdBindVertexBuffers(thisCommandBuffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets);
 			vkCmdBindIndexBuffer(thisCommandBuffer, indexBuffers[0], 0, VK_INDEX_TYPE_UINT16);
 
+			vkCmdBindDescriptorSets(
+				thisCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[i], 0, nullptr);
 			// TODO: don't use global vertices vector size
 			//vkCmdDraw(thisCommandBuffer, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 			vkCmdDrawIndexed(thisCommandBuffer, static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
@@ -589,6 +594,39 @@ namespace hvk {
 		return descriptorSetLayout;
 	}
 
+	VkDescriptorPool createDescriptorPool(VkDevice device, uint32_t descriptorCount, uint32_t numSets) {
+		VkDescriptorPool descriptorPool;
+
+		VkDescriptorPoolSize poolSize = { VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER };
+		poolSize.descriptorCount = descriptorCount;
+
+		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = numSets;
+
+		if (vkCreateDescriptorPool(device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to create Descriptor Pool");
+		}
+
+		return descriptorPool;
+	}
+
+	DescriptorSets createDescriptorSets(VkDevice device, VkDescriptorPool pool, std::vector<VkDescriptorSetLayout>& layouts) {
+		DescriptorSets descriptorSets(layouts.size());
+
+		VkDescriptorSetAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		allocInfo.descriptorPool = pool;
+		allocInfo.descriptorSetCount = layouts.size();
+		allocInfo.pSetLayouts = layouts.data();
+
+		if (vkAllocateDescriptorSets(device, &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
+			throw std::runtime_error("Failed to allocate Descriptor Sets");
+		}
+
+		return descriptorSets;
+	}
+
 	VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
 		mWindowWidth(width),
 		mWindowHeight(height),
@@ -627,6 +665,7 @@ namespace hvk {
 		//vmaFreeMemory(mAllocator, )
 		//vkFreeMemory(mDevice, mVertexBufferMemory, nullptr);
 		//vkFreeMemory(mDevice, mIndexbu, nullptr);
+		vkDestroyDescriptorPool(mDevice, mDescriptorPool, nullptr);
 		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
 		vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
 		vkDestroyDevice(mDevice, nullptr);
@@ -768,6 +807,51 @@ namespace hvk {
 
 		mDescriptorSetLayout = createDescriptorSetLayout(mDevice);
 
+		mDescriptorPool = createDescriptorPool(
+			mDevice, static_cast<uint32_t>(mSwapchainImages.size()), static_cast<uint32_t>(mSwapchainImages.size()));
+
+		std::vector<VkDescriptorSetLayout> descriptorLayoutCopies(mSwapchainImages.size(), mDescriptorSetLayout);
+		mDescriptorSets = createDescriptorSets(mDevice, mDescriptorPool, descriptorLayoutCopies);
+
+		// create UBOs
+		uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
+		VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+		uboInfo.size = uboMemorySize;
+		uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		mUniformBuffers.resize(mSwapchainImages.size());
+		mUniformAllocations.resize(mSwapchainImages.size());
+
+		for (int i = 0; i < mSwapchainImages.size(); i++) {
+			VmaAllocation uniformAllocation;
+			VmaAllocationInfo uniformAllocInfo;
+			VmaAllocationCreateInfo uniformAllocCreateInfo = {};
+			uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+			uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+			vmaCreateBuffer(mAllocator, &uboInfo, &uniformAllocCreateInfo, &mUniformBuffers[i], &uniformAllocation, &uniformAllocInfo);
+			mUniformAllocations[i] = uniformAllocInfo;
+		}
+
+		// populate descriptor sets
+		for (size_t i = 0; i < descriptorLayoutCopies.size(); i++) {
+			VkDescriptorBufferInfo bufferInfo = {};
+			bufferInfo.buffer = mUniformBuffers[i];
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(hvk::UniformBufferObject);
+
+			VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+			descriptorWrite.dstSet = mDescriptorSets[i];
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
+		}
+
 		mPipelineLayout = createGraphicsPipelineLayout(mDevice, mDescriptorSetLayout);
 
 		mGraphicsPipeline = createGraphicsPipeline(mDevice, mSwapchain.swapchainExtent, mRenderPass, mPipelineLayout);
@@ -817,24 +901,6 @@ namespace hvk {
 
 		memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
-		uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
-		VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-		uboInfo.size = uboMemorySize;
-		uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-		mUniformBuffers.resize(mSwapchainImages.size());
-		mUniformAllocations.resize(mSwapchainImages.size());
-
-		for (int i = 0; i < mSwapchainImages.size(); i++) {
-			VmaAllocation uniformAllocation;
-			VmaAllocationInfo uniformAllocInfo;
-			VmaAllocationCreateInfo uniformAllocCreateInfo = {};
-			uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-			uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			vmaCreateBuffer(mAllocator, &uboInfo, &uniformAllocCreateInfo, &mUniformBuffers[i], &uniformAllocation, &uniformAllocInfo);
-			mUniformAllocations.push_back(uniformAllocInfo);
-		}
-
 		std::vector<VkBuffer> vertexBuffers = { mVertexBuffer };
 		std::vector<VkBuffer> indexBuffers = { mIndexBuffer };
 
@@ -847,7 +913,9 @@ namespace hvk {
 			mFramebuffers, 
 			vertexBuffers, 
 			indexBuffers,
-			mCommandBuffers);
+			mCommandBuffers,
+			mPipelineLayout,
+			mDescriptorSets);
 
 		mImageAvailable = createSemaphore(mDevice);
 		mRenderFinished = createSemaphore(mDevice);
@@ -873,11 +941,12 @@ namespace hvk {
 
 		// update current UBO with model view projection
 		hvk::UniformBufferObject ubo = {};
+		glm::mat4 position = glm::rotate(glm::mat4(1.0f), 0.f, glm::vec3(0.f, 0.f, 1.f));
 		ubo.modelViewProj = glm::perspective(
 			glm::radians(45.0f), 
 			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height, 
 			0.1f, 
-			10.0f);
+			10.0f) * position;
 		ubo.modelViewProj[1][1] *= -1; // Flip Y value of the clip coordinates
 		//memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 		memcpy(mUniformAllocations[imageIndex].pMappedData, &ubo, sizeof(ubo));
