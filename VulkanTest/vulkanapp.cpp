@@ -228,7 +228,8 @@ namespace hvk {
 		VkAttachmentDescription colorAttachment = {};
 		colorAttachment.format = swapchainImageFormat;
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		//colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -860,46 +861,33 @@ namespace hvk {
 
 		mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
 
-		/*
-		mVertexBuffer = createVertexBuffer(mDevice, vertices);
-
-		mVertexBufferMemory = allocateVertexBufferMemory(mDevice, mPhysicalDevice, mVertexBuffer);
-
-		vkBindBufferMemory(mDevice, mVertexBuffer, mVertexBufferMemory, 0);
-		*/
-
 		uint32_t vertexMemorySize = sizeof(vertices[0]) * vertices.size();
 		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 		bufferInfo.size = vertexMemorySize;
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
-		VmaAllocation allocation;
-		VmaAllocationInfo allocInfo;
 		VmaAllocationCreateInfo allocCreateInfo = {};
 		allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+		//allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-		//vmaCreateBuffer(mAllocator, &bufferInfo, &allocInfo, &mVertexBuffer, &allocation, nullptr);
-		vmaCreateBuffer(mAllocator, &bufferInfo, &allocCreateInfo, &mVertexBuffer, &allocation, &allocInfo);
+		vmaCreateBuffer(
+			mAllocator, &bufferInfo, &allocCreateInfo, &mVertexBuffer, &mVertexAllocation, &mVertexAllocationInfo);
 
-		//void* vertexData;
-		//vkMapMemory(mDevice, mVertexBufferMemory, 0, vertexMemorySize, 0, &vertexData);
-		//vmaMapMemory(mAllocator, allocation, &vertexData);
-		//memcpy(vertexData, vertices.data(), (size_t)vertexMemorySize);
-		memcpy(allocInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
+		memcpy(mVertexAllocationInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
 
 		uint32_t indexMemorySize = sizeof(uint16_t) * indices.size();
 		VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 		iboInfo.size = indexMemorySize;
 		iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 
-		VmaAllocation indexAllocation;
-		VmaAllocationInfo indexAllocInfo;
 		VmaAllocationCreateInfo indexAllocCreateInfo = {};
-		indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+		//indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+		indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-		vmaCreateBuffer(mAllocator, &iboInfo, &indexAllocCreateInfo, &mIndexBuffer, &indexAllocation, &indexAllocInfo);
+		vmaCreateBuffer(
+			mAllocator, &iboInfo, &indexAllocCreateInfo, &mIndexBuffer, &mIndexAllocation, &mIndexAllocationInfo);
 
-		memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
+		memcpy(mIndexAllocationInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
 		std::vector<VkBuffer> vertexBuffers = { mVertexBuffer };
 		std::vector<VkBuffer> indexBuffers = { mIndexBuffer };
@@ -922,11 +910,20 @@ namespace hvk {
 	}
 
 	void VulkanApp::init() {
-		initializeVulkan();
-		enableVulkanValidationLayers();
-		initializeDevice();
-		initializeAllocator();
-		initializeRenderer();
+		try {
+			std::cout << "init vulkan" << std::endl;
+			initializeVulkan();
+			enableVulkanValidationLayers();
+			std::cout << "init device" << std::endl;
+			initializeDevice();
+			std::cout << "init allocator" << std::endl;
+			initializeAllocator();
+			std::cout << "init renderer" << std::endl;
+			initializeRenderer();
+			std::cout << "done initializing" << std::endl;
+		} catch (const std::runtime_error& error) {
+			std::cout << "Error during initialization: " << error.what() << std::endl;
+		}
 	}
 
 	void VulkanApp::drawFrame() {
@@ -941,6 +938,7 @@ namespace hvk {
 
 		// update current UBO with model view projection
 		hvk::UniformBufferObject ubo = {};
+		/*
 		glm::mat4 position = glm::rotate(glm::mat4(1.0f), 0.f, glm::vec3(0.f, 0.f, 1.f));
 		ubo.modelViewProj = glm::perspective(
 			glm::radians(45.0f), 
@@ -948,9 +946,21 @@ namespace hvk {
 			0.1f, 
 			10.0f) * position;
 		ubo.modelViewProj[1][1] *= -1; // Flip Y value of the clip coordinates
+		*/
+		glm::mat4 identity = glm::mat4(1.0f);
+		ubo.model = glm::translate(identity, glm::vec3(0.f, 0.f, 0.f));
+		ubo.view = glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+		ubo.modelViewProj = glm::perspective(
+			glm::radians(45.0f),
+			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+			0.1f,
+			10.0f) * ubo.view * ubo.model;
+		ubo.modelViewProj[1][1] *= -1;
 		//memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 		memcpy(mUniformAllocations[imageIndex].pMappedData, &ubo, sizeof(ubo));
 
+		//auto testData = reinterpret_cast<hvk::Vertex*>(mVertexAllocationInfo.pMappedData);
+		//std::cout << testData->pos[0] << ", " << testData->pos[1] << ", " << testData->pos[2] << std::endl;
 
 		VkSemaphore waitSemaphores[] = { mImageAvailable };
 		VkSemaphore signalSemaphores[] = { mRenderFinished };

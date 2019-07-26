@@ -60,6 +60,8 @@ namespace hvk {
 	};
 
 	struct UniformBufferObject {
+		glm::mat4 model;
+		glm::mat4 view;
 		glm::mat4 modelViewProj;
 	};
 
@@ -85,8 +87,11 @@ namespace hvk {
 		window_ptr mWindow;
 		VkBuffer mVertexBuffer;
 		VkBuffer mIndexBuffer;
+		VmaAllocation mVertexAllocation;
+		VmaAllocationInfo mVertexAllocationInfo;
+		VmaAllocation mIndexAllocation;
+		VmaAllocationInfo mIndexAllocationInfo;
 		VkDescriptorSetLayout mDescriptorSetLayout;
-		VkDeviceMemory mVertexBufferMemory;
 		VkDescriptorPool mDescriptorPool;
 		DescriptorSets mDescriptorSets;
 		UniformBuffers mUniformBuffers;
