@@ -59,6 +59,13 @@ namespace hvk {
 		}
 	};
 
+	template <class T>
+	struct Resource {
+		T memoryResource;
+		VmaAllocation allocation;
+		VmaAllocationInfo allocationInfo;
+	};
+
 	struct UniformBufferObject {
 		glm::mat4 model;
 		glm::mat4 view;
@@ -87,10 +94,14 @@ namespace hvk {
 		window_ptr mWindow;
 		VkBuffer mVertexBuffer;
 		VkBuffer mIndexBuffer;
+		// TODO: create a struct that holds a buffer/image, allocation, and allocation info
 		VmaAllocation mVertexAllocation;
 		VmaAllocationInfo mVertexAllocationInfo;
 		VmaAllocation mIndexAllocation;
 		VmaAllocationInfo mIndexAllocationInfo;
+		VkImage mTextureImage;
+		VmaAllocation mTextureAllocation;
+		VmaAllocationInfo mTextureAllocationInfo;
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorPool mDescriptorPool;
 		DescriptorSets mDescriptorSets;
