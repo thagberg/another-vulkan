@@ -46,6 +46,7 @@ namespace hvk {
 		UniformBufferResources mUniformBufferResources;
 
 		VkImageView mTextureView;
+        VkSampler mTextureSampler;
 
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorPool mDescriptorPool;

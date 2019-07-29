@@ -136,6 +136,9 @@ namespace hvk {
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 		vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayout, nullptr);
 
+        vkDestroySampler(mDevice, mTextureSampler, nullptr);
+        vkDestroyImageView(mDevice, mTextureView, nullptr);
+
 		vmaDestroyBuffer(mAllocator, mVertexBufferResource.memoryResource, mVertexBufferResource.allocation);
 		vmaDestroyBuffer(mAllocator, mIndexBufferResource.memoryResource, mIndexBufferResource.allocation);
 		vmaDestroyImage(mAllocator, mTexture.memoryResource, mTexture.allocation);
@@ -197,11 +200,18 @@ namespace hvk {
 		// Cheating... just take the first physical device found
 		mPhysicalDevice = VK_NULL_HANDLE;
 		VkPhysicalDeviceFeatures deviceFeatures = {};
+        deviceFeatures.samplerAnisotropy = VK_TRUE;     // enable anisotropic filtering
 		uint32_t deviceCount = 0;
 		vkEnumeratePhysicalDevices(mInstance, &deviceCount, nullptr);
 		std::vector<VkPhysicalDevice> devices(deviceCount);
 		vkEnumeratePhysicalDevices(mInstance, &deviceCount, devices.data());
 		mPhysicalDevice = devices[0];
+
+        VkPhysicalDeviceFeatures supportedFeatures;
+        vkGetPhysicalDeviceFeatures(mPhysicalDevice, &supportedFeatures);
+        if (!supportedFeatures.samplerAnisotropy) {
+            throw std::runtime_error("Physical Device does not support Anisotropic Filtering");
+        }
 
 		uint32_t queueFamilyCount = 0;
 		mGraphicsIndex = 0;
@@ -268,24 +278,7 @@ namespace hvk {
 
 		mImageViews.resize(mSwapchainImages.size());
 		for (size_t i = 0; i < mSwapchainImages.size(); i++) {
-			VkImageViewCreateInfo createInfo = {};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = mSwapchainImages[i];
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = mSwapchain.swapchainImageFormat;
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-
-			if (vkCreateImageView(mDevice, &createInfo, nullptr, &mImageViews[i]) != VK_SUCCESS) {
-				throw std::runtime_error("Failed to create Swapchain Image Views");
-			}
+            mImageViews[i] = createImageView(mDevice, mSwapchainImages[i], mSwapchain.swapchainImageFormat);
 		}
 
 		mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
@@ -326,6 +319,11 @@ namespace hvk {
 			bufferInfo.offset = 0;
 			bufferInfo.range = sizeof(hvk::UniformBufferObject);
 
+            VkDescriptorImageInfo imageInfo = {};
+            imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            imageInfo.imageView = mTextureView;
+            imageInfo.sampler = mTextureSampler;
+
 			VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 			descriptorWrite.dstSet = mDescriptorSets[i];
 			descriptorWrite.dstBinding = 0;
@@ -336,7 +334,17 @@ namespace hvk {
 			descriptorWrite.pImageInfo = nullptr;
 			descriptorWrite.pTexelBufferView = nullptr;
 
-			vkUpdateDescriptorSets(mDevice, 1, &descriptorWrite, 0, nullptr);
+            VkWriteDescriptorSet imageDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+            imageDescriptorWrite.dstSet = mDescriptorSets[i];
+            imageDescriptorWrite.dstBinding = 1;
+            imageDescriptorWrite.dstArrayElement = 0;
+            imageDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            imageDescriptorWrite.descriptorCount = 1;
+            imageDescriptorWrite.pImageInfo = &imageInfo;
+
+            std::array<VkWriteDescriptorSet, 2> descriptorWrites = { descriptorWrite, imageDescriptorWrite };
+
+			vkUpdateDescriptorSets(mDevice, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 		}
 
 		mPipelineLayout = createGraphicsPipelineLayout(mDevice, mDescriptorSetLayout);
@@ -405,6 +413,8 @@ namespace hvk {
 		mRenderFinished = createSemaphore(mDevice);
 
 		mTexture = createTextureImage(mDevice, mAllocator, mCommandPool, mGraphicsQueue);
+        mTextureView = createImageView(mDevice, mTexture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+        mTextureSampler = createTextureSampler(mDevice);
 	}
 
 	void VulkanApp::init() {
