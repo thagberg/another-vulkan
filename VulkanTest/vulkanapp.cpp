@@ -867,16 +867,15 @@ namespace hvk {
 		}
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 		vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayout, nullptr);
-		vkDestroyBuffer(mDevice, mVertexBuffer, nullptr);
-		/*for (int i = 0; i < mUniformBuffers.size(); i++) {
-			auto ubo = mUniformBuffers[i];
-			auto allocInfo = mUniformAllocations[i];
-			vmaDestroyBuffer(mAllocator, ubo, allocInfo);
-		}*/
-		// TODO: FREE VMA BUFFER MEMORY
-		//vmaFreeMemory(mAllocator, )
-		//vkFreeMemory(mDevice, mVertexBufferMemory, nullptr);
-		//vkFreeMemory(mDevice, mIndexbu, nullptr);
+
+		vmaDestroyBuffer(mAllocator, mVertexBufferResource.memoryResource, mVertexBufferResource.allocation);
+		vmaDestroyBuffer(mAllocator, mIndexBufferResource.memoryResource, mIndexBufferResource.allocation);
+		vmaDestroyImage(mAllocator, mTexture.memoryResource, mTexture.allocation);
+		for (auto uniformResource : mUniformBufferResources) {
+			vmaDestroyBuffer(mAllocator, uniformResource.memoryResource, uniformResource.allocation);
+		}
+		vmaDestroyAllocator(mAllocator);
+
 		vkDestroyDescriptorPool(mDevice, mDescriptorPool, nullptr);
 		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
 		vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
@@ -984,6 +983,12 @@ namespace hvk {
 			throw std::runtime_error("Failed to create Window Surface");
 		}
 
+		VkBool32 surfaceSupported;
+		vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, mSurface, &surfaceSupported);
+		if (!surfaceSupported) {
+			throw std::runtime_error("Surface not supported by Physical Device");
+		}
+
 		if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mWindowWidth, mWindowHeight, mSwapchain) != VK_SUCCESS) {
 			throw std::runtime_error("Failed to create Swapchain");
 		}
@@ -1031,23 +1036,25 @@ namespace hvk {
 		uboInfo.size = uboMemorySize;
 		uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 
-		mUniformBuffers.resize(mSwapchainImages.size());
-		mUniformAllocations.resize(mSwapchainImages.size());
+		mUniformBufferResources.resize(mSwapchainImages.size());
 
 		for (int i = 0; i < mSwapchainImages.size(); i++) {
-			VmaAllocation uniformAllocation;
-			VmaAllocationInfo uniformAllocInfo;
 			VmaAllocationCreateInfo uniformAllocCreateInfo = {};
 			uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 			uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-			vmaCreateBuffer(mAllocator, &uboInfo, &uniformAllocCreateInfo, &mUniformBuffers[i], &uniformAllocation, &uniformAllocInfo);
-			mUniformAllocations[i] = uniformAllocInfo;
+			vmaCreateBuffer(
+				mAllocator, 
+				&uboInfo, 
+				&uniformAllocCreateInfo, 
+				&mUniformBufferResources[i].memoryResource, 
+				&mUniformBufferResources[i].allocation, 
+				&mUniformBufferResources[i].allocationInfo);
 		}
 
 		// populate descriptor sets
 		for (size_t i = 0; i < descriptorLayoutCopies.size(); i++) {
 			VkDescriptorBufferInfo bufferInfo = {};
-			bufferInfo.buffer = mUniformBuffers[i];
+			bufferInfo.buffer = mUniformBufferResources[i].memoryResource;
 			bufferInfo.offset = 0;
 			bufferInfo.range = sizeof(hvk::UniformBufferObject);
 
@@ -1082,9 +1089,14 @@ namespace hvk {
 		//allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator, &bufferInfo, &allocCreateInfo, &mVertexBuffer, &mVertexAllocation, &mVertexAllocationInfo);
+			mAllocator, 
+			&bufferInfo, 
+			&allocCreateInfo, 
+			&mVertexBufferResource.memoryResource, 
+			&mVertexBufferResource.allocation, 
+			&mVertexBufferResource.allocationInfo);
 
-		memcpy(mVertexAllocationInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
+		memcpy(mVertexBufferResource.allocationInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
 
 		uint32_t indexMemorySize = sizeof(uint16_t) * indices.size();
 		VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -1096,12 +1108,17 @@ namespace hvk {
 		indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator, &iboInfo, &indexAllocCreateInfo, &mIndexBuffer, &mIndexAllocation, &mIndexAllocationInfo);
+			mAllocator, 
+			&iboInfo, 
+			&indexAllocCreateInfo, 
+			&mIndexBufferResource.memoryResource, 
+			&mIndexBufferResource.allocation, 
+			&mIndexBufferResource.allocationInfo);
 
-		memcpy(mIndexAllocationInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
+		memcpy(mIndexBufferResource.allocationInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
-		std::vector<VkBuffer> vertexBuffers = { mVertexBuffer };
-		std::vector<VkBuffer> indexBuffers = { mIndexBuffer };
+		std::vector<VkBuffer> vertexBuffers = { mVertexBufferResource.memoryResource };
+		std::vector<VkBuffer> indexBuffers = { mIndexBufferResource.memoryResource };
 
 		createCommandBuffers(
 			mDevice, 
@@ -1119,7 +1136,7 @@ namespace hvk {
 		mImageAvailable = createSemaphore(mDevice);
 		mRenderFinished = createSemaphore(mDevice);
 
-		hvk::Resource<VkImage> textureResource = createTextureImage(mDevice, mAllocator, mCommandPool, mGraphicsQueue);
+		mTexture = createTextureImage(mDevice, mAllocator, mCommandPool, mGraphicsQueue);
 	}
 
 	void VulkanApp::init() {
@@ -1170,7 +1187,7 @@ namespace hvk {
 			10.0f) * ubo.view * ubo.model;
 		ubo.modelViewProj[1][1] *= -1;
 		//memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
-		memcpy(mUniformAllocations[imageIndex].pMappedData, &ubo, sizeof(ubo));
+		memcpy(mUniformBufferResources[imageIndex].allocationInfo.pMappedData, &ubo, sizeof(ubo));
 
 		//auto testData = reinterpret_cast<hvk::Vertex*>(mVertexAllocationInfo.pMappedData);
 		//std::cout << testData->pos[0] << ", " << testData->pos[1] << ", " << testData->pos[2] << std::endl;

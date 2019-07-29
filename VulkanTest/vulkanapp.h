@@ -18,10 +18,17 @@ namespace hvk {
 	typedef std::vector<VkFramebuffer> FrameBuffers;
 	typedef std::vector<VkCommandBuffer> CommandBuffers;
 	typedef std::vector<VkDescriptorSet> DescriptorSets;
-	typedef std::vector<VkBuffer> UniformBuffers;
-	typedef std::vector<VmaAllocationInfo> UniformAllocationInfos;
 	//typedef std::shared_ptr<GLFWwindow, void(*)(GLFWwindow*)> window_ptr;
 	typedef std::shared_ptr<GLFWwindow> window_ptr;
+
+	template <class T>
+	struct Resource {
+		T memoryResource;
+		VmaAllocation allocation;
+		VmaAllocationInfo allocationInfo;
+	};
+	typedef std::vector<Resource<VkBuffer>> UniformBufferResources;
+
 
 	struct Swapchain {
 		VkSwapchainKHR swapchain;
@@ -59,13 +66,6 @@ namespace hvk {
 		}
 	};
 
-	template <class T>
-	struct Resource {
-		T memoryResource;
-		VmaAllocation allocation;
-		VmaAllocationInfo allocationInfo;
-	};
-
 	struct UniformBufferObject {
 		glm::mat4 model;
 		glm::mat4 view;
@@ -74,9 +74,12 @@ namespace hvk {
 
 	class VulkanApp {
 	private:
+		window_ptr mWindow;
 		VkInstance mInstance;
 		VkDevice mDevice;
 		VkPhysicalDevice mPhysicalDevice;
+
+		uint32_t mGraphicsIndex;
 		VkQueue mGraphicsQueue;
 		VkPipelineLayout mPipelineLayout;
 		VkPipeline mGraphicsPipeline;
@@ -84,30 +87,32 @@ namespace hvk {
 		VkRenderPass mRenderPass;
 		VkCommandPool mCommandPool;
 		CommandBuffers mCommandBuffers;
+
 		SwapchainImageViews mImageViews;
 		SwapchainImages mSwapchainImages;
 		FrameBuffers mFramebuffers;
 		hvk::Swapchain mSwapchain;
+
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
-		uint32_t mGraphicsIndex;
-		window_ptr mWindow;
-		VkBuffer mVertexBuffer;
-		VkBuffer mIndexBuffer;
+
+		VmaAllocator mAllocator;
+		//VkBuffer mVertexBuffer;
+		//VkBuffer mIndexBuffer;
 		// TODO: create a struct that holds a buffer/image, allocation, and allocation info
-		VmaAllocation mVertexAllocation;
-		VmaAllocationInfo mVertexAllocationInfo;
-		VmaAllocation mIndexAllocation;
-		VmaAllocationInfo mIndexAllocationInfo;
-		VkImage mTextureImage;
-		VmaAllocation mTextureAllocation;
-		VmaAllocationInfo mTextureAllocationInfo;
+		//VmaAllocation mVertexAllocation;
+		//VmaAllocationInfo mVertexAllocationInfo;
+		//VmaAllocation mIndexAllocation;
+		//VmaAllocationInfo mIndexAllocationInfo;
+		hvk::Resource<VkImage> mTexture;
+		hvk::Resource<VkBuffer> mVertexBufferResource;
+		hvk::Resource<VkBuffer> mIndexBufferResource;
+		UniformBufferResources mUniformBufferResources;
+
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorPool mDescriptorPool;
 		DescriptorSets mDescriptorSets;
-		UniformBuffers mUniformBuffers;
-		UniformAllocationInfos mUniformAllocations;
-		VmaAllocator mAllocator;
+
 		int mWindowWidth, mWindowHeight;
 
 		void initializeVulkan();
