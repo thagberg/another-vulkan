@@ -8,9 +8,6 @@
 
 #include "vk_mem_alloc.h"
 
-#define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
-#define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
-
 #include "types.h"
 
 namespace hvk {

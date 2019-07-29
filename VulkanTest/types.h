@@ -1,5 +1,14 @@
 #pragma once
 
+#include <vector>
+#include <memory>
+
+#include <glm/glm.hpp>
+
+#define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
+#define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
+#define VertexUVFormat VK_FORMAT_R32G32_SFLOAT
+
 namespace hvk {
 
 	typedef std::vector<VkImageView> SwapchainImageViews;
@@ -27,6 +36,7 @@ namespace hvk {
 	struct Vertex {
 		glm::vec3 pos;
 		glm::vec3 color;
+		glm::vec2 texCoord;
 
 		static VkVertexInputBindingDescription getBindingDescription() {
 			VkVertexInputBindingDescription bindingDescription = {};
@@ -37,8 +47,8 @@ namespace hvk {
 			return bindingDescription;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
-			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+		static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
 
 			attributeDescriptions[0].binding = 0;
 			attributeDescriptions[0].location = 0;
@@ -49,6 +59,11 @@ namespace hvk {
 			attributeDescriptions[1].location = 1;
 			attributeDescriptions[1].format = VertexColorFormat;
 			attributeDescriptions[1].offset = offsetof(Vertex, color);
+
+			attributeDescriptions[2].binding = 0;
+			attributeDescriptions[2].location = 2;
+			attributeDescriptions[2].format = VertexUVFormat;
+			attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
 
 			return attributeDescriptions;
 		}

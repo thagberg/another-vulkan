@@ -26,10 +26,10 @@ const std::vector<const char*> deviceExtensions = {
 };
 
 const std::vector<hvk::Vertex> vertices = {
-	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}},
-	{{0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}}, 
-	{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}}, 
-	{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}}, 
+	{{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+	{{0.5f, -0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}},
+	{{0.5f, 0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}},
+	{{-0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
 };
 
 const std::vector<uint16_t> indices = {
@@ -283,6 +283,8 @@ namespace hvk {
 
 		mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
 
+		mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
+
 		mDescriptorSetLayout = createDescriptorSetLayout(mDevice);
 
 		mDescriptorPool = createDescriptorPool(
@@ -311,6 +313,11 @@ namespace hvk {
 				&mUniformBufferResources[i].allocation, 
 				&mUniformBufferResources[i].allocationInfo);
 		}
+
+		// Create textures
+		mTexture = createTextureImage(mDevice, mAllocator, mCommandPool, mGraphicsQueue);
+        mTextureView = createImageView(mDevice, mTexture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+        mTextureSampler = createTextureSampler(mDevice);
 
 		// populate descriptor sets
 		for (size_t i = 0; i < descriptorLayoutCopies.size(); i++) {
@@ -352,8 +359,6 @@ namespace hvk {
 		mGraphicsPipeline = createGraphicsPipeline(mDevice, mSwapchain.swapchainExtent, mRenderPass, mPipelineLayout);
 
 		createFramebuffers(mDevice, mImageViews, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
-
-		mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
 
 		uint32_t vertexMemorySize = sizeof(vertices[0]) * vertices.size();
 		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -411,10 +416,6 @@ namespace hvk {
 
 		mImageAvailable = createSemaphore(mDevice);
 		mRenderFinished = createSemaphore(mDevice);
-
-		mTexture = createTextureImage(mDevice, mAllocator, mCommandPool, mGraphicsQueue);
-        mTextureView = createImageView(mDevice, mTexture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-        mTextureSampler = createTextureSampler(mDevice);
 	}
 
 	void VulkanApp::init() {
