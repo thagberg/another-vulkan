@@ -9,6 +9,7 @@
 #include "vk_mem_alloc.h"
 
 #include "types.h"
+#include "Node.h"
 
 namespace hvk {
 
@@ -49,6 +50,8 @@ namespace hvk {
 		VkDescriptorPool mDescriptorPool;
 		DescriptorSets mDescriptorSets;
 
+        NodeRef mObjectNode;
+
 		int mWindowWidth, mWindowHeight;
 
 		void initializeVulkan();
@@ -64,6 +67,7 @@ namespace hvk {
 
 		void init();
 		void run();
+        void processKeyInput(int keyCode, bool pressed);
 
 		window_ptr getWindow() { 
 			return mWindow; 
