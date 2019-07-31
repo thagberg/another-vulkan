@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <iostream>
 #include <fstream>
+#include <unordered_map>
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -17,6 +18,33 @@
 #include "types.h"
 
 hvk::VulkanApp* currentApp;
+
+enum CameraControl {
+	move_left,
+	move_right,
+	move_up,
+	move_down,
+	move_forward,
+	move_backward
+};
+
+std::unordered_map<int, CameraControl> cameraControlMapping({
+	{GLFW_KEY_A, CameraControl::move_left},
+	{GLFW_KEY_D, CameraControl::move_right},
+	{GLFW_KEY_W, CameraControl::move_forward},
+	{GLFW_KEY_S, CameraControl::move_backward},
+	{GLFW_KEY_Q, CameraControl::move_up},
+	{GLFW_KEY_E, CameraControl::move_down}
+});
+
+std::unordered_map<CameraControl, bool> cameraControls({
+	{CameraControl::move_left, false},
+	{CameraControl::move_right, false},
+	{CameraControl::move_up, false},
+	{CameraControl::move_down, false},
+	{CameraControl::move_forward, false},
+	{CameraControl::move_backward, false}
+});
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -38,8 +66,8 @@ const std::vector<uint16_t> indices = {
 };
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    std::cout << "Key " << ((action == GLFW_PRESS) ? "Pressed" : "Released") << ": " << key << std::endl;
-    currentApp->processKeyInput(key, action == GLFW_PRESS);
+    std::cout << "Key " << ((action == GLFW_PRESS || action == GLFW_REPEAT) ? "Pressed" : "Released") << ": " << key << std::endl;
+    currentApp->processKeyInput(key, (action == GLFW_PRESS || action == GLFW_REPEAT));
 }
 
 namespace hvk {
@@ -300,6 +328,15 @@ namespace hvk {
         std::vector<VkDescriptorSetLayout> descriptorLayoutCopies(mSwapchainImages.size(), mDescriptorSetLayout);
         mDescriptorSets = createDescriptorSets(mDevice, mDescriptorPool, descriptorLayoutCopies);
 
+		// create Camera object
+		mCameraNode = std::make_shared<Camera>(
+			45.0f,
+			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+			0.1f,
+			10.0f,
+			nullptr,
+			glm::mat4(1.0f));
+
         // create Node object for the object being rendered
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 
@@ -468,13 +505,16 @@ namespace hvk {
         ubo.modelViewProj[1][1] *= -1; // Flip Y value of the clip coordinates
         */
         ubo.model = mObjectNode->getWorldTransform();
-        ubo.view = glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
-        ubo.modelViewProj = glm::perspective(
+        //ubo.view = glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+		ubo.view = mCameraNode->getWorldTransform() * glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+        ubo.modelViewProj =  mCameraNode->getProjection() * ubo.view * ubo.model;
+        ubo.modelViewProj[1][1] *= -1;
+        /*ubo.modelViewProj = glm::perspective(
             glm::radians(45.0f),
             mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
             0.1f,
             10.0f) * ubo.view * ubo.model;
-        ubo.modelViewProj[1][1] *= -1;
+        ubo.modelViewProj[1][1] *= -1;*/
         //memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
         memcpy(mUniformBufferResources[imageIndex].allocationInfo.pMappedData, &ubo, sizeof(ubo));
 
@@ -515,6 +555,33 @@ namespace hvk {
         glfwSetKeyCallback(mWindow.get(), keyCallback);
         while (!glfwWindowShouldClose(mWindow.get())) {
             glfwPollEvents();
+
+			// camera updates
+			if (cameraControls[CameraControl::move_left]) {
+				mCameraNode->setLocalTransform(
+					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.01f, 0.f, 0.f)));
+			}
+			if (cameraControls[CameraControl::move_right]) {
+				mCameraNode->setLocalTransform(
+					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(-0.01f, 0.f, 0.f)));
+			}
+			if (cameraControls[CameraControl::move_forward]) {
+				mCameraNode->setLocalTransform(
+					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, 0.f, 0.01f)));
+			}
+			if (cameraControls[CameraControl::move_backward]) {
+				mCameraNode->setLocalTransform(
+					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, 0.f, -0.01f)));
+			}
+			if (cameraControls[CameraControl::move_up]) {
+				mCameraNode->setLocalTransform(
+					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, 0.01f, 0.f)));
+			}
+			if (cameraControls[CameraControl::move_down]) {
+				mCameraNode->setLocalTransform(
+					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, -0.01f, 0.f)));
+			}
+
             drawFrame();
         }
 
@@ -539,5 +606,10 @@ namespace hvk {
                 mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, -0.1f)));
             }
         }
+
+		auto mapping = cameraControlMapping.find(keyCode);
+		if (mapping != cameraControlMapping.end()) {
+			cameraControls[mapping->second] = pressed;
+		}
     }
 }

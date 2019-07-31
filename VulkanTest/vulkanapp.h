@@ -10,6 +10,7 @@
 
 #include "types.h"
 #include "Node.h"
+#include "Camera.h"
 
 namespace hvk {
 
@@ -51,6 +52,7 @@ namespace hvk {
 		DescriptorSets mDescriptorSets;
 
         NodeRef mObjectNode;
+		CameraRef mCameraNode;
 
 		int mWindowWidth, mWindowHeight;
 

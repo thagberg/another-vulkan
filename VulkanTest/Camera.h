@@ -6,11 +6,16 @@
 
 namespace hvk {
 
+	class Camera;
+	typedef std::shared_ptr<Camera> CameraRef;
+
     class Camera : public Node
     {
     public:
         Camera(float fov, float aspectRatio, float near, float far, NodeRef parent, glm::mat4 transform);
         ~Camera();
+
+		glm::mat4 getProjection() { return mProjection; }
 
     private:
         float mFov;
