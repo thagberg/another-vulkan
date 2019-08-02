@@ -1,0 +1,29 @@
+01-Aug-2019
+-----------------
+
+Defining the RenderObject and its relationship with Renderer
+* How do we manage descriptor sets?
+	* Renderer has a descriptor set pool
+	* Use a single descriptor set layout for now -- expects a single UBO and single texture
+	* RenderObject will own its texture and model transform
+* How do we handle VBOs and IBOs?
+	* RenderObject owns its own VBO and IBO... for now
+		* Eventually want some kind of resource manager which allow us to instance
+* How does rendering happen?
+	* Renderer has the rendering pass and graphics pipeline
+	* Renderer waits on the render fence
+	* Renderer gets the current swapchain and framebuffer index
+	* Uses the current framebuffer to begin a render pass
+	* Renderer "gathers" all relevant RenderObjects for a particular frame
+		* At first this will just do all existing RenderObjects
+	* For each RenderObject:
+		* Update UBO
+		* Bind descriptor set
+		* Bind VBO
+		* Bind IBO
+		* Perform indexed draw
+	* End the render pass and submit
+* How does image presentation happen?
+	* Wait on the render fence?  Or is this a pipeline barrier?  I think it's a pipeline barrier
+	* Outside of renderer (or at least outside of the actual frame rendering), using the current swapchain, create Present Info and submit it to graphics queue
+		
