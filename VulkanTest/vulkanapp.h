@@ -1,16 +1,15 @@
 #include <memory>
 #include <array>
 
+#ifndef GLFW_INCLUDE_VULKAN
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
-
-#include <glm/glm.hpp>
-
-#include "vk_mem_alloc.h"
+#endif
 
 #include "types.h"
 #include "Node.h"
 #include "Camera.h"
+#include "Renderer.h"
 
 namespace hvk {
 
@@ -23,14 +22,9 @@ namespace hvk {
 
 		uint32_t mGraphicsIndex;
 		VkQueue mGraphicsQueue;
-		VkPipelineLayout mPipelineLayout;
-		VkPipeline mGraphicsPipeline;
 		VkSurfaceKHR mSurface;
 		VkRenderPass mRenderPass;
 		VkCommandPool mCommandPool;
-		CommandBuffers mCommandBuffers;
-
-		RenderTarget mRenderTarget;
 
 		SwapchainImageViews mImageViews;
 		SwapchainImages mSwapchainImages;
@@ -40,28 +34,16 @@ namespace hvk {
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
 
-		VmaAllocator mAllocator;
-		hvk::Resource<VkImage> mTexture;
-		hvk::Resource<VkBuffer> mVertexBufferResource;
-		hvk::Resource<VkBuffer> mIndexBufferResource;
-		UniformBufferResources mUniformBufferResources;
-
-		VkImageView mTextureView;
-        VkSampler mTextureSampler;
-
-		VkDescriptorSetLayout mDescriptorSetLayout;
-		VkDescriptorPool mDescriptorPool;
-		DescriptorSets mDescriptorSets;
-
         NodeRef mObjectNode;
 		CameraRef mCameraNode;
+
+		Renderer mRenderer;
 
 		int mWindowWidth, mWindowHeight;
 
 		void initializeVulkan();
 		void enableVulkanValidationLayers();
 		void initializeDevice();
-		void initializeAllocator();
 		void initializeRenderer();
 		void drawFrame();
 

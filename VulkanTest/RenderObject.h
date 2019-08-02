@@ -1,9 +1,9 @@
 #pragma once
 
 #include <memory>
+#include <vector>
 
 #include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
 
 #include "types.h"
 #include "Node.h"
@@ -12,21 +12,13 @@ namespace hvk {
 	class RenderObject;
 	typedef std::shared_ptr<RenderObject> RenderObjRef;
 
-	class RenderObject : Node
+	class RenderObject : public Node
 	{
-	private:
-		Resource<VkImage> mTexture;
-		Resource<VkBuffer> mVertexBuffer;
-		Resource<VkBuffer> mIndexBuffer;
-		Resource<VkBuffer> mUniformBuffer;
-
-		VkImageView mTextureView;
-		VkSampler mTextureSampler;
-
-		VkDescriptorSet mDescriptorSet;
-
 	public:
-		RenderObject(NodeRef parent, glm::mat4 transform);
+		RenderObject( NodeRef parent, glm::mat4 transform);
 		~RenderObject();
+
+		const std::vector<Vertex> getVertices();
+		const std::vector<uint16_t> getIndices();
 	};
 }

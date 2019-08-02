@@ -4,9 +4,10 @@
 #include <vector>
 #include <memory>
 
+#include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
-
 #include <glm/glm.hpp>
+#include "vk_mem_alloc.h"
 
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT

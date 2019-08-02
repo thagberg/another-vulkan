@@ -1,16 +1,57 @@
 #pragma once
 
+#include <vector>
+
+#ifndef GLFW_INCLUDE_VULKAN
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#endif
 
+namespace hvk {
+	GLFWwindow* initializeWindow(int width, int height, const char* windowTitle);
+	std::vector<const char*> getRequiredExtensions();
+	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+		void* pUserData);
+	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, VkDebugUtilsMessengerEXT* pDebugMesenger);
+	VkResult createSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, int width, int height, hvk::Swapchain& swapchain);
+	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format);
+	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat);
+	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat);
+	VkSemaphore createSemaphore(VkDevice device);
+	void createFramebuffers(
+		VkDevice device,
+		hvk::SwapchainImageViews& imageViews,
+		VkRenderPass renderPass,
+		VkExtent2D extent,
+		hvk::FrameBuffers& oFramebuffers);
+	VkCommandPool createCommandPool(VkDevice device, int queueFamilyIndex);
+}
+
+#ifdef HVK_UTIL_IMPLEMENTATION
+//#define HVK_UTIL_IMPLEMENTATION
+
+#include <assert.h>
+#include <fstream>
+#include <iostream>
+
+
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
+#ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+#endif
 
 #include "types.h"
 
 #define BYTES_PER_PIXEL 4
 
 namespace hvk {
+
     struct SwapchainSupportDetails {
         VkSurfaceCapabilitiesKHR capabilities;
         std::vector<VkSurfaceFormatKHR> formats;
@@ -279,7 +320,7 @@ namespace hvk {
         VkDevice device,
         VkExtent2D swapchainExtent,
         VkRenderPass renderPass,
-        VkPipelineLayout& pipelineLayout) {
+        VkPipelineLayout pipelineLayout) {
 
         VkPipeline graphicsPipeline;
 
@@ -388,9 +429,7 @@ namespace hvk {
         pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineInfo.basePipelineIndex = -1;
 
-        if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Graphics Pipeline");
-        }
+		assert(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) == VK_SUCCESS);
 
         vkDestroyShaderModule(device, vertShaderModule, nullptr);
         vkDestroyShaderModule(device, fragShaderModule, nullptr);
@@ -487,9 +526,7 @@ namespace hvk {
         VkSemaphoreCreateInfo semaphoreInfo = {};
         semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-        if (vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphore) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Semaphore");
-        }
+		assert(vkCreateSemaphore(device, &semaphoreInfo, nullptr, &semaphore) == VK_SUCCESS);
 
         return semaphore;
     }
@@ -778,9 +815,7 @@ namespace hvk {
         createInfo.subresourceRange.baseArrayLayer = 0;
         createInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(device, &createInfo, nullptr, &imageView) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Image View");
-        }
+		assert(vkCreateImageView(device, &createInfo, nullptr, &imageView) == VK_SUCCESS);
 
         return imageView;
     }
@@ -805,10 +840,10 @@ namespace hvk {
         createInfo.minLod = 0.0f;
         createInfo.maxLod = 0.0f;
 
-        if (vkCreateSampler(device, &createInfo, nullptr, &textureSampler) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Texture Sampler");
-        }
+		assert(vkCreateSampler(device, &createInfo, nullptr, &textureSampler) == VK_SUCCESS);
 
         return textureSampler;
     }
 }
+
+#endif
