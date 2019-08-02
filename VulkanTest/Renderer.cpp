@@ -29,6 +29,7 @@ namespace hvk {
 
 	void Renderer::init(
 		VulkanDevice device, 
+		VmaAllocator allocator,
 		VkQueue graphicsQueue,
 		VkRenderPass renderPass,
 		CameraRef camera, 
@@ -40,14 +41,9 @@ namespace hvk {
 		mRenderPass = renderPass;
 		mExtent = extent;
 		mCamera = camera;
+		mAllocator = allocator;
 
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
-
-		// create allocator
-		VmaAllocatorCreateInfo allocatorCreate = {};
-		allocatorCreate.physicalDevice = mDevice.physicalDevice;
-		allocatorCreate.device = mDevice.device;
-		vmaCreateAllocator(&allocatorCreate, &mAllocator);
 
 		// Create fence for rendering complete
 		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -250,7 +246,9 @@ namespace hvk {
 		assert(vkWaitForFences(mDevice.device, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice.device, 1, &mRenderFence) == VK_SUCCESS);
 
-		VkClearValue clearColor = { 0.1f, 0.1f, 0.1f, 1.0f };
+		std::array<VkClearValue, 2> clearValues = {};
+		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		commandBegin.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
@@ -261,8 +259,8 @@ namespace hvk {
 		renderBegin.framebuffer = framebuffer;
 		renderBegin.renderArea.offset = { 0, 0 };
 		renderBegin.renderArea.extent = mExtent;
-		renderBegin.clearValueCount = 1;
-		renderBegin.pClearValues = &clearColor;
+		renderBegin.clearValueCount = clearValues.size();
+		renderBegin.pClearValues = clearValues.data();
 
 		assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
 		vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);

@@ -229,12 +229,54 @@ namespace hvk {
             mImageViews[i] = createImageView(mDevice, mSwapchainImages[i], mSwapchain.swapchainImageFormat);
         }
 
+        mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
+
+		// create allocator
+		VmaAllocatorCreateInfo allocatorCreate = {};
+		allocatorCreate.physicalDevice = mPhysicalDevice;
+		allocatorCreate.device = mDevice;
+		vmaCreateAllocator(&allocatorCreate, &mAllocator);
+
+		// create depth image and view
+		VkImageCreateInfo depthImageCreate = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+		depthImageCreate.imageType = VK_IMAGE_TYPE_2D;
+		depthImageCreate.extent.width = mSwapchain.swapchainExtent.width;
+		depthImageCreate.extent.height = mSwapchain.swapchainExtent.height;
+		depthImageCreate.extent.depth = 1;
+		depthImageCreate.mipLevels = 1;
+		depthImageCreate.arrayLayers = 1;
+		depthImageCreate.format = VK_FORMAT_D32_SFLOAT;
+		depthImageCreate.tiling = VK_IMAGE_TILING_OPTIMAL;
+		depthImageCreate.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthImageCreate.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		depthImageCreate.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		depthImageCreate.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        VmaAllocationCreateInfo depthImageAllocationCreate = {};
+        depthImageAllocationCreate.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        vmaCreateImage(
+            mAllocator,
+            &depthImageCreate,
+            &depthImageAllocationCreate,
+            &mDepthResource.memoryResource,
+            &mDepthResource.allocation,
+            &mDepthResource.allocationInfo);
+
+		mDepthView = createImageView(mDevice, mDepthResource.memoryResource, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT);
+		transitionImageLayout(
+			mDevice, 
+			mCommandPool, 
+			mGraphicsQueue, 
+			mDepthResource.memoryResource, 
+			VK_FORMAT_D32_SFLOAT, 
+			VK_IMAGE_LAYOUT_UNDEFINED, 
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+
 
         mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
 
-        createFramebuffers(mDevice, mImageViews, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
-
-        mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
+        createFramebuffers(mDevice, mImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
 
 		// create Camera object
 		mCameraNode = std::make_shared<Camera>(
@@ -253,7 +295,7 @@ namespace hvk {
 			mDevice,
 			families
 		};
-		mRenderer.init(device, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
+		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 
 		RenderObjRef newObj = std::make_shared<RenderObject>(nullptr, glm::mat4(1.0f));
 		glm::mat4 obj2Trans = glm::mat4(1.0f);

@@ -6,6 +6,8 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#include "vk_mem_alloc.h"
+
 #include "types.h"
 #include "Node.h"
 #include "Camera.h"
@@ -28,11 +30,15 @@ namespace hvk {
 
 		SwapchainImageViews mImageViews;
 		SwapchainImages mSwapchainImages;
+		Resource<VkImage> mDepthResource;
+		VkImageView mDepthView;
 		FrameBuffers mFramebuffers;
 		hvk::Swapchain mSwapchain;
 
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
+
+		VmaAllocator mAllocator;
 
         NodeRef mObjectNode;
 		CameraRef mCameraNode;

@@ -59,7 +59,7 @@ namespace hvk {
 		Renderer();
 		~Renderer();
 
-		void init(VulkanDevice device, VkQueue graphicsQueue, VkRenderPass renderPass, CameraRef camera, VkFormat colorAttachmentFormat, VkExtent2D extent);
+		void init(VulkanDevice device, VmaAllocator allocator, VkQueue graphicsQueue, VkRenderPass renderPass, CameraRef camera, VkFormat colorAttachmentFormat, VkExtent2D extent);
 		void addRenderable(RenderObjRef renderObject);
 		VkSemaphore drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores=nullptr, uint32_t waitSemaphoreCount=0);
 	};
