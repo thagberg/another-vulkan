@@ -16,6 +16,7 @@
 #include "vulkanapp.h"
 #include "vulkan-util.h"
 #include "types.h"
+#include "Renderer.h"
 
 hvk::VulkanApp* currentApp;
 
@@ -308,6 +309,7 @@ namespace hvk {
 
         uint32_t imageCount = 0;
         vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
         mSwapchainImages.resize(imageCount);
         vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, mSwapchainImages.data());
 
@@ -316,7 +318,10 @@ namespace hvk {
             mImageViews[i] = createImageView(mDevice, mSwapchainImages[i], mSwapchain.swapchainImageFormat);
         }
 
+
         mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
+
+        createFramebuffers(mDevice, mImageViews, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
 
         mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
 
@@ -336,6 +341,19 @@ namespace hvk {
 			10.0f,
 			nullptr,
 			glm::mat4(1.0f));
+
+		QueueFamilies families = {
+			mGraphicsIndex,
+			mGraphicsIndex
+		};
+		VulkanDevice device = {
+			mPhysicalDevice,
+			mDevice,
+			families
+		};
+		Renderer testRenderer;
+		testRenderer.init(device, mCameraNode);
+		//testRenderer.init(device);
 
         // create Node object for the object being rendered
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
@@ -404,8 +422,6 @@ namespace hvk {
         mPipelineLayout = createGraphicsPipelineLayout(mDevice, mDescriptorSetLayout);
 
         mGraphicsPipeline = createGraphicsPipeline(mDevice, mSwapchain.swapchainExtent, mRenderPass, mPipelineLayout);
-
-        createFramebuffers(mDevice, mImageViews, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
 
         uint32_t vertexMemorySize = sizeof(vertices[0]) * vertices.size();
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -495,31 +511,11 @@ namespace hvk {
 
         // update current UBO with model view projection
         hvk::UniformBufferObject ubo = {};
-        /*
-        glm::mat4 position = glm::rotate(glm::mat4(1.0f), 0.f, glm::vec3(0.f, 0.f, 1.f));
-        ubo.modelViewProj = glm::perspective(
-            glm::radians(45.0f),
-            mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-            0.1f,
-            10.0f) * position;
-        ubo.modelViewProj[1][1] *= -1; // Flip Y value of the clip coordinates
-        */
         ubo.model = mObjectNode->getWorldTransform();
-        //ubo.view = glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
 		ubo.view = mCameraNode->getWorldTransform() * glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
         ubo.modelViewProj =  mCameraNode->getProjection() * ubo.view * ubo.model;
         ubo.modelViewProj[1][1] *= -1;
-        /*ubo.modelViewProj = glm::perspective(
-            glm::radians(45.0f),
-            mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-            0.1f,
-            10.0f) * ubo.view * ubo.model;
-        ubo.modelViewProj[1][1] *= -1;*/
-        //memcpy(indexAllocInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
         memcpy(mUniformBufferResources[imageIndex].allocationInfo.pMappedData, &ubo, sizeof(ubo));
-
-        //auto testData = reinterpret_cast<hvk::Vertex*>(mVertexAllocationInfo.pMappedData);
-        //std::cout << testData->pos[0] << ", " << testData->pos[1] << ", " << testData->pos[2] << std::endl;
 
         VkSemaphore waitSemaphores[] = { mImageAvailable };
         VkSemaphore signalSemaphores[] = { mRenderFinished };

@@ -30,6 +30,8 @@ namespace hvk {
 		VkCommandPool mCommandPool;
 		CommandBuffers mCommandBuffers;
 
+		RenderTarget mRenderTarget;
+
 		SwapchainImageViews mImageViews;
 		SwapchainImages mSwapchainImages;
 		FrameBuffers mFramebuffers;

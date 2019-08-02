@@ -1,7 +1,10 @@
 #pragma once
 
+#include <array>
 #include <vector>
 #include <memory>
+
+#include <vulkan/vulkan.h>
 
 #include <glm/glm.hpp>
 
@@ -27,10 +30,29 @@ namespace hvk {
 	};
 	typedef std::vector<Resource<VkBuffer>> UniformBufferResources;
 
+	struct QueueFamilies {
+		int graphics;
+		int submit;
+	};
+
+	struct VulkanDevice {
+		VkPhysicalDevice physicalDevice;
+		VkDevice device;
+		QueueFamilies queueFamilies;
+	};
+
 	struct Swapchain {
 		VkSwapchainKHR swapchain;
 		VkFormat swapchainImageFormat;
 		VkExtent2D swapchainExtent;
+	};
+
+	struct RenderTarget {
+		uint16_t num;
+		Swapchain swapchain;
+		FrameBuffers frameBuffers;
+		SwapchainImages swapImages;
+		SwapchainImageViews swapImageViews;
 	};
 
 	struct Vertex {

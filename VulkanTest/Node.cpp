@@ -16,7 +16,7 @@ namespace hvk {
         mTransform = transform;
     }
 
-    glm::mat4 Node::getWorldTransform() {
+    const glm::mat4 Node::getWorldTransform() {
         if (mParent) {
             return mParent->getWorldTransform() * mTransform;
         } else {

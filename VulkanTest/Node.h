@@ -17,9 +17,12 @@ namespace hvk {
         glm::mat4 mTransform;
 
     public:
+		const NodeRef getParent() { return mParent; }
+		const std::vector<NodeRef>& getChildren() { return mChildren; }
+
         void setLocalTransform(glm::mat4 transform);
-        glm::mat4 getLocalTransform() { return mTransform; }
-        glm::mat4 getWorldTransform();
+        const glm::mat4 getLocalTransform() { return mTransform; }
+        const glm::mat4 getWorldTransform();
 
         Node(NodeRef parent, glm::mat4 transform);
         ~Node();

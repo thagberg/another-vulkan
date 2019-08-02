@@ -150,6 +150,18 @@ namespace hvk {
         }
     }
 
+	/*RenderTarget createRenderTarget(
+		VkDevice device,
+		VkSurfaceFormatKHR swapSurfaceFormat,
+		VkPresentModeKHR presentMode,
+		VkExtent2D extent,
+		uint16_t numSwaps) {
+
+		RenderTarget renderTarget;
+
+		return renderTarget;
+	}*/
+
     VkResult createSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, int width, int height, hvk::Swapchain& swapchain) {
         SwapchainSupportDetails support = querySwapchainSupport(physicalDevice, surface);
         VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(support.formats);
