@@ -292,9 +292,7 @@ namespace hvk {
         createInfo.dependencyCount = 1;
         createInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(device, &createInfo, nullptr, &renderPass) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create render pass");
-        }
+		assert(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass) == VK_SUCCESS);
 
         return renderPass;
     }

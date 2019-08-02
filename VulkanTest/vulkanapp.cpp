@@ -6,11 +6,10 @@
 #include <fstream>
 #include <unordered_map>
 
-#ifndef GLM_FORCE_RADIANS
 #define GLM_FORCE_RADIANS
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-#endif
 
 #include "vulkanapp.h"
 #include "vulkan-util.h"
@@ -254,14 +253,14 @@ namespace hvk {
 			mDevice,
 			families
 		};
-		mRenderer.init(device, mGraphicsQueue, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
+		mRenderer.init(device, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 
 		RenderObjRef newObj = std::make_shared<RenderObject>(nullptr, glm::mat4(1.0f));
 		glm::mat4 obj2Trans = glm::mat4(1.0f);
-		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.0f, 1.0f));
+		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, 1.0f));
 		RenderObjRef obj2 = std::make_shared<RenderObject>(nullptr, obj2Trans);
-		mRenderer.addRenderable(newObj);
 		mRenderer.addRenderable(obj2);
+		mRenderer.addRenderable(newObj);
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 
