@@ -8,8 +8,10 @@
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
+#define GLM_SWIZZLE_XYZW
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include "vulkanapp.h"
 #include "vulkan-util.h"
@@ -303,6 +305,10 @@ namespace hvk {
 		RenderObjRef obj2 = std::make_shared<RenderObject>(nullptr, obj2Trans);
 		mRenderer.addRenderable(obj2);
 		mRenderer.addRenderable(newObj);
+
+		std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
+		std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
+		std::cout << "Camera position: " << glm::to_string(mCameraNode->getWorldPosition()) << std::endl;
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 

@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 
+#define GLM_SWIZZLE_XYZW
 #include <glm/glm.hpp>
 
 
@@ -23,6 +24,7 @@ namespace hvk {
         void setLocalTransform(glm::mat4 transform);
         const glm::mat4 getLocalTransform() { return mTransform; }
         const glm::mat4 getWorldTransform();
+		const glm::vec3 getWorldPosition();
 
         Node(NodeRef parent, glm::mat4 transform);
         ~Node();

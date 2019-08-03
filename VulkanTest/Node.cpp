@@ -1,6 +1,7 @@
 #include "stdafx.h"
 #include "Node.h"
 
+
 namespace hvk {
     Node::Node(NodeRef parent, glm::mat4 transform) :
         mParent(parent),
@@ -23,4 +24,7 @@ namespace hvk {
             return mTransform;
         }
     }
+ const glm::vec3 Node::getWorldPosition() {
+		return glm::vec3(getWorldTransform()[3]);
+	}
 }
