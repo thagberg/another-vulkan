@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "Node.h"
+#include <glm/gtc/matrix_transform.hpp>
 
 
 namespace hvk {
@@ -16,15 +17,20 @@ namespace hvk {
     void Node::setLocalTransform(glm::mat4 transform) {
         mTransform = transform;
     }
+	
+	void Node::translateLocal(const glm::vec3& trans) {
+		setLocalTransform(glm::translate(mTransform, trans));
+	}
 
-    const glm::mat4 Node::getWorldTransform() {
+    glm::mat4 Node::getWorldTransform() const {
         if (mParent != nullptr) {
             return mParent->getWorldTransform() * mTransform;
         } else {
             return mTransform;
         }
     }
- const glm::vec3 Node::getWorldPosition() {
+	
+	glm::vec3 Node::getWorldPosition() const {
 		return glm::vec3(getWorldTransform()[3]);
 	}
 }

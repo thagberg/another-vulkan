@@ -292,9 +292,9 @@ namespace hvk {
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
 			ubo.model = renderable.renderObject->getWorldTransform();
-			ubo.view = mCamera->getWorldTransform() * glm::lookAt(glm::vec3(0.f, 2.f, 2.f), glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f));
+			ubo.view = mCamera->getViewTransform();
 			ubo.modelViewProj = mCamera->getProjection() * ubo.view * ubo.model;
-			ubo.modelViewProj[1][1] *= -1;
+			//ubo.modelViewProj[1][1] *= -1;
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 

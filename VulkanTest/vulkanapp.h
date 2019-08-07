@@ -45,12 +45,15 @@ namespace hvk {
 
 		Renderer mRenderer;
 
+		double mLastX, mLastY;
+
 		int mWindowWidth, mWindowHeight;
 
 		void initializeVulkan();
 		void enableVulkanValidationLayers();
 		void initializeDevice();
 		void initializeRenderer();
+		void initializeApp();
 		void drawFrame();
 
 	public:
@@ -60,6 +63,7 @@ namespace hvk {
 		void init();
 		void run();
         void processKeyInput(int keyCode, bool pressed);
+		void processMouseInput(double x, double y);
 
 		window_ptr getWindow() { 
 			return mWindow; 

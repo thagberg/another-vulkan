@@ -70,6 +70,10 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     currentApp->processKeyInput(key, (action == GLFW_PRESS || action == GLFW_REPEAT));
 }
 
+void mouseCallback(GLFWwindow* window, double x, double y) {
+
+}
+
 namespace hvk {
 
     VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
@@ -81,7 +85,9 @@ namespace hvk {
         //mPipelineLayout(VK_NULL_HANDLE),
         //mGraphicsPipeline(VK_NULL_HANDLE),
         mWindow(hvk::initializeWindow(width, height, windowTitle), glfwDestroyWindow),
-		mRenderer()
+		mRenderer(),
+		mLastX(0.f),
+		mLastY(0.f)
     {
         // TODO: this is super bad, but IDGAF right now
         currentApp = this;
@@ -301,20 +307,37 @@ namespace hvk {
 
 		RenderObjRef newObj = std::make_shared<RenderObject>(nullptr, glm::mat4(1.0f));
 		glm::mat4 obj2Trans = glm::mat4(1.0f);
-		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, 1.0f));
+		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, 5.0f));
+		glm::mat4 obj3Trans  = glm::rotate(glm::mat4(1.0f), 0.1f, glm::vec3(0.f, 1.f, 0.f));
+		obj3Trans = glm::translate(obj3Trans, glm::vec3(1.f, -4.f, 1.f));
 		RenderObjRef obj2 = std::make_shared<RenderObject>(nullptr, obj2Trans);
+		RenderObjRef obj3 = std::make_shared<RenderObject>(nullptr, obj3Trans);
 		mRenderer.addRenderable(obj2);
 		mRenderer.addRenderable(newObj);
+		mRenderer.addRenderable(obj3);
+
+		//glm::lookAt(mCameraNode->getWorldPosition(), )
+		//mCameraNode->setLocalTransform(mCameraNode->getLocalTransform() * glm::lookAt());
+		//mCameraNode->lookAt()
+
+		//mCameraNode->setLocalPosition(glm::vec3(0.f, 2.f, 2.f));
 
 		std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
 		std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
 		std::cout << "Camera position: " << glm::to_string(mCameraNode->getWorldPosition()) << std::endl;
+		std::cout << "Camera Up Vector: " << glm::to_string(mCameraNode->getUpVector()) << std::endl;
+		std::cout << "Camera Forward Vector: " << glm::to_string(mCameraNode->getForwardVector()) << std::endl;
+		std::cout << "Camera Right Vector: " << glm::to_string(mCameraNode->getRightVector()) << std::endl;
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 
 
         mImageAvailable = createSemaphore(mDevice);
     }
+
+	void VulkanApp::initializeApp() {
+		glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	}
 
     void VulkanApp::init() {
         try {
@@ -325,6 +348,8 @@ namespace hvk {
             initializeDevice();
             std::cout << "init renderer" << std::endl;
             initializeRenderer();
+            std::cout << "init application" << std::endl;
+			initializeApp();
             std::cout << "done initializing" << std::endl;
         }
         catch (const std::runtime_error& error) {
@@ -359,33 +384,29 @@ namespace hvk {
 
     void VulkanApp::run() {
         glfwSetKeyCallback(mWindow.get(), keyCallback);
+		glfwGetCursorPos(mWindow.get(), &mLastX, &mLastY);
+		glfwSetCursorPosCallback(mWindow.get(), mouseCallback);
         while (!glfwWindowShouldClose(mWindow.get())) {
             glfwPollEvents();
 
 			// camera updates
 			if (cameraControls[CameraControl::move_left]) {
-				mCameraNode->setLocalTransform(
-					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.01f, 0.f, 0.f)));
+				mCameraNode->translateLocal(glm::vec3(0.01f, 0.f, 0.f));
 			}
 			if (cameraControls[CameraControl::move_right]) {
-				mCameraNode->setLocalTransform(
-					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(-0.01f, 0.f, 0.f)));
+				mCameraNode->translateLocal(glm::vec3(-0.01f, 0.f, 0.f));
 			}
 			if (cameraControls[CameraControl::move_forward]) {
-				mCameraNode->setLocalTransform(
-					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, 0.f, 0.01f)));
+				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, 0.01f));
 			}
 			if (cameraControls[CameraControl::move_backward]) {
-				mCameraNode->setLocalTransform(
-					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, 0.f, -0.01f)));
+				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, -0.01f));
 			}
 			if (cameraControls[CameraControl::move_up]) {
-				mCameraNode->setLocalTransform(
-					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, 0.01f, 0.f)));
+				mCameraNode->translateLocal(glm::vec3(0.f, -0.01f, 0.f));
 			}
 			if (cameraControls[CameraControl::move_down]) {
-				mCameraNode->setLocalTransform(
-					glm::translate(mCameraNode->getLocalTransform(), glm::vec3(0.f, -0.01f, 0.f)));
+				mCameraNode->translateLocal(glm::vec3(0.f, 0.01f, 0.f));
 			}
 
             drawFrame();
@@ -418,4 +439,14 @@ namespace hvk {
 			cameraControls[mapping->second] = pressed;
 		}
     }
+
+	void VulkanApp::processMouseInput(double x, double y) {
+		double deltaX = x - mLastX;
+		double deltaY = y - mLastY;
+		mLastX = x;
+		mLastY = y;
+
+		//glm::vec3 lookVec = mCameraNode->getForwardVector();
+		//glm::rotate(glm::mat4(1.f), )
+	}
 }
