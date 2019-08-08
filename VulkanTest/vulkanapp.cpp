@@ -71,7 +71,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 }
 
 void mouseCallback(GLFWwindow* window, double x, double y) {
-
+	std::cout << "Cursor: " << x << ", " << y << std::endl;
+	currentApp->processMouseInput(x, y);
 }
 
 namespace hvk {
@@ -307,7 +308,7 @@ namespace hvk {
 
 		RenderObjRef newObj = std::make_shared<RenderObject>(nullptr, glm::mat4(1.0f));
 		glm::mat4 obj2Trans = glm::mat4(1.0f);
-		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, 5.0f));
+		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, -5.0f));
 		glm::mat4 obj3Trans  = glm::rotate(glm::mat4(1.0f), 0.1f, glm::vec3(0.f, 1.f, 0.f));
 		obj3Trans = glm::translate(obj3Trans, glm::vec3(1.f, -4.f, 1.f));
 		RenderObjRef obj2 = std::make_shared<RenderObject>(nullptr, obj2Trans);
@@ -391,22 +392,22 @@ namespace hvk {
 
 			// camera updates
 			if (cameraControls[CameraControl::move_left]) {
-				mCameraNode->translateLocal(glm::vec3(0.01f, 0.f, 0.f));
-			}
-			if (cameraControls[CameraControl::move_right]) {
 				mCameraNode->translateLocal(glm::vec3(-0.01f, 0.f, 0.f));
 			}
-			if (cameraControls[CameraControl::move_forward]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, 0.01f));
+			if (cameraControls[CameraControl::move_right]) {
+				mCameraNode->translateLocal(glm::vec3(0.01f, 0.f, 0.f));
 			}
-			if (cameraControls[CameraControl::move_backward]) {
+			if (cameraControls[CameraControl::move_forward]) {
 				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, -0.01f));
 			}
+			if (cameraControls[CameraControl::move_backward]) {
+				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, 0.01f));
+			}
 			if (cameraControls[CameraControl::move_up]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, -0.01f, 0.f));
+				mCameraNode->translateLocal(glm::vec3(0.f, 0.01f, 0.f));
 			}
 			if (cameraControls[CameraControl::move_down]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.01f, 0.f));
+				mCameraNode->translateLocal(glm::vec3(0.f, -0.01f, 0.f));
 			}
 
             drawFrame();
@@ -441,12 +442,15 @@ namespace hvk {
     }
 
 	void VulkanApp::processMouseInput(double x, double y) {
-		double deltaX = x - mLastX;
+		float sensitivity = 0.1f;
+		double deltaX = mLastX - x;
 		double deltaY = y - mLastY;
 		mLastX = x;
 		mLastY = y;
 
-		//glm::vec3 lookVec = mCameraNode->getForwardVector();
-		//glm::rotate(glm::mat4(1.f), )
+		float pitch = deltaY * sensitivity;
+		float yaw = deltaX * sensitivity;
+
+		mCameraNode->rotate(glm::radians(pitch), glm::radians(yaw));
 	}
 }

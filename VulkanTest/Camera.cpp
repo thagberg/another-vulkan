@@ -1,8 +1,12 @@
 #include "stdafx.h"
+#include "Camera.h"
+
+#include <math.h>
+#include <algorithm>
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/matrix_access.hpp>
 
-#include "Camera.h"
 
 namespace hvk {
 
@@ -13,7 +17,8 @@ namespace hvk {
         mNearPlane(near),
         mFarPlane(far),
 		mLookVec(glm::vec3(0.f, 0.f, 1.f)),
-		mLookLocked(false) {
+		mPitch(0.0f),
+		mYaw(0.0f) {
 
         mProjection = glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane);
     }
@@ -21,11 +26,6 @@ namespace hvk {
 
     Camera::~Camera() {
     }
-
-	//void Camera::setLocalTransform(glm::mat4 transform) {
-		// TODO: Maybe an error here or something?  Shouldn't
-		// explicitly set the full transform of the camera
-	//}
 
 	glm::vec3  Camera::getUpVector() const {
 		return glm::vec3(getWorldTransform()[1]);
@@ -40,17 +40,20 @@ namespace hvk {
 	}
 
 	glm::mat4 Camera::getViewTransform() const {
-		return glm::lookAt(getWorldPosition(), mLookVec, getUpVector());
+		glm::mat4 xRot = glm::rotate(glm::mat4(1.0f), mPitch, glm::vec3(1.f, 0.f, 0.f));
+		glm::mat4 yRot = glm::rotate(glm::mat4(1.0f), mYaw, glm::vec3(0.f, 1.f, 0.f));
+
+		return glm::inverse(getWorldTransform() *yRot * xRot);
 	}
 
 	void Camera::setLookAt(glm::vec3 center) {
 		mLookVec = glm::normalize(center);
 	}
 
-	void Camera::translateLocal(const glm::vec3& trans) {
-		Node::translateLocal(trans);
-		if (!mLookLocked) {
-			mLookVec += trans;
-		}
+	void Camera::rotate(float radPitch, float radYaw) {
+		mPitch += radPitch;
+		mYaw += radYaw;
+
+		mPitch = std::clamp(mPitch, -89.0f, 89.0f);
 	}
 }
