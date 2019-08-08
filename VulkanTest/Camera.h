@@ -21,14 +21,14 @@ namespace hvk {
 		glm::vec3 getRightVector() const;
 		glm::mat4 getViewTransform() const;
 		void setLookAt(glm::vec3 center);
-		virtual void translateLocal(const glm::vec3& trans) override;
+		void rotate(float radPitch, float radYaw);
 
     private:
-		bool mLookLocked;
         float mFov;
         float mAspectRatio;
         float mNearPlane;
         float mFarPlane;
+		float mPitch, mYaw;
 		glm::vec3 mLookVec;
         glm::mat4 mProjection;
     };
