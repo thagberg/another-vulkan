@@ -13,6 +13,8 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include "tiny_gltf.h"
+
 #include "vulkanapp.h"
 #include "vulkan-util.h"
 #include "RenderObject.h"
@@ -306,16 +308,49 @@ namespace hvk {
 		};
 		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 
-		RenderObjRef newObj = std::make_shared<RenderObject>(nullptr, glm::mat4(1.0f));
+		RenderObjRef newObj = std::make_shared<RenderObject>(
+            nullptr, 
+            glm::mat4(1.0f), 
+            std::make_shared<std::vector<Vertex>>(vertices),
+            std::make_shared<std::vector<uint16_t>>(indices));
 		glm::mat4 obj2Trans = glm::mat4(1.0f);
 		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, -5.0f));
 		glm::mat4 obj3Trans  = glm::rotate(glm::mat4(1.0f), 0.1f, glm::vec3(0.f, 1.f, 0.f));
 		obj3Trans = glm::translate(obj3Trans, glm::vec3(1.f, -4.f, 1.f));
-		RenderObjRef obj2 = std::make_shared<RenderObject>(nullptr, obj2Trans);
-		RenderObjRef obj3 = std::make_shared<RenderObject>(nullptr, obj3Trans);
+		RenderObjRef obj2 = std::make_shared<RenderObject>(
+            nullptr, 
+            obj2Trans,
+            std::make_shared<std::vector<Vertex>>(vertices),
+            std::make_shared<std::vector<uint16_t>>(indices));
+		RenderObjRef obj3 = std::make_shared<RenderObject>(
+            nullptr, 
+            obj3Trans,
+            std::make_shared<std::vector<Vertex>>(vertices),
+            std::make_shared<std::vector<uint16_t>>(indices));
 		mRenderer.addRenderable(obj2);
 		mRenderer.addRenderable(newObj);
 		mRenderer.addRenderable(obj3);
+
+        tinygltf::TinyGLTF modelLoader;
+        tinygltf::Model model;
+        std::string err, warn;
+
+        bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, "resources/duck/Duck.gltf");
+
+        if (!err.empty()) {
+            std::cout << err << std::endl;
+        }
+        if (!warn.empty()) {
+            std::cout << warn << std::endl;
+        }
+        assert(modelLoaded);
+
+        // traverse the model and create RenderObjects
+        const tinygltf::Scene modelScene = model.scenes[model.defaultScene];
+        // TODO: need to do this recursively for child nodes
+        for (size_t i = 0; i < modelScene.nodes.size(); ++i) {
+            tinygltf::Node sceneNode = model.nodes[modelScene.nodes[i]];
+        }
 
 		//glm::lookAt(mCameraNode->getWorldPosition(), )
 		//mCameraNode->setLocalTransform(mCameraNode->getLocalTransform() * glm::lookAt());
