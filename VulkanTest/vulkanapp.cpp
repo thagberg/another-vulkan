@@ -68,12 +68,10 @@ const std::vector<uint16_t> indices = {
 };
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    std::cout << "Key " << ((action == GLFW_PRESS || action == GLFW_REPEAT) ? "Pressed" : "Released") << ": " << key << std::endl;
     currentApp->processKeyInput(key, (action == GLFW_PRESS || action == GLFW_REPEAT));
 }
 
 void mouseCallback(GLFWwindow* window, double x, double y) {
-	std::cout << "Cursor: " << x << ", " << y << std::endl;
 	currentApp->processMouseInput(x, y);
 }
 
