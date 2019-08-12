@@ -28,22 +28,19 @@ namespace hvk {
     }
 
 	glm::vec3  Camera::getUpVector() const {
-		return glm::vec3(getWorldTransform()[1]);
+		return glm::vec3(getLocalTransform()[1]);
 	}
 
 	glm::vec3  Camera::getForwardVector() const {
-		return glm::vec3(getWorldTransform()[2]);
+		return glm::vec3(getLocalTransform()[2]);
 	}
 
 	glm::vec3  Camera::getRightVector() const {
-		return glm::vec3(getWorldTransform()[0]);
+		return glm::vec3(getLocalTransform()[0]);
 	}
 
 	glm::mat4 Camera::getViewTransform() const {
-		glm::mat4 xRot = glm::rotate(glm::mat4(1.0f), mPitch, glm::vec3(1.f, 0.f, 0.f));
-		glm::mat4 yRot = glm::rotate(glm::mat4(1.0f), mYaw, glm::vec3(0.f, 1.f, 0.f));
-
-		return glm::inverse(getWorldTransform() *yRot * xRot);
+		return glm::inverse(getWorldTransform());
 	}
 
 	void Camera::setLookAt(glm::vec3 center) {
@@ -55,5 +52,11 @@ namespace hvk {
 		mYaw += radYaw;
 
 		mPitch = std::clamp(mPitch, -89.0f, 89.0f);
+	}
+
+	glm::mat4 Camera::getLocalTransform() const {
+		glm::mat4 xRot = glm::rotate(glm::mat4(1.0f), mPitch, glm::vec3(1.f, 0.f, 0.f));
+		glm::mat4 yRot = glm::rotate(glm::mat4(1.0f), mYaw, glm::vec3(0.f, 1.f, 0.f));
+		return Node::getLocalTransform() * yRot * xRot;
 	}
 }

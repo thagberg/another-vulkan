@@ -23,7 +23,7 @@ namespace hvk {
 
         virtual void setLocalTransform(glm::mat4 transform);
 		virtual void translateLocal(const glm::vec3& trans);
-        glm::mat4 getLocalTransform() const { return mTransform; }
+        virtual glm::mat4 getLocalTransform() const { return mTransform; }
         glm::mat4 getWorldTransform() const;
 		glm::vec3 getWorldPosition() const;
 

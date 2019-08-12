@@ -68,12 +68,10 @@ const std::vector<uint16_t> indices = {
 };
 
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    std::cout << "Key " << ((action == GLFW_PRESS || action == GLFW_REPEAT) ? "Pressed" : "Released") << ": " << key << std::endl;
     currentApp->processKeyInput(key, (action == GLFW_PRESS || action == GLFW_REPEAT));
 }
 
 void mouseCallback(GLFWwindow* window, double x, double y) {
-	std::cout << "Cursor: " << x << ", " << y << std::endl;
 	currentApp->processMouseInput(x, y);
 }
 
@@ -294,7 +292,7 @@ namespace hvk {
 			45.0f,
 			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
 			0.1f,
-			10.0f,
+			1000.0f,
 			nullptr,
 			glm::mat4(1.0f));
 		QueueFamilies families = {
@@ -308,6 +306,7 @@ namespace hvk {
 		};
 		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 
+		/*
 		RenderObjRef newObj = std::make_shared<RenderObject>(
             nullptr, 
             glm::mat4(1.0f), 
@@ -330,27 +329,15 @@ namespace hvk {
 		mRenderer.addRenderable(obj2);
 		mRenderer.addRenderable(newObj);
 		mRenderer.addRenderable(obj3);
+		*/
 
-        tinygltf::TinyGLTF modelLoader;
-        tinygltf::Model model;
-        std::string err, warn;
+        //bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, "resources/duck/Duck.gltf");
+		glm::mat4 modelTransform = glm::mat4(1.0f);
+		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
+		RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
+		mRenderer.addRenderable(modelObj);
 
-        bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, "resources/duck/Duck.gltf");
 
-        if (!err.empty()) {
-            std::cout << err << std::endl;
-        }
-        if (!warn.empty()) {
-            std::cout << warn << std::endl;
-        }
-        assert(modelLoaded);
-
-        // traverse the model and create RenderObjects
-        const tinygltf::Scene modelScene = model.scenes[model.defaultScene];
-        // TODO: need to do this recursively for child nodes
-        for (size_t i = 0; i < modelScene.nodes.size(); ++i) {
-            tinygltf::Node sceneNode = model.nodes[modelScene.nodes[i]];
-        }
 
 		//glm::lookAt(mCameraNode->getWorldPosition(), )
 		//mCameraNode->setLocalTransform(mCameraNode->getLocalTransform() * glm::lookAt());
@@ -358,8 +345,8 @@ namespace hvk {
 
 		//mCameraNode->setLocalPosition(glm::vec3(0.f, 2.f, 2.f));
 
-		std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
-		std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
+		//std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
+		//std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
 		std::cout << "Camera position: " << glm::to_string(mCameraNode->getWorldPosition()) << std::endl;
 		std::cout << "Camera Up Vector: " << glm::to_string(mCameraNode->getUpVector()) << std::endl;
 		std::cout << "Camera Forward Vector: " << glm::to_string(mCameraNode->getForwardVector()) << std::endl;
@@ -426,23 +413,26 @@ namespace hvk {
             glfwPollEvents();
 
 			// camera updates
+			glm::vec3 forwardMovement = 0.01f * mCameraNode->getForwardVector();
+			glm::vec3 lateralMovement = 0.01f * mCameraNode->getRightVector();
+			glm::vec3 verticalMovement = 0.01f * mCameraNode->getUpVector();
 			if (cameraControls[CameraControl::move_left]) {
-				mCameraNode->translateLocal(glm::vec3(-0.01f, 0.f, 0.f));
+				mCameraNode->translateLocal(-1.0f * lateralMovement);
 			}
 			if (cameraControls[CameraControl::move_right]) {
-				mCameraNode->translateLocal(glm::vec3(0.01f, 0.f, 0.f));
+				mCameraNode->translateLocal(lateralMovement);
 			}
 			if (cameraControls[CameraControl::move_forward]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, -0.01f));
+				mCameraNode->translateLocal(-1.0f * forwardMovement);
 			}
 			if (cameraControls[CameraControl::move_backward]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, 0.01f));
+				mCameraNode->translateLocal(forwardMovement);
 			}
 			if (cameraControls[CameraControl::move_up]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.01f, 0.f));
+				mCameraNode->translateLocal(verticalMovement);
 			}
 			if (cameraControls[CameraControl::move_down]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, -0.01f, 0.f));
+				mCameraNode->translateLocal(-1.0f * verticalMovement);
 			}
 
             drawFrame();

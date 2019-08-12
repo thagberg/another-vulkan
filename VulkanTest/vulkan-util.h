@@ -757,18 +757,27 @@ namespace hvk {
         VkDevice device,
         VmaAllocator allocator,
         VkCommandPool commandPool,
-        VkQueue graphicsQueue) {
+        VkQueue graphicsQueue,
+		std::vector<unsigned char>& imageData,
+		int imageWidth,
+		int imageHeight,
+		int bitDepth) {
 
         hvk::Resource<VkImage> textureResource;
 
+		/*
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load("resources/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
 
         if (!pixels) {
             throw std::runtime_error("Failed to load Texture Image");
         }
+		*/
 
-        VkDeviceSize imageSize = texWidth * texHeight * BYTES_PER_PIXEL;
+        //VkDeviceSize imageSize = texWidth * texHeight * BYTES_PER_PIXEL;
+		//VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
+		VkDeviceSize imageSize = imageData.size() * sizeof(imageData[0]);
+		// TODO: figure out why imageWidth * imageHeight * bitDepth is giving an incorrect image size
 
         // copy image data into a staging buffer which will then be used
         // to transfer to a Vulkan image
@@ -792,16 +801,16 @@ namespace hvk {
 
         void* stagingData;
         vmaMapMemory(allocator, stagingAllocation, &stagingData);
-        memcpy(stagingData, pixels, imageSize);
+        memcpy(stagingData, imageData.data(), imageSize);
         vmaUnmapMemory(allocator, stagingAllocation);
 
         // free the pixel data
-        stbi_image_free(pixels);
+        //stbi_image_free(pixels);
 
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageInfo.extent.width = static_cast<uint32_t>(texWidth);
-        imageInfo.extent.height = static_cast<uint32_t>(texHeight);
+        imageInfo.extent.width = static_cast<uint32_t>(imageWidth);
+        imageInfo.extent.height = static_cast<uint32_t>(imageHeight);
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
         imageInfo.arrayLayers = 1;
@@ -839,8 +848,8 @@ namespace hvk {
             graphicsQueue,
             imageStagingBuffer,
             textureResource.memoryResource,
-            texWidth,
-            texHeight);
+            imageWidth,
+            imageHeight);
 
         transitionImageLayout(
             device,

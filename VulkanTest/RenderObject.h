@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <glm/glm.hpp>
+#include "tiny_gltf.h"
 
 #include "types.h"
 #include "Node.h"
@@ -11,7 +12,8 @@
 namespace hvk {
 
     typedef std::shared_ptr<std::vector<Vertex>> VerticesRef;
-    typedef std::shared_ptr<std::vector<uint16_t>> IndicesRef;
+    typedef std::shared_ptr<std::vector<VertIndex>> IndicesRef;
+	typedef std::shared_ptr<tinygltf::Image> TextureRef;
 
 	class RenderObject;
 	typedef std::shared_ptr<RenderObject> RenderObjRef;
@@ -21,16 +23,35 @@ namespace hvk {
     private:
         VerticesRef mVertices;
         IndicesRef mIndices;
+		TextureRef mTexture;
+
+		static tinygltf::TinyGLTF sModelLoader;
+
+		static void processGltfNode(
+			VerticesRef vertices, 
+			IndicesRef indices, 
+			tinygltf::Image& texture, 
+			tinygltf::Node& node, 
+			tinygltf::Model& model);
 
 	public:
 		RenderObject(
             NodeRef parent, 
             glm::mat4 transform, 
             VerticesRef vertices, 
-            IndicesRef indices);
+            IndicesRef indices,
+			TextureRef texture);
 		~RenderObject();
 
 		const VerticesRef getVertices();
 		const IndicesRef getIndices();
+		const TextureRef getTexture();
+
+		static void allocateVertices(size_t reservedSize, VerticesRef vertices);
+		static void allocateIndices(size_t reservedSize, IndicesRef indices);
+		static RenderObjRef createFromGltf(
+			const std::string& gltfFilename, 
+			NodeRef parent, 
+			glm::mat4 transform);
 	};
 }
