@@ -22,6 +22,7 @@ namespace hvk {
 	typedef std::vector<VkDescriptorSet> DescriptorSets;
 	//typedef std::shared_ptr<GLFWwindow, void(*)(GLFWwindow*)> window_ptr;
 	typedef std::shared_ptr<GLFWwindow> window_ptr;
+	typedef uint16_t VertIndex;
 
 	template <class T>
 	struct Resource {

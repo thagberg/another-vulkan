@@ -294,7 +294,7 @@ namespace hvk {
 			45.0f,
 			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
 			0.1f,
-			10.0f,
+			1000.0f,
 			nullptr,
 			glm::mat4(1.0f));
 		QueueFamilies families = {
@@ -308,6 +308,7 @@ namespace hvk {
 		};
 		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 
+		/*
 		RenderObjRef newObj = std::make_shared<RenderObject>(
             nullptr, 
             glm::mat4(1.0f), 
@@ -330,27 +331,15 @@ namespace hvk {
 		mRenderer.addRenderable(obj2);
 		mRenderer.addRenderable(newObj);
 		mRenderer.addRenderable(obj3);
+		*/
 
-        tinygltf::TinyGLTF modelLoader;
-        tinygltf::Model model;
-        std::string err, warn;
+        //bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, "resources/duck/Duck.gltf");
+		glm::mat4 modelTransform = glm::mat4(1.0f);
+		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
+		RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
+		mRenderer.addRenderable(modelObj);
 
-        bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, "resources/duck/Duck.gltf");
 
-        if (!err.empty()) {
-            std::cout << err << std::endl;
-        }
-        if (!warn.empty()) {
-            std::cout << warn << std::endl;
-        }
-        assert(modelLoaded);
-
-        // traverse the model and create RenderObjects
-        const tinygltf::Scene modelScene = model.scenes[model.defaultScene];
-        // TODO: need to do this recursively for child nodes
-        for (size_t i = 0; i < modelScene.nodes.size(); ++i) {
-            tinygltf::Node sceneNode = model.nodes[modelScene.nodes[i]];
-        }
 
 		//glm::lookAt(mCameraNode->getWorldPosition(), )
 		//mCameraNode->setLocalTransform(mCameraNode->getLocalTransform() * glm::lookAt());
@@ -358,8 +347,8 @@ namespace hvk {
 
 		//mCameraNode->setLocalPosition(glm::vec3(0.f, 2.f, 2.f));
 
-		std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
-		std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
+		//std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
+		//std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
 		std::cout << "Camera position: " << glm::to_string(mCameraNode->getWorldPosition()) << std::endl;
 		std::cout << "Camera Up Vector: " << glm::to_string(mCameraNode->getUpVector()) << std::endl;
 		std::cout << "Camera Forward Vector: " << glm::to_string(mCameraNode->getForwardVector()) << std::endl;

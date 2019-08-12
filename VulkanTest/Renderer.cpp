@@ -123,13 +123,13 @@ namespace hvk {
 		Renderable newRenderable;
 		newRenderable.renderObject = renderObject;
 
-		std::vector<Vertex> vertices = renderObject->getVertices();
-		std::vector<uint16_t> indices = renderObject->getIndices();
-		newRenderable.numVertices = vertices.size();
-		newRenderable.numIndices = indices.size();
+		VerticesRef vertices = renderObject->getVertices();
+		IndicesRef indices = renderObject->getIndices();
+		newRenderable.numVertices = vertices->size();
+		newRenderable.numIndices = indices->size();
 
 		// Create vertex buffer
-        uint32_t vertexMemorySize = sizeof(vertices[0]) * vertices.size();
+        uint32_t vertexMemorySize = sizeof(Vertex) * vertices->size();
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size = vertexMemorySize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -145,10 +145,10 @@ namespace hvk {
             &newRenderable.vbo.allocation,
             &newRenderable.vbo.allocationInfo);
 
-        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
+        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), (size_t)vertexMemorySize);
 
 		// Create index buffer
-        uint32_t indexMemorySize = sizeof(uint16_t) * indices.size();
+        uint32_t indexMemorySize = sizeof(uint16_t) * indices->size();
         VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         iboInfo.size = indexMemorySize;
         iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -164,7 +164,7 @@ namespace hvk {
             &newRenderable.ibo.allocation,
             &newRenderable.ibo.allocationInfo);
 
-        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
+        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices->data(), (size_t)indexMemorySize);
 
         // create UBOs
         uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
@@ -184,7 +184,16 @@ namespace hvk {
 			&newRenderable.ubo.allocationInfo);
 
 		// create texture
-        newRenderable.texture = createTextureImage(mDevice.device, mAllocator, mCommandPool, mGraphicsQueue);
+		TextureRef tex = renderObject->getTexture();
+        newRenderable.texture = createTextureImage(
+			mDevice.device, 
+			mAllocator, 
+			mCommandPool, 
+			mGraphicsQueue,
+			tex->image,
+			tex->width,
+			tex->height,
+			tex->bits);
         newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
         newRenderable.textureSampler = createTextureSampler(mDevice.device);
 
