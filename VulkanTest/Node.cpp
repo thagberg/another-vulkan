@@ -24,9 +24,9 @@ namespace hvk {
 
     glm::mat4 Node::getWorldTransform() const {
         if (mParent != nullptr) {
-            return mParent->getWorldTransform() * mTransform;
+            return mParent->getWorldTransform() * getLocalTransform();
         } else {
-            return mTransform;
+            return getLocalTransform();
         }
     }
 	

@@ -415,23 +415,26 @@ namespace hvk {
             glfwPollEvents();
 
 			// camera updates
+			glm::vec3 forwardMovement = 0.01f * mCameraNode->getForwardVector();
+			glm::vec3 lateralMovement = 0.01f * mCameraNode->getRightVector();
+			glm::vec3 verticalMovement = 0.01f * mCameraNode->getUpVector();
 			if (cameraControls[CameraControl::move_left]) {
-				mCameraNode->translateLocal(glm::vec3(-0.01f, 0.f, 0.f));
+				mCameraNode->translateLocal(-1.0f * lateralMovement);
 			}
 			if (cameraControls[CameraControl::move_right]) {
-				mCameraNode->translateLocal(glm::vec3(0.01f, 0.f, 0.f));
+				mCameraNode->translateLocal(lateralMovement);
 			}
 			if (cameraControls[CameraControl::move_forward]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, -0.01f));
+				mCameraNode->translateLocal(-1.0f * forwardMovement);
 			}
 			if (cameraControls[CameraControl::move_backward]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.f, 0.01f));
+				mCameraNode->translateLocal(forwardMovement);
 			}
 			if (cameraControls[CameraControl::move_up]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, 0.01f, 0.f));
+				mCameraNode->translateLocal(verticalMovement);
 			}
 			if (cameraControls[CameraControl::move_down]) {
-				mCameraNode->translateLocal(glm::vec3(0.f, -0.01f, 0.f));
+				mCameraNode->translateLocal(-1.0f * verticalMovement);
 			}
 
             drawFrame();

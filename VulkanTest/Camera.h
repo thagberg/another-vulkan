@@ -23,6 +23,8 @@ namespace hvk {
 		void setLookAt(glm::vec3 center);
 		void rotate(float radPitch, float radYaw);
 
+        virtual glm::mat4 getLocalTransform() const override;
+
     private:
         float mFov;
         float mAspectRatio;
