@@ -92,7 +92,7 @@ namespace hvk {
 				for (size_t k = 0; k < numPositions; ++k) {
 					Vertex v{};
 					v.pos = glm::make_vec3(&positionData[k * 3]);
-					v.color = glm::vec3(1.0f, 0.f, 0.f);
+					v.normal = glm::vec3(1.0f, 0.f, 0.f);
 					v.texCoord = glm::make_vec2(&uvData[k * 2]);
 					vertices->push_back(v);
 				}
