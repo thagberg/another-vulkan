@@ -17,6 +17,8 @@
 
 namespace hvk {
 
+	bool Renderer::sDrawNormals = true;
+
 	Renderer::Renderer() :
 		mFirstRenderIndexAvailable(-1)
 	{
@@ -114,8 +116,52 @@ namespace hvk {
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineLayout) == VK_SUCCESS);
 
-		auto modelVertShaderCode = readFile("shaders/compiled/vert.spv");
-		auto modelFragShaderCode = readFile("shaders/compiled/frag.spv");
+		VkVertexInputBindingDescription modelBindingDescription = hvk::Vertex::getBindingDescription();
+		auto modelAttributeDescriptions = hvk::Vertex::getAttributeDescriptions();
+
+		VkPipelineVertexInputStateCreateInfo modelVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		modelVertexInputInfo.vertexBindingDescriptionCount = 1;
+		modelVertexInputInfo.pVertexBindingDescriptions = &modelBindingDescription;
+		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
+		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
+
+		mPipeline = generatePipeline(
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			"shaders/compiled/vert.spv",
+			"shaders/compiled/frag.spv",
+			extent,
+			modelVertexInputInfo);
+
+		VkVertexInputBindingDescription normalBindingDescription = hvk::ColorVertex::getBindingDescription();
+		auto normalAttributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
+
+		VkPipelineVertexInputStateCreateInfo normalVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		normalVertexInputInfo.vertexBindingDescriptionCount = 1;
+		normalVertexInputInfo.pVertexBindingDescriptions = &normalBindingDescription;
+		normalVertexInputInfo.vertexAttributeDescriptionCount = normalAttributeDescriptions.size();
+		normalVertexInputInfo.pVertexAttributeDescriptions = normalAttributeDescriptions.data();
+
+		mNormalsPipeline = generatePipeline(
+			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+			"shaders/compiled/normal_v.spv",
+			"shaders/compiled/normal_f.spv",
+			extent,
+			normalVertexInputInfo);
+
+		mInitialized = true;
+	}
+
+	VkPipeline Renderer::generatePipeline(
+		VkPrimitiveTopology topology, 
+		const char* vertShaderFile, 
+		const char* fragShaderFile,
+		VkExtent2D& extent,
+		VkPipelineVertexInputStateCreateInfo& vertexInputInfo) {
+
+		VkPipeline pipeline;
+
+		auto modelVertShaderCode = readFile(vertShaderFile);
+		auto modelFragShaderCode = readFile(fragShaderFile);
 		VkShaderModule modelVertShaderModule = createShaderModule(mDevice.device, modelVertShaderCode);
 		VkShaderModule modelFragShaderModule = createShaderModule(mDevice.device, modelFragShaderCode);
 
@@ -133,32 +179,23 @@ namespace hvk {
 			modelVertStageInfo, modelFragStageInfo
 		};
 
-		VkVertexInputBindingDescription modelBindingDescription = hvk::Vertex::getBindingDescription();
-		auto modelAttributeDescriptions = hvk::Vertex::getAttributeDescriptions();
-
-		VkPipelineVertexInputStateCreateInfo modelVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-		modelVertexInputInfo.vertexBindingDescriptionCount = 1;
-		modelVertexInputInfo.pVertexBindingDescriptions = &modelBindingDescription;
-		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
-		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
-
 		VkPipelineInputAssemblyStateCreateInfo modelInputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-		modelInputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		modelInputAssembly.topology = topology;
 		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
 
-		mPipeline = createCustomizedGraphicsPipeline(
+		pipeline = createCustomizedGraphicsPipeline(
 			mDevice.device, 
 			extent, 
 			mRenderPass, 
 			mPipelineLayout,
 			modelShaderStages,
-			modelVertexInputInfo,
+			vertexInputInfo,
 			modelInputAssembly);
 
 		vkDestroyShaderModule(mDevice.device, modelVertShaderModule, nullptr);
 		vkDestroyShaderModule(mDevice.device, modelFragShaderModule, nullptr);
 
-		mInitialized = true;
+		return pipeline;
 	}
 
 	void Renderer::addRenderable(RenderObjRef renderObject) {
@@ -282,6 +319,43 @@ namespace hvk {
 			vkUpdateDescriptorSets(mDevice.device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
 		}
 
+		// create buffers for rendering normals
+		newRenderable.numNormalVertices = vertices->size() * 2;
+        uint32_t normalMemorySize = sizeof(ColorVertex) * newRenderable.numNormalVertices;
+        VkBufferCreateInfo normalBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        normalBufferInfo.size = normalMemorySize;
+        normalBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo normalCreateInfo = {};
+        normalCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        normalCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        vmaCreateBuffer(
+            mAllocator,
+            &normalBufferInfo,
+            &normalCreateInfo,
+            &newRenderable.normalVbo.memoryResource,
+            &newRenderable.normalVbo.allocation,
+            &newRenderable.normalVbo.allocationInfo);
+
+		int memOffset = 0;
+		char* copyAddr = reinterpret_cast<char*>(newRenderable.normalVbo.allocationInfo.pMappedData);
+		for (size_t i = 0; i < vertices->size(); ++i) {
+			Vertex v = vertices->at(i);
+			ColorVertex cv = {
+				v.pos,
+				glm::vec3(1.0f, 0.f, 0.f)
+			};
+			memcpy(copyAddr + memOffset, &cv, sizeof(cv));
+			memOffset += sizeof(cv);
+			glm::vec3 p = v.pos + v.normal;
+			ColorVertex cv2 = {
+				v.pos + v.normal * 3.f,
+				glm::vec3(0.f, 1.f, 0.f)
+			};
+			memcpy(copyAddr + memOffset, &cv2, sizeof(cv2));
+			memOffset += sizeof(cv2);
+		}
+
 		//findFirstRenderIndexAvailable();
 		//mRenderables[mFirstRenderIndexAvailable] = newRenderable;
 		mRenderables.push_back(newRenderable);
@@ -332,6 +406,23 @@ namespace hvk {
 				0, 
 				nullptr);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
+		}
+
+		if (sDrawNormals) {
+			vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mNormalsPipeline);
+			for (const auto& renderable : mRenderables) {
+				vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &renderable.normalVbo.memoryResource, offsets);
+				vkCmdBindDescriptorSets(
+					mCommandBuffer,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					mPipelineLayout,
+					0,
+					1,
+					&renderable.descriptorSet,
+					0,
+					nullptr);
+				vkCmdDraw(mCommandBuffer, renderable.numNormalVertices, 1, 0, 0);
+			}
 		}
 
 		vkCmdEndRenderPass(mCommandBuffer);

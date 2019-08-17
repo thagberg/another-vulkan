@@ -187,6 +187,8 @@
     <ClCompile Include="VulkanTest.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\normal.frag" />
+    <None Include="shaders\normal.vert" />
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
   </ItemGroup>

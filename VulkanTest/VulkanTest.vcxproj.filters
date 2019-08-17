@@ -82,5 +82,11 @@
     <None Include="shaders\shader.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\normal.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\normal.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

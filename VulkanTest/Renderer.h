@@ -26,10 +26,19 @@ namespace hvk {
 		VkSampler textureSampler;
 		Resource<VkBuffer> ubo;
 		VkDescriptorSet descriptorSet;
+
+		Resource<VkBuffer> normalVbo;
+		size_t numNormalVertices;
 	};
 
 	class Renderer
 	{
+	private:
+		static bool sDrawNormals;
+	public:
+		static bool getDrawNormals() { return sDrawNormals; }
+		static void setDrawNormals(bool drawNormals) { sDrawNormals = drawNormals; }
+
 	private:
 		bool mInitialized;
 		size_t mFirstRenderIndexAvailable;
@@ -43,6 +52,7 @@ namespace hvk {
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkPipelineLayout mPipelineLayout;
 		VkPipeline mPipeline;
+		VkPipeline mNormalsPipeline;
 		VkRenderPass mRenderPass;
 		VkExtent2D mExtent;
 		VkSemaphore mRenderFinished;
@@ -54,6 +64,12 @@ namespace hvk {
 
 		void recordCommandBuffer(VkFramebuffer& framebuffer);
 		void findFirstRenderIndexAvailable();
+		VkPipeline generatePipeline(
+			VkPrimitiveTopology topology, 
+			const char* vertShaderFile, 
+			const char* fragShaderFile,
+			VkExtent2D& extent,
+			VkPipelineVertexInputStateCreateInfo& vertexInputInfo);
 
 	public:
 		Renderer();

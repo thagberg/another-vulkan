@@ -12,6 +12,7 @@
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexUVFormat VK_FORMAT_R32G32_SFLOAT
+#define VertexNormalFormat VK_FORMAT_R32G32B32_SFLOAT
 
 namespace hvk {
 
@@ -81,13 +82,43 @@ namespace hvk {
 
 			attributeDescriptions[1].binding = 0;
 			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VertexColorFormat;
+			attributeDescriptions[1].format = VertexNormalFormat;
 			attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
 			attributeDescriptions[2].binding = 0;
 			attributeDescriptions[2].location = 2;
 			attributeDescriptions[2].format = VertexUVFormat;
 			attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+
+			return attributeDescriptions;
+		}
+	};
+
+	struct ColorVertex {
+		glm::vec3 pos;
+		glm::vec3 color;
+
+		static VkVertexInputBindingDescription getBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription = {};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(ColorVertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			return bindingDescription;
+		}
+
+		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VertexPositionFormat;
+			attributeDescriptions[0].offset = offsetof(ColorVertex, pos);
+
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VertexColorFormat;
+			attributeDescriptions[1].offset = offsetof(ColorVertex, color);
 
 			return attributeDescriptions;
 		}

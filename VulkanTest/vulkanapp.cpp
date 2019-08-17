@@ -458,6 +458,9 @@ namespace hvk {
             else if (keyCode == GLFW_KEY_DOWN) {
                 mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, -0.1f)));
             }
+			else if (keyCode == GLFW_KEY_Y) {
+				Renderer::setDrawNormals(!Renderer::getDrawNormals());
+			}
         }
 
 		auto mapping = cameraControlMapping.find(keyCode);
