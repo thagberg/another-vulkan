@@ -114,7 +114,49 @@ namespace hvk {
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineLayout) == VK_SUCCESS);
 
-		mPipeline = createGraphicsPipeline(mDevice.device, extent, mRenderPass, mPipelineLayout);
+		auto modelVertShaderCode = readFile("shaders/compiled/vert.spv");
+		auto modelFragShaderCode = readFile("shaders/compiled/frag.spv");
+		VkShaderModule modelVertShaderModule = createShaderModule(mDevice.device, modelVertShaderCode);
+		VkShaderModule modelFragShaderModule = createShaderModule(mDevice.device, modelFragShaderCode);
+
+		VkPipelineShaderStageCreateInfo modelVertStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+		modelVertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		modelVertStageInfo.module = modelVertShaderModule;
+		modelVertStageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo modelFragStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+		modelFragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		modelFragStageInfo.module = modelFragShaderModule;
+		modelFragStageInfo.pName = "main";
+
+		std::vector<VkPipelineShaderStageCreateInfo> modelShaderStages = {
+			modelVertStageInfo, modelFragStageInfo
+		};
+
+		VkVertexInputBindingDescription modelBindingDescription = hvk::Vertex::getBindingDescription();
+		auto modelAttributeDescriptions = hvk::Vertex::getAttributeDescriptions();
+
+		VkPipelineVertexInputStateCreateInfo modelVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		modelVertexInputInfo.vertexBindingDescriptionCount = 1;
+		modelVertexInputInfo.pVertexBindingDescriptions = &modelBindingDescription;
+		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
+		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
+
+		VkPipelineInputAssemblyStateCreateInfo modelInputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+		modelInputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
+
+		mPipeline = createCustomizedGraphicsPipeline(
+			mDevice.device, 
+			extent, 
+			mRenderPass, 
+			mPipelineLayout,
+			modelShaderStages,
+			modelVertexInputInfo,
+			modelInputAssembly);
+
+		vkDestroyShaderModule(mDevice.device, modelVertShaderModule, nullptr);
+		vkDestroyShaderModule(mDevice.device, modelFragShaderModule, nullptr);
 
 		mInitialized = true;
 	}
