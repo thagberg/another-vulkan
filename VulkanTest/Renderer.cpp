@@ -3,10 +3,9 @@
 #include <array>
 #include <vector>
 
-/*
-*/
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "imgui/imgui.h"
 
 #include "Renderer.h"
 #define HVK_UTIL_IMPLEMENTATION
@@ -20,7 +19,9 @@ namespace hvk {
 	bool Renderer::sDrawNormals = true;
 
 	Renderer::Renderer() :
-		mFirstRenderIndexAvailable(-1)
+		mFirstRenderIndexAvailable(-1),
+		mUiVbo{},
+		mUiIbo{}
 	{
 	}
 
@@ -37,6 +38,8 @@ namespace hvk {
 		CameraRef camera, 
 		VkFormat colorAttachmentFormat,
 		VkExtent2D extent) {
+
+		ImGui::CreateContext();
 
 		mDevice = device;
 		mGraphicsQueue = graphicsQueue;
@@ -130,7 +133,8 @@ namespace hvk {
 			"shaders/compiled/vert.spv",
 			"shaders/compiled/frag.spv",
 			extent,
-			modelVertexInputInfo);
+			modelVertexInputInfo,
+			mPipelineLayout);
 
 		VkVertexInputBindingDescription normalBindingDescription = hvk::ColorVertex::getBindingDescription();
 		auto normalAttributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
@@ -146,7 +150,115 @@ namespace hvk {
 			"shaders/compiled/normal_v.spv",
 			"shaders/compiled/normal_f.spv",
 			extent,
-			normalVertexInputInfo);
+			normalVertexInputInfo,
+			mPipelineLayout);
+
+		// Initialize Imgui stuff
+		unsigned char* fontTextureData;
+		int fontTextWidth, fontTextHeight;
+		ImGuiIO& io = ImGui::GetIO();
+		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight);
+		io.DisplaySize = ImVec2(mExtent.width, mExtent.height);
+		io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
+
+
+        Resource<VkImage> uiFont = createTextureImage(
+			mDevice.device, 
+			mAllocator, 
+			mCommandPool, 
+			mGraphicsQueue,
+			fontTextureData,
+			fontTextWidth,
+			fontTextHeight,
+			4,
+			8);
+
+		VkDescriptorSetLayout uiDescriptorSetLayout;
+		VkImageView uiFontView = createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+		VkSampler uiFontSampler = createTextureSampler(mDevice.device);
+
+		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
+		uiLayoutImageBinding.binding = 0;
+		uiLayoutImageBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uiLayoutImageBinding.descriptorCount = 1;
+		uiLayoutImageBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		uiLayoutImageBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo uiLayoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		uiLayoutInfo.bindingCount = 1;
+		uiLayoutInfo.pBindings = &uiLayoutImageBinding;
+
+		assert(vkCreateDescriptorSetLayout(mDevice.device, &uiLayoutInfo, nullptr, &uiDescriptorSetLayout) == VK_SUCCESS);
+
+		VkDescriptorSetAllocateInfo uiAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		uiAlloc.descriptorPool = mDescriptorPool;
+		uiAlloc.descriptorSetCount = 1;
+		uiAlloc.pSetLayouts = &uiDescriptorSetLayout;
+
+		assert(vkAllocateDescriptorSets(mDevice.device, &uiAlloc, &mUiDescriptorSet) == VK_SUCCESS);
+
+		VkDescriptorImageInfo fontImageInfo = {};
+		fontImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		fontImageInfo.imageView = uiFontView;
+		fontImageInfo.sampler = uiFontSampler;
+
+		VkWriteDescriptorSet fontDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		fontDescriptorWrite.dstSet = mUiDescriptorSet;
+		fontDescriptorWrite.dstBinding = 0;
+		fontDescriptorWrite.dstArrayElement = 0;
+		fontDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		fontDescriptorWrite.descriptorCount = 1;
+		fontDescriptorWrite.pImageInfo = &fontImageInfo;
+
+		vkUpdateDescriptorSets(mDevice.device, 1, &fontDescriptorWrite, 0, nullptr);
+
+		VkPushConstantRange uiPushRange = {};
+		uiPushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uiPushRange.size = sizeof(hvk::UiPushConstant);
+		uiPushRange.offset = 0;
+
+		VkPipelineLayoutCreateInfo uiLayoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+		uiLayoutCreate.setLayoutCount = 1;
+		uiLayoutCreate.pSetLayouts = &uiDescriptorSetLayout;
+		uiLayoutCreate.pushConstantRangeCount = 1;
+		uiLayoutCreate.pPushConstantRanges = &uiPushRange;
+
+		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mUiPipelineLayout) == VK_SUCCESS);
+
+		VkVertexInputBindingDescription uiBindingDescription = {};
+		uiBindingDescription.binding = 0;
+		uiBindingDescription.stride = sizeof(ImDrawVert);
+		uiBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;	
+
+		std::array<VkVertexInputAttributeDescription, 3> uiAttributeDescriptions = {};
+		uiAttributeDescriptions[0].binding = 0;
+		uiAttributeDescriptions[0].location = 0;
+		uiAttributeDescriptions[0].format = UiVertexPositionFormat;
+		uiAttributeDescriptions[0].offset = offsetof(ImDrawVert, pos);
+
+		uiAttributeDescriptions[1].binding = 0;
+		uiAttributeDescriptions[1].location = 1;
+		uiAttributeDescriptions[1].format = UiVertexUVFormat;
+		uiAttributeDescriptions[1].offset = offsetof(ImDrawVert, uv);
+
+		uiAttributeDescriptions[2].binding = 0;
+		uiAttributeDescriptions[2].location = 2;
+		uiAttributeDescriptions[2].format = UiVertexColorFormat;
+		uiAttributeDescriptions[2].offset = offsetof(ImDrawVert, col);
+
+		VkPipelineVertexInputStateCreateInfo uiVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		uiVertexInputInfo.vertexBindingDescriptionCount = 1;
+		uiVertexInputInfo.pVertexBindingDescriptions = &uiBindingDescription;
+		uiVertexInputInfo.vertexAttributeDescriptionCount = uiAttributeDescriptions.size();
+		uiVertexInputInfo.pVertexAttributeDescriptions = uiAttributeDescriptions.data();
+
+		mUiPipeline = generatePipeline(
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			"shaders/compiled/ui_v.spv",
+			"shaders/compiled/ui_f.spv",
+			extent,
+			uiVertexInputInfo,
+			mUiPipelineLayout);
 
 		mInitialized = true;
 	}
@@ -156,7 +268,8 @@ namespace hvk {
 		const char* vertShaderFile, 
 		const char* fragShaderFile,
 		VkExtent2D& extent,
-		VkPipelineVertexInputStateCreateInfo& vertexInputInfo) {
+		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
+		VkPipelineLayout& pipelineLayout) {
 
 		VkPipeline pipeline;
 
@@ -187,7 +300,7 @@ namespace hvk {
 			mDevice.device, 
 			extent, 
 			mRenderPass, 
-			mPipelineLayout,
+			pipelineLayout,
 			modelShaderStages,
 			vertexInputInfo,
 			modelInputAssembly);
@@ -269,9 +382,10 @@ namespace hvk {
 			mAllocator, 
 			mCommandPool, 
 			mGraphicsQueue,
-			tex->image,
+			tex->image.data(),
 			tex->width,
 			tex->height,
+			tex->component,
 			tex->bits);
         newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
         newRenderable.textureSampler = createTextureSampler(mDevice.device);
@@ -425,11 +539,105 @@ namespace hvk {
 			}
 		}
 
+		ImGuiIO& io = ImGui::GetIO();
+		ImDrawData* imDrawData = ImGui::GetDrawData();
+
+		if (imDrawData->CmdListsCount > 0) {
+			vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mUiPipeline);
+			vkCmdBindDescriptorSets(
+				mCommandBuffer, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS, 
+				mUiPipelineLayout, 
+				0, 
+				1, 
+				&mUiDescriptorSet, 
+				0, 
+				nullptr);
+			UiPushConstant push = {};
+			push.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
+			push.pos = glm::vec2(-1.f);
+			vkCmdPushConstants(mCommandBuffer, mUiPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
+			VkDeviceSize offsets[1] = { 0 };
+
+			// Create vertex buffer
+			uint32_t vertexMemorySize = sizeof(ImDrawVert) * imDrawData->TotalVtxCount;
+			uint32_t indexMemorySize = sizeof(ImDrawIdx) * imDrawData->TotalIdxCount;
+			if (vertexMemorySize && indexMemorySize) {
+				if (mUiVbo.allocationInfo.size < vertexMemorySize) {
+					if (mUiVbo.allocationInfo.pMappedData != nullptr) {
+						vmaDestroyBuffer(mAllocator, mUiVbo.memoryResource, mUiVbo.allocation);
+					}
+					VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO }; bufferInfo.size = vertexMemorySize;
+					bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+					VmaAllocationCreateInfo allocCreateInfo = {};
+					allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+					allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					vmaCreateBuffer(
+						mAllocator,
+						&bufferInfo,
+						&allocCreateInfo,
+						&mUiVbo.memoryResource,
+						&mUiVbo.allocation,
+						&mUiVbo.allocationInfo);
+
+				}
+
+				if (mUiIbo.allocationInfo.size < indexMemorySize) {
+					if (mUiIbo.allocationInfo.pMappedData != nullptr) {
+						vmaDestroyBuffer(mAllocator, mUiIbo.memoryResource, mUiIbo.allocation);
+					}
+					VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+					iboInfo.size = indexMemorySize;
+					iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+					VmaAllocationCreateInfo indexAllocCreateInfo = {};
+					indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+					indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					vmaCreateBuffer(
+						mAllocator,
+						&iboInfo,
+						&indexAllocCreateInfo,
+						&mUiIbo.memoryResource,
+						&mUiIbo.allocation,
+						&mUiIbo.allocationInfo);
+
+				}
+
+				ImDrawVert* vertDst = static_cast<ImDrawVert*>(mUiVbo.allocationInfo.pMappedData);
+				ImDrawIdx* indexDst = static_cast<ImDrawIdx*>(mUiIbo.allocationInfo.pMappedData);
+
+				for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
+					const ImDrawList* cmdList = imDrawData->CmdLists[i];
+					memcpy(vertDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+					memcpy(indexDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+					vertDst += cmdList->VtxBuffer.Size;
+					indexDst += cmdList->IdxBuffer.Size;
+				}
+
+				vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mUiVbo.memoryResource, offsets);
+				vkCmdBindIndexBuffer(mCommandBuffer, mUiIbo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+
+				int vertexOffset = 0;
+				int indexOffset = 0;
+				for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
+					const ImDrawList* cmdList = imDrawData->CmdLists[i];
+					for (int j = 0; j < cmdList->CmdBuffer.Size; ++j) {
+						const ImDrawCmd* cmd = &cmdList->CmdBuffer[j];
+						vkCmdDrawIndexed(mCommandBuffer, cmd->ElemCount, 1, indexOffset, vertexOffset, 0);
+						indexOffset += cmd->ElemCount;
+					}
+					vertexOffset += cmdList->VtxBuffer.Size;
+				}
+			}
+		}
+
 		vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 	}
 
 	VkSemaphore Renderer::drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores, uint32_t waitSemaphoreCount) {
+		ImGui::NewFrame();
 		// update uniforms
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
@@ -439,6 +647,12 @@ namespace hvk {
 			//ubo.modelViewProj[1][1] *= -1;
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
+
+		ImGui::Text("Text Blah");
+		ImGui::ShowDemoWindow();
+
+		ImGui::EndFrame();
+		ImGui::Render();
 
 		// record the command buffer
 		recordCommandBuffer(framebuffer);

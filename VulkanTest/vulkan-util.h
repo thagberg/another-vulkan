@@ -853,9 +853,11 @@ namespace hvk {
         VmaAllocator allocator,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-		std::vector<unsigned char>& imageData,
+		//std::vector<unsigned char>& imageData,
+		unsigned char* imageData,
 		int imageWidth,
 		int imageHeight,
+		int components,
 		int bitDepth) {
 
         hvk::Resource<VkImage> textureResource;
@@ -869,10 +871,7 @@ namespace hvk {
         }
 		*/
 
-        //VkDeviceSize imageSize = texWidth * texHeight * BYTES_PER_PIXEL;
-		//VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
-		VkDeviceSize imageSize = imageData.size() * sizeof(imageData[0]);
-		// TODO: figure out why imageWidth * imageHeight * bitDepth is giving an incorrect image size
+		VkDeviceSize imageSize = imageWidth * imageHeight * components * (bitDepth / 8);
 
         // copy image data into a staging buffer which will then be used
         // to transfer to a Vulkan image
@@ -896,7 +895,8 @@ namespace hvk {
 
         void* stagingData;
         vmaMapMemory(allocator, stagingAllocation, &stagingData);
-        memcpy(stagingData, imageData.data(), imageSize);
+        //memcpy(stagingData, imageData.data(), imageSize);
+        memcpy(stagingData, imageData, imageSize);
         vmaUnmapMemory(allocator, stagingAllocation);
 
         // free the pixel data

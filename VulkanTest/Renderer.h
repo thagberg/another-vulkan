@@ -53,6 +53,11 @@ namespace hvk {
 		VkPipelineLayout mPipelineLayout;
 		VkPipeline mPipeline;
 		VkPipeline mNormalsPipeline;
+		VkPipeline mUiPipeline;
+		VkPipelineLayout mUiPipelineLayout;
+		VkDescriptorSet mUiDescriptorSet;
+		Resource<VkBuffer> mUiVbo;
+		Resource<VkBuffer> mUiIbo;
 		VkRenderPass mRenderPass;
 		VkExtent2D mExtent;
 		VkSemaphore mRenderFinished;
@@ -69,7 +74,8 @@ namespace hvk {
 			const char* vertShaderFile, 
 			const char* fragShaderFile,
 			VkExtent2D& extent,
-			VkPipelineVertexInputStateCreateInfo& vertexInputInfo);
+			VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
+			VkPipelineLayout& pipelineLayout);
 
 	public:
 		Renderer();

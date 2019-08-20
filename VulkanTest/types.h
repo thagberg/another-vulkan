@@ -13,6 +13,9 @@
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexUVFormat VK_FORMAT_R32G32_SFLOAT
 #define VertexNormalFormat VK_FORMAT_R32G32B32_SFLOAT
+#define UiVertexPositionFormat VK_FORMAT_R32G32_SFLOAT
+#define UiVertexUVFormat VK_FORMAT_R32G32_SFLOAT
+#define UiVertexColorFormat VK_FORMAT_R8G8B8A8_UNORM
 
 namespace hvk {
 
@@ -128,5 +131,10 @@ namespace hvk {
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 modelViewProj;
+	};
+
+	struct UiPushConstant {
+		glm::vec2 scale;
+		glm::vec2 pos;
 	};
 }
