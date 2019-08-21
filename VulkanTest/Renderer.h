@@ -56,6 +56,8 @@ namespace hvk {
 		VkPipeline mUiPipeline;
 		VkPipelineLayout mUiPipelineLayout;
 		VkDescriptorSet mUiDescriptorSet;
+		VkImageView mUiFontView;
+		VkSampler mUiFontSampler;
 		Resource<VkBuffer> mUiVbo;
 		Resource<VkBuffer> mUiIbo;
 		VkRenderPass mRenderPass;
@@ -75,7 +77,8 @@ namespace hvk {
 			const char* fragShaderFile,
 			VkExtent2D& extent,
 			VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-			VkPipelineLayout& pipelineLayout);
+			VkPipelineLayout& pipelineLayout,
+			std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments);
 
 	public:
 		Renderer();

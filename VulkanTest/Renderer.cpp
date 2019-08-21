@@ -128,13 +128,20 @@ namespace hvk {
 		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
 		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
 
+		VkPipelineColorBlendAttachmentState blendAttachment = {};
+		blendAttachment.blendEnable = VK_FALSE;
+		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments = { blendAttachment };
+
 		mPipeline = generatePipeline(
 			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 			"shaders/compiled/vert.spv",
 			"shaders/compiled/frag.spv",
 			extent,
 			modelVertexInputInfo,
-			mPipelineLayout);
+			mPipelineLayout,
+			blendAttachments);
 
 		VkVertexInputBindingDescription normalBindingDescription = hvk::ColorVertex::getBindingDescription();
 		auto normalAttributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
@@ -151,16 +158,17 @@ namespace hvk {
 			"shaders/compiled/normal_f.spv",
 			extent,
 			normalVertexInputInfo,
-			mPipelineLayout);
+			mPipelineLayout,
+			blendAttachments);
 
 		// Initialize Imgui stuff
 		unsigned char* fontTextureData;
-		int fontTextWidth, fontTextHeight;
+		int fontTextWidth, fontTextHeight, bytesPerPixel;
 		ImGuiIO& io = ImGui::GetIO();
-		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight);
+		io.Fonts->AddFontDefault();
+		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight, &bytesPerPixel);
 		io.DisplaySize = ImVec2(mExtent.width, mExtent.height);
 		io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
-
 
         Resource<VkImage> uiFont = createTextureImage(
 			mDevice.device, 
@@ -170,12 +178,11 @@ namespace hvk {
 			fontTextureData,
 			fontTextWidth,
 			fontTextHeight,
-			4,
-			8);
+			bytesPerPixel);
 
 		VkDescriptorSetLayout uiDescriptorSetLayout;
-		VkImageView uiFontView = createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-		VkSampler uiFontSampler = createTextureSampler(mDevice.device);
+		mUiFontView = createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+		mUiFontSampler = createTextureSampler(mDevice.device);
 
 		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
 		uiLayoutImageBinding.binding = 0;
@@ -199,8 +206,8 @@ namespace hvk {
 
 		VkDescriptorImageInfo fontImageInfo = {};
 		fontImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		fontImageInfo.imageView = uiFontView;
-		fontImageInfo.sampler = uiFontSampler;
+		fontImageInfo.imageView = mUiFontView;
+		fontImageInfo.sampler = mUiFontSampler;
 
 		VkWriteDescriptorSet fontDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 		fontDescriptorWrite.dstSet = mUiDescriptorSet;
@@ -252,13 +259,27 @@ namespace hvk {
 		uiVertexInputInfo.vertexAttributeDescriptionCount = uiAttributeDescriptions.size();
 		uiVertexInputInfo.pVertexAttributeDescriptions = uiAttributeDescriptions.data();
 
+		VkPipelineColorBlendAttachmentState uiBlendAttachment = {};
+		uiBlendAttachment.blendEnable = VK_TRUE;
+		//uiBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_FLAG_BITS_MAX_ENUM; // all color components
+		uiBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		uiBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		uiBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		uiBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		uiBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		uiBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		uiBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		std::vector<VkPipelineColorBlendAttachmentState> uiBlendAttachments = { uiBlendAttachment };
+
 		mUiPipeline = generatePipeline(
 			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 			"shaders/compiled/ui_v.spv",
 			"shaders/compiled/ui_f.spv",
 			extent,
 			uiVertexInputInfo,
-			mUiPipelineLayout);
+			mUiPipelineLayout,
+			uiBlendAttachments);
 
 		mInitialized = true;
 	}
@@ -269,7 +290,8 @@ namespace hvk {
 		const char* fragShaderFile,
 		VkExtent2D& extent,
 		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-		VkPipelineLayout& pipelineLayout) {
+		VkPipelineLayout& pipelineLayout,
+		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
 
 		VkPipeline pipeline;
 
@@ -296,6 +318,7 @@ namespace hvk {
 		modelInputAssembly.topology = topology;
 		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
 
+
 		pipeline = createCustomizedGraphicsPipeline(
 			mDevice.device, 
 			extent, 
@@ -303,7 +326,8 @@ namespace hvk {
 			pipelineLayout,
 			modelShaderStages,
 			vertexInputInfo,
-			modelInputAssembly);
+			modelInputAssembly,
+			blendAttachments);
 
 		vkDestroyShaderModule(mDevice.device, modelVertShaderModule, nullptr);
 		vkDestroyShaderModule(mDevice.device, modelFragShaderModule, nullptr);
@@ -385,8 +409,7 @@ namespace hvk {
 			tex->image.data(),
 			tex->width,
 			tex->height,
-			tex->component,
-			tex->bits);
+			tex->component * (tex->bits/8));
         newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
         newRenderable.textureSampler = createTextureSampler(mDevice.device);
 
@@ -637,6 +660,8 @@ namespace hvk {
 	}
 
 	VkSemaphore Renderer::drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores, uint32_t waitSemaphoreCount) {
+		ImGuiIO& io = ImGui::GetIO();
+		io.DeltaTime = 1.f / 60.f;
 		ImGui::NewFrame();
 		// update uniforms
 		for (const auto& renderable : mRenderables) {
@@ -648,7 +673,9 @@ namespace hvk {
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 
+		ImGui::Begin("Test Window");
 		ImGui::Text("Text Blah");
+		ImGui::End();
 		ImGui::ShowDemoWindow();
 
 		ImGui::EndFrame();

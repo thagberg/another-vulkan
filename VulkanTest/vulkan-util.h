@@ -355,7 +355,8 @@ namespace hvk {
 		VkPipelineLayout pipelineLayout,
 		std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
 		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-		VkPipelineInputAssemblyStateCreateInfo& inputAssembly) {
+		VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
+		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
 
 		VkPipeline graphicsPipeline;
 
@@ -401,20 +402,17 @@ namespace hvk {
         multisampling.alphaToCoverageEnable = VK_FALSE;
         multisampling.alphaToOneEnable = VK_FALSE;
 
-        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
-
         VkPipelineColorBlendStateCreateInfo colorBlending = {};
         colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        colorBlending.logicOpEnable = VK_FALSE;
-        colorBlending.attachmentCount = 1;
-        colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.attachmentCount = blendAttachments.size();
+		colorBlending.pAttachments = blendAttachments.data();
 
 		VkPipelineDepthStencilStateCreateInfo depthCreate = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 		depthCreate.depthTestEnable = VK_TRUE;
 		depthCreate.depthWriteEnable = VK_TRUE;
-		depthCreate.depthCompareOp = VK_COMPARE_OP_LESS;
+		//depthCreate.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthCreate.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 		depthCreate.depthBoundsTestEnable = VK_FALSE;
 		depthCreate.minDepthBounds = 0.0f;
 		depthCreate.maxDepthBounds = 1.0f;
@@ -853,11 +851,9 @@ namespace hvk {
         VmaAllocator allocator,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-		//std::vector<unsigned char>& imageData,
 		unsigned char* imageData,
 		int imageWidth,
 		int imageHeight,
-		int components,
 		int bitDepth) {
 
         hvk::Resource<VkImage> textureResource;
@@ -871,7 +867,8 @@ namespace hvk {
         }
 		*/
 
-		VkDeviceSize imageSize = imageWidth * imageHeight * components * (bitDepth / 8);
+		//VkDeviceSize imageSize = imageWidth * imageHeight * components * bitDepth;
+		VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
 
         // copy image data into a staging buffer which will then be used
         // to transfer to a Vulkan image
@@ -946,14 +943,16 @@ namespace hvk {
             imageWidth,
             imageHeight);
 
-        transitionImageLayout(
-            device,
-            commandPool,
-            graphicsQueue,
-            textureResource.memoryResource,
-            VK_FORMAT_R8G8B8A8_UNORM,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+
+		transitionImageLayout(
+			device,
+			commandPool,
+			graphicsQueue,
+			textureResource.memoryResource,
+			VK_FORMAT_R8G8B8A8_UNORM,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
 
         vmaDestroyBuffer(allocator, imageStagingBuffer, stagingAllocation);
 
@@ -984,12 +983,16 @@ namespace hvk {
         VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         createInfo.magFilter = VK_FILTER_LINEAR;
         createInfo.minFilter = VK_FILTER_LINEAR;
-        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         createInfo.anisotropyEnable = VK_TRUE;
         createInfo.maxAnisotropy = 16;
-        createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        //createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
         createInfo.unnormalizedCoordinates = VK_FALSE;
         createInfo.compareEnable = VK_FALSE;
         createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
