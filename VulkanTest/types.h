@@ -12,6 +12,10 @@
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexUVFormat VK_FORMAT_R32G32_SFLOAT
+#define VertexNormalFormat VK_FORMAT_R32G32B32_SFLOAT
+#define UiVertexPositionFormat VK_FORMAT_R32G32_SFLOAT
+#define UiVertexUVFormat VK_FORMAT_R32G32_SFLOAT
+#define UiVertexColorFormat VK_FORMAT_R8G8B8A8_UNORM
 
 namespace hvk {
 
@@ -59,7 +63,7 @@ namespace hvk {
 
 	struct Vertex {
 		glm::vec3 pos;
-		glm::vec3 color;
+		glm::vec3 normal;
 		glm::vec2 texCoord;
 
 		static VkVertexInputBindingDescription getBindingDescription() {
@@ -81,8 +85,8 @@ namespace hvk {
 
 			attributeDescriptions[1].binding = 0;
 			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VertexColorFormat;
-			attributeDescriptions[1].offset = offsetof(Vertex, color);
+			attributeDescriptions[1].format = VertexNormalFormat;
+			attributeDescriptions[1].offset = offsetof(Vertex, normal);
 
 			attributeDescriptions[2].binding = 0;
 			attributeDescriptions[2].location = 2;
@@ -93,9 +97,44 @@ namespace hvk {
 		}
 	};
 
+	struct ColorVertex {
+		glm::vec3 pos;
+		glm::vec3 color;
+
+		static VkVertexInputBindingDescription getBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription = {};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(ColorVertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			return bindingDescription;
+		}
+
+		static std::array<VkVertexInputAttributeDescription, 2> getAttributeDescriptions() {
+			std::array<VkVertexInputAttributeDescription, 2> attributeDescriptions = {};
+
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VertexPositionFormat;
+			attributeDescriptions[0].offset = offsetof(ColorVertex, pos);
+
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VertexColorFormat;
+			attributeDescriptions[1].offset = offsetof(ColorVertex, color);
+
+			return attributeDescriptions;
+		}
+	};
+
 	struct UniformBufferObject {
 		glm::mat4 model;
 		glm::mat4 view;
 		glm::mat4 modelViewProj;
+	};
+
+	struct UiPushConstant {
+		glm::vec2 scale;
+		glm::vec2 pos;
 	};
 }

@@ -348,6 +348,99 @@ namespace hvk {
         return pipelineLayout;
     }
 
+	VkPipeline createCustomizedGraphicsPipeline(
+		VkDevice device,
+		VkExtent2D swapchainExtent,
+		VkRenderPass renderPass,
+		VkPipelineLayout pipelineLayout,
+		std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
+		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
+		VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
+		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
+
+		VkPipeline graphicsPipeline;
+
+        VkViewport viewport = {};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = (float)swapchainExtent.width;
+        viewport.height = (float)swapchainExtent.height;
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+
+        VkRect2D scissor = {};
+        scissor.offset = { 0, 0 };
+        scissor.extent = swapchainExtent;
+
+        VkPipelineViewportStateCreateInfo viewportState = {};
+        viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+        viewportState.viewportCount = 1;
+        viewportState.pViewports = &viewport;
+        viewportState.scissorCount = 1;
+        viewportState.pScissors = &scissor;
+
+        VkPipelineRasterizationStateCreateInfo rasterizer = {};
+        rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+        rasterizer.depthClampEnable = VK_FALSE;
+        rasterizer.rasterizerDiscardEnable = VK_FALSE;
+        rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+        rasterizer.lineWidth = 1.0f;
+        rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+        rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
+        //rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+        rasterizer.depthBiasEnable = VK_FALSE;
+        rasterizer.depthBiasConstantFactor = 0.0f;
+        rasterizer.depthBiasClamp = 0.0f;
+        rasterizer.depthBiasSlopeFactor = 0.0f;
+
+        VkPipelineMultisampleStateCreateInfo multisampling = {};
+        multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+        multisampling.sampleShadingEnable = VK_FALSE;
+        multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        multisampling.minSampleShading = 1.0f;
+        multisampling.pSampleMask = nullptr;
+        multisampling.alphaToCoverageEnable = VK_FALSE;
+        multisampling.alphaToOneEnable = VK_FALSE;
+
+        VkPipelineColorBlendStateCreateInfo colorBlending = {};
+        colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.attachmentCount = blendAttachments.size();
+		colorBlending.pAttachments = blendAttachments.data();
+
+		VkPipelineDepthStencilStateCreateInfo depthCreate = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+		depthCreate.depthTestEnable = VK_TRUE;
+		depthCreate.depthWriteEnable = VK_TRUE;
+		//depthCreate.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthCreate.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+		depthCreate.depthBoundsTestEnable = VK_FALSE;
+		depthCreate.minDepthBounds = 0.0f;
+		depthCreate.maxDepthBounds = 1.0f;
+		depthCreate.stencilTestEnable = VK_FALSE;
+
+        VkGraphicsPipelineCreateInfo pipelineInfo = {};
+        pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+        pipelineInfo.stageCount = shaderStages.size();
+        pipelineInfo.pStages = shaderStages.data();
+        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.pInputAssemblyState = &inputAssembly;
+        pipelineInfo.pViewportState = &viewportState;
+        pipelineInfo.pRasterizationState = &rasterizer;
+        pipelineInfo.pMultisampleState = &multisampling;
+        pipelineInfo.pDepthStencilState = &depthCreate;
+        pipelineInfo.pColorBlendState = &colorBlending;
+        pipelineInfo.pDynamicState = nullptr;
+        pipelineInfo.layout = pipelineLayout;
+        pipelineInfo.renderPass = renderPass;
+        pipelineInfo.subpass = 0;
+        pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+        pipelineInfo.basePipelineIndex = -1;
+
+		assert(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) == VK_SUCCESS);
+
+        return graphicsPipeline;
+	}
+
     VkPipeline createGraphicsPipeline(
         VkDevice device,
         VkExtent2D swapchainExtent,
@@ -758,7 +851,7 @@ namespace hvk {
         VmaAllocator allocator,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-		std::vector<unsigned char>& imageData,
+		unsigned char* imageData,
 		int imageWidth,
 		int imageHeight,
 		int bitDepth) {
@@ -774,10 +867,8 @@ namespace hvk {
         }
 		*/
 
-        //VkDeviceSize imageSize = texWidth * texHeight * BYTES_PER_PIXEL;
-		//VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
-		VkDeviceSize imageSize = imageData.size() * sizeof(imageData[0]);
-		// TODO: figure out why imageWidth * imageHeight * bitDepth is giving an incorrect image size
+		//VkDeviceSize imageSize = imageWidth * imageHeight * components * bitDepth;
+		VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
 
         // copy image data into a staging buffer which will then be used
         // to transfer to a Vulkan image
@@ -801,7 +892,8 @@ namespace hvk {
 
         void* stagingData;
         vmaMapMemory(allocator, stagingAllocation, &stagingData);
-        memcpy(stagingData, imageData.data(), imageSize);
+        //memcpy(stagingData, imageData.data(), imageSize);
+        memcpy(stagingData, imageData, imageSize);
         vmaUnmapMemory(allocator, stagingAllocation);
 
         // free the pixel data
@@ -851,14 +943,16 @@ namespace hvk {
             imageWidth,
             imageHeight);
 
-        transitionImageLayout(
-            device,
-            commandPool,
-            graphicsQueue,
-            textureResource.memoryResource,
-            VK_FORMAT_R8G8B8A8_UNORM,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+
+		transitionImageLayout(
+			device,
+			commandPool,
+			graphicsQueue,
+			textureResource.memoryResource,
+			VK_FORMAT_R8G8B8A8_UNORM,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
 
         vmaDestroyBuffer(allocator, imageStagingBuffer, stagingAllocation);
 
@@ -889,12 +983,16 @@ namespace hvk {
         VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
         createInfo.magFilter = VK_FILTER_LINEAR;
         createInfo.minFilter = VK_FILTER_LINEAR;
-        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        //createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         createInfo.anisotropyEnable = VK_TRUE;
         createInfo.maxAnisotropy = 16;
-        createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        //createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
         createInfo.unnormalizedCoordinates = VK_FALSE;
         createInfo.compareEnable = VK_FALSE;
         createInfo.compareOp = VK_COMPARE_OP_ALWAYS;

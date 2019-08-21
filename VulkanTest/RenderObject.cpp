@@ -62,12 +62,13 @@ namespace hvk {
 			tinygltf::Mesh mesh = model.meshes[node.mesh];
 			for (size_t j = 0; j < mesh.primitives.size(); ++j) {
 				tinygltf::Primitive prim = mesh.primitives[j];
-				// TODO: Process the Normal attribute as well
 				const auto positionAttr = prim.attributes.find("POSITION");
 				const auto uvAttr = prim.attributes.find("TEXCOORD_0");
+				const auto normalAttr = prim.attributes.find("NORMAL");
 
 				assert(positionAttr != prim.attributes.end());
 				assert(uvAttr != prim.attributes.end());
+				assert(normalAttr != prim.attributes.end());
 
 				// process position data
 				const tinygltf::Accessor positionAccess = model.accessors[positionAttr->second];
@@ -84,6 +85,13 @@ namespace hvk {
 				const float* uvData = reinterpret_cast<const float*>(
 					&(model.buffers[uvView.buffer].data[uvView.byteOffset + uvAccess.byteOffset]));
 
+				// process normal data
+				const tinygltf::Accessor normalAccess = model.accessors[normalAttr->second];
+				assert(normalAccess.type == TINYGLTF_TYPE_VEC3);
+				const tinygltf::BufferView normalView = model.bufferViews[normalAccess.bufferView];
+				const float* normalData = reinterpret_cast<const float*>(
+					&(model.buffers[normalView.buffer].data[normalView.byteOffset + normalAccess.byteOffset]));
+
 				assert(positionAccess.count == uvAccess.count);
 
 				//RenderObject::allocateVertices(numPositions, vertices);
@@ -92,7 +100,7 @@ namespace hvk {
 				for (size_t k = 0; k < numPositions; ++k) {
 					Vertex v{};
 					v.pos = glm::make_vec3(&positionData[k * 3]);
-					v.color = glm::vec3(1.0f, 0.f, 0.f);
+					v.normal = glm::make_vec3(&normalData[k * 3]);
 					v.texCoord = glm::make_vec2(&uvData[k * 2]);
 					vertices->push_back(v);
 				}

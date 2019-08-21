@@ -14,6 +14,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include "tiny_gltf.h"
+#include "imgui/imgui.h"
 
 #include "vulkanapp.h"
 #include "vulkan-util.h"
@@ -75,6 +76,10 @@ void mouseCallback(GLFWwindow* window, double x, double y) {
 	currentApp->processMouseInput(x, y);
 }
 
+void clickCallback(GLFWwindow* window, int button, int action, int mods) {
+	currentApp->processMouseClick(button, action == GLFW_PRESS);
+}
+
 namespace hvk {
 
     VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
@@ -88,7 +93,8 @@ namespace hvk {
         mWindow(hvk::initializeWindow(width, height, windowTitle), glfwDestroyWindow),
 		mRenderer(),
 		mLastX(0.f),
-		mLastY(0.f)
+		mLastY(0.f),
+		mMouseLeftDown(false)
     {
         // TODO: this is super bad, but IDGAF right now
         currentApp = this;
@@ -359,11 +365,12 @@ namespace hvk {
     }
 
 	void VulkanApp::initializeApp() {
-		glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		//glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 
     void VulkanApp::init() {
         try {
+			ImGui::CreateContext();
             std::cout << "init vulkan" << std::endl;
             initializeVulkan();
             enableVulkanValidationLayers();
@@ -409,8 +416,14 @@ namespace hvk {
         glfwSetKeyCallback(mWindow.get(), keyCallback);
 		glfwGetCursorPos(mWindow.get(), &mLastX, &mLastY);
 		glfwSetCursorPosCallback(mWindow.get(), mouseCallback);
+		glfwSetMouseButtonCallback(mWindow.get(), clickCallback);
+		ImGuiIO& io = ImGui::GetIO();
         while (!glfwWindowShouldClose(mWindow.get())) {
             glfwPollEvents();
+
+			io.DeltaTime = 1.0f / 60.0f; // TODO: need to actually track time
+			io.MousePos = ImVec2(mLastX, mLastY);
+			io.MouseDown[0] = mMouseLeftDown;
 
 			// camera updates
 			glm::vec3 forwardMovement = 0.01f * mCameraNode->getForwardVector();
@@ -458,6 +471,9 @@ namespace hvk {
             else if (keyCode == GLFW_KEY_DOWN) {
                 mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, -0.1f)));
             }
+			else if (keyCode == GLFW_KEY_Y) {
+				Renderer::setDrawNormals(!Renderer::getDrawNormals());
+			}
         }
 
 		auto mapping = cameraControlMapping.find(keyCode);
@@ -477,5 +493,9 @@ namespace hvk {
 		float yaw = deltaX * sensitivity;
 
 		mCameraNode->rotate(glm::radians(pitch), glm::radians(yaw));
+	}
+
+	void VulkanApp::processMouseClick(int button, bool pressed) {
+		mMouseLeftDown = pressed;
 	}
 }

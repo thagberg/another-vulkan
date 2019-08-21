@@ -3,10 +3,9 @@
 #include <array>
 #include <vector>
 
-/*
-*/
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "imgui/imgui.h"
 
 #include "Renderer.h"
 #define HVK_UTIL_IMPLEMENTATION
@@ -17,8 +16,12 @@
 
 namespace hvk {
 
+	bool Renderer::sDrawNormals = true;
+
 	Renderer::Renderer() :
-		mFirstRenderIndexAvailable(-1)
+		mFirstRenderIndexAvailable(-1),
+		mUiVbo{},
+		mUiIbo{}
 	{
 	}
 
@@ -114,9 +117,220 @@ namespace hvk {
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineLayout) == VK_SUCCESS);
 
-		mPipeline = createGraphicsPipeline(mDevice.device, extent, mRenderPass, mPipelineLayout);
+		VkVertexInputBindingDescription modelBindingDescription = hvk::Vertex::getBindingDescription();
+		auto modelAttributeDescriptions = hvk::Vertex::getAttributeDescriptions();
+
+		VkPipelineVertexInputStateCreateInfo modelVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		modelVertexInputInfo.vertexBindingDescriptionCount = 1;
+		modelVertexInputInfo.pVertexBindingDescriptions = &modelBindingDescription;
+		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
+		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
+
+		VkPipelineColorBlendAttachmentState blendAttachment = {};
+		blendAttachment.blendEnable = VK_FALSE;
+		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments = { blendAttachment };
+
+		mPipeline = generatePipeline(
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			"shaders/compiled/vert.spv",
+			"shaders/compiled/frag.spv",
+			extent,
+			modelVertexInputInfo,
+			mPipelineLayout,
+			blendAttachments);
+
+		VkVertexInputBindingDescription normalBindingDescription = hvk::ColorVertex::getBindingDescription();
+		auto normalAttributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
+
+		VkPipelineVertexInputStateCreateInfo normalVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		normalVertexInputInfo.vertexBindingDescriptionCount = 1;
+		normalVertexInputInfo.pVertexBindingDescriptions = &normalBindingDescription;
+		normalVertexInputInfo.vertexAttributeDescriptionCount = normalAttributeDescriptions.size();
+		normalVertexInputInfo.pVertexAttributeDescriptions = normalAttributeDescriptions.data();
+
+		mNormalsPipeline = generatePipeline(
+			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+			"shaders/compiled/normal_v.spv",
+			"shaders/compiled/normal_f.spv",
+			extent,
+			normalVertexInputInfo,
+			mPipelineLayout,
+			blendAttachments);
+
+		// Initialize Imgui stuff
+		unsigned char* fontTextureData;
+		int fontTextWidth, fontTextHeight, bytesPerPixel;
+		ImGuiIO& io = ImGui::GetIO();
+		io.Fonts->AddFontDefault();
+		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight, &bytesPerPixel);
+		io.DisplaySize = ImVec2(mExtent.width, mExtent.height);
+		io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
+
+        Resource<VkImage> uiFont = createTextureImage(
+			mDevice.device, 
+			mAllocator, 
+			mCommandPool, 
+			mGraphicsQueue,
+			fontTextureData,
+			fontTextWidth,
+			fontTextHeight,
+			bytesPerPixel);
+
+		VkDescriptorSetLayout uiDescriptorSetLayout;
+		mUiFontView = createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+		mUiFontSampler = createTextureSampler(mDevice.device);
+
+		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
+		uiLayoutImageBinding.binding = 0;
+		uiLayoutImageBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		uiLayoutImageBinding.descriptorCount = 1;
+		uiLayoutImageBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		uiLayoutImageBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo uiLayoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		uiLayoutInfo.bindingCount = 1;
+		uiLayoutInfo.pBindings = &uiLayoutImageBinding;
+
+		assert(vkCreateDescriptorSetLayout(mDevice.device, &uiLayoutInfo, nullptr, &uiDescriptorSetLayout) == VK_SUCCESS);
+
+		VkDescriptorSetAllocateInfo uiAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		uiAlloc.descriptorPool = mDescriptorPool;
+		uiAlloc.descriptorSetCount = 1;
+		uiAlloc.pSetLayouts = &uiDescriptorSetLayout;
+
+		assert(vkAllocateDescriptorSets(mDevice.device, &uiAlloc, &mUiDescriptorSet) == VK_SUCCESS);
+
+		VkDescriptorImageInfo fontImageInfo = {};
+		fontImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		fontImageInfo.imageView = mUiFontView;
+		fontImageInfo.sampler = mUiFontSampler;
+
+		VkWriteDescriptorSet fontDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		fontDescriptorWrite.dstSet = mUiDescriptorSet;
+		fontDescriptorWrite.dstBinding = 0;
+		fontDescriptorWrite.dstArrayElement = 0;
+		fontDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		fontDescriptorWrite.descriptorCount = 1;
+		fontDescriptorWrite.pImageInfo = &fontImageInfo;
+
+		vkUpdateDescriptorSets(mDevice.device, 1, &fontDescriptorWrite, 0, nullptr);
+
+		VkPushConstantRange uiPushRange = {};
+		uiPushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uiPushRange.size = sizeof(hvk::UiPushConstant);
+		uiPushRange.offset = 0;
+
+		VkPipelineLayoutCreateInfo uiLayoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+		uiLayoutCreate.setLayoutCount = 1;
+		uiLayoutCreate.pSetLayouts = &uiDescriptorSetLayout;
+		uiLayoutCreate.pushConstantRangeCount = 1;
+		uiLayoutCreate.pPushConstantRanges = &uiPushRange;
+
+		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mUiPipelineLayout) == VK_SUCCESS);
+
+		VkVertexInputBindingDescription uiBindingDescription = {};
+		uiBindingDescription.binding = 0;
+		uiBindingDescription.stride = sizeof(ImDrawVert);
+		uiBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;	
+
+		std::array<VkVertexInputAttributeDescription, 3> uiAttributeDescriptions = {};
+		uiAttributeDescriptions[0].binding = 0;
+		uiAttributeDescriptions[0].location = 0;
+		uiAttributeDescriptions[0].format = UiVertexPositionFormat;
+		uiAttributeDescriptions[0].offset = offsetof(ImDrawVert, pos);
+
+		uiAttributeDescriptions[1].binding = 0;
+		uiAttributeDescriptions[1].location = 1;
+		uiAttributeDescriptions[1].format = UiVertexUVFormat;
+		uiAttributeDescriptions[1].offset = offsetof(ImDrawVert, uv);
+
+		uiAttributeDescriptions[2].binding = 0;
+		uiAttributeDescriptions[2].location = 2;
+		uiAttributeDescriptions[2].format = UiVertexColorFormat;
+		uiAttributeDescriptions[2].offset = offsetof(ImDrawVert, col);
+
+		VkPipelineVertexInputStateCreateInfo uiVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+		uiVertexInputInfo.vertexBindingDescriptionCount = 1;
+		uiVertexInputInfo.pVertexBindingDescriptions = &uiBindingDescription;
+		uiVertexInputInfo.vertexAttributeDescriptionCount = uiAttributeDescriptions.size();
+		uiVertexInputInfo.pVertexAttributeDescriptions = uiAttributeDescriptions.data();
+
+		VkPipelineColorBlendAttachmentState uiBlendAttachment = {};
+		uiBlendAttachment.blendEnable = VK_TRUE;
+		//uiBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_FLAG_BITS_MAX_ENUM; // all color components
+		uiBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		uiBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		uiBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		uiBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+		uiBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		uiBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		uiBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+
+		std::vector<VkPipelineColorBlendAttachmentState> uiBlendAttachments = { uiBlendAttachment };
+
+		mUiPipeline = generatePipeline(
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			"shaders/compiled/ui_v.spv",
+			"shaders/compiled/ui_f.spv",
+			extent,
+			uiVertexInputInfo,
+			mUiPipelineLayout,
+			uiBlendAttachments);
 
 		mInitialized = true;
+	}
+
+	VkPipeline Renderer::generatePipeline(
+		VkPrimitiveTopology topology, 
+		const char* vertShaderFile, 
+		const char* fragShaderFile,
+		VkExtent2D& extent,
+		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
+		VkPipelineLayout& pipelineLayout,
+		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
+
+		VkPipeline pipeline;
+
+		auto modelVertShaderCode = readFile(vertShaderFile);
+		auto modelFragShaderCode = readFile(fragShaderFile);
+		VkShaderModule modelVertShaderModule = createShaderModule(mDevice.device, modelVertShaderCode);
+		VkShaderModule modelFragShaderModule = createShaderModule(mDevice.device, modelFragShaderCode);
+
+		VkPipelineShaderStageCreateInfo modelVertStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+		modelVertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		modelVertStageInfo.module = modelVertShaderModule;
+		modelVertStageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo modelFragStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+		modelFragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		modelFragStageInfo.module = modelFragShaderModule;
+		modelFragStageInfo.pName = "main";
+
+		std::vector<VkPipelineShaderStageCreateInfo> modelShaderStages = {
+			modelVertStageInfo, modelFragStageInfo
+		};
+
+		VkPipelineInputAssemblyStateCreateInfo modelInputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+		modelInputAssembly.topology = topology;
+		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
+
+
+		pipeline = createCustomizedGraphicsPipeline(
+			mDevice.device, 
+			extent, 
+			mRenderPass, 
+			pipelineLayout,
+			modelShaderStages,
+			vertexInputInfo,
+			modelInputAssembly,
+			blendAttachments);
+
+		vkDestroyShaderModule(mDevice.device, modelVertShaderModule, nullptr);
+		vkDestroyShaderModule(mDevice.device, modelFragShaderModule, nullptr);
+
+		return pipeline;
 	}
 
 	void Renderer::addRenderable(RenderObjRef renderObject) {
@@ -190,10 +404,10 @@ namespace hvk {
 			mAllocator, 
 			mCommandPool, 
 			mGraphicsQueue,
-			tex->image,
+			tex->image.data(),
 			tex->width,
 			tex->height,
-			tex->bits);
+			tex->component * (tex->bits/8));
         newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
         newRenderable.textureSampler = createTextureSampler(mDevice.device);
 
@@ -238,6 +452,43 @@ namespace hvk {
 			std::array<VkWriteDescriptorSet, 2> descriptorWrites = { descriptorWrite, imageDescriptorWrite };
 
 			vkUpdateDescriptorSets(mDevice.device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+		}
+
+		// create buffers for rendering normals
+		newRenderable.numNormalVertices = vertices->size() * 2;
+        uint32_t normalMemorySize = sizeof(ColorVertex) * newRenderable.numNormalVertices;
+        VkBufferCreateInfo normalBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        normalBufferInfo.size = normalMemorySize;
+        normalBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo normalCreateInfo = {};
+        normalCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        normalCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        vmaCreateBuffer(
+            mAllocator,
+            &normalBufferInfo,
+            &normalCreateInfo,
+            &newRenderable.normalVbo.memoryResource,
+            &newRenderable.normalVbo.allocation,
+            &newRenderable.normalVbo.allocationInfo);
+
+		int memOffset = 0;
+		char* copyAddr = reinterpret_cast<char*>(newRenderable.normalVbo.allocationInfo.pMappedData);
+		for (size_t i = 0; i < vertices->size(); ++i) {
+			Vertex v = vertices->at(i);
+			ColorVertex cv = {
+				v.pos,
+				glm::vec3(1.0f, 0.f, 0.f)
+			};
+			memcpy(copyAddr + memOffset, &cv, sizeof(cv));
+			memOffset += sizeof(cv);
+			glm::vec3 p = v.pos + v.normal;
+			ColorVertex cv2 = {
+				v.pos + v.normal * 3.f,
+				glm::vec3(0.f, 1.f, 0.f)
+			};
+			memcpy(copyAddr + memOffset, &cv2, sizeof(cv2));
+			memOffset += sizeof(cv2);
 		}
 
 		//findFirstRenderIndexAvailable();
@@ -292,11 +543,123 @@ namespace hvk {
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
 
+		if (sDrawNormals) {
+			vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mNormalsPipeline);
+			for (const auto& renderable : mRenderables) {
+				vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &renderable.normalVbo.memoryResource, offsets);
+				vkCmdBindDescriptorSets(
+					mCommandBuffer,
+					VK_PIPELINE_BIND_POINT_GRAPHICS,
+					mPipelineLayout,
+					0,
+					1,
+					&renderable.descriptorSet,
+					0,
+					nullptr);
+				vkCmdDraw(mCommandBuffer, renderable.numNormalVertices, 1, 0, 0);
+			}
+		}
+
+		ImGuiIO& io = ImGui::GetIO();
+		ImDrawData* imDrawData = ImGui::GetDrawData();
+
+		if (imDrawData->CmdListsCount > 0) {
+			vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mUiPipeline);
+			vkCmdBindDescriptorSets(
+				mCommandBuffer, 
+				VK_PIPELINE_BIND_POINT_GRAPHICS, 
+				mUiPipelineLayout, 
+				0, 
+				1, 
+				&mUiDescriptorSet, 
+				0, 
+				nullptr);
+			UiPushConstant push = {};
+			push.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
+			push.pos = glm::vec2(-1.f);
+			vkCmdPushConstants(mCommandBuffer, mUiPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
+			VkDeviceSize offsets[1] = { 0 };
+
+			// Create vertex buffer
+			uint32_t vertexMemorySize = sizeof(ImDrawVert) * imDrawData->TotalVtxCount;
+			uint32_t indexMemorySize = sizeof(ImDrawIdx) * imDrawData->TotalIdxCount;
+			if (vertexMemorySize && indexMemorySize) {
+				if (mUiVbo.allocationInfo.size < vertexMemorySize) {
+					if (mUiVbo.allocationInfo.pMappedData != nullptr) {
+						vmaDestroyBuffer(mAllocator, mUiVbo.memoryResource, mUiVbo.allocation);
+					}
+					VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO }; bufferInfo.size = vertexMemorySize;
+					bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+					VmaAllocationCreateInfo allocCreateInfo = {};
+					allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+					allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					vmaCreateBuffer(
+						mAllocator,
+						&bufferInfo,
+						&allocCreateInfo,
+						&mUiVbo.memoryResource,
+						&mUiVbo.allocation,
+						&mUiVbo.allocationInfo);
+
+				}
+
+				if (mUiIbo.allocationInfo.size < indexMemorySize) {
+					if (mUiIbo.allocationInfo.pMappedData != nullptr) {
+						vmaDestroyBuffer(mAllocator, mUiIbo.memoryResource, mUiIbo.allocation);
+					}
+					VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+					iboInfo.size = indexMemorySize;
+					iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+					VmaAllocationCreateInfo indexAllocCreateInfo = {};
+					indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+					indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+					vmaCreateBuffer(
+						mAllocator,
+						&iboInfo,
+						&indexAllocCreateInfo,
+						&mUiIbo.memoryResource,
+						&mUiIbo.allocation,
+						&mUiIbo.allocationInfo);
+
+				}
+
+				ImDrawVert* vertDst = static_cast<ImDrawVert*>(mUiVbo.allocationInfo.pMappedData);
+				ImDrawIdx* indexDst = static_cast<ImDrawIdx*>(mUiIbo.allocationInfo.pMappedData);
+
+				for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
+					const ImDrawList* cmdList = imDrawData->CmdLists[i];
+					memcpy(vertDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
+					memcpy(indexDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
+					vertDst += cmdList->VtxBuffer.Size;
+					indexDst += cmdList->IdxBuffer.Size;
+				}
+
+				vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mUiVbo.memoryResource, offsets);
+				vkCmdBindIndexBuffer(mCommandBuffer, mUiIbo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+
+				int vertexOffset = 0;
+				int indexOffset = 0;
+				for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
+					const ImDrawList* cmdList = imDrawData->CmdLists[i];
+					for (int j = 0; j < cmdList->CmdBuffer.Size; ++j) {
+						const ImDrawCmd* cmd = &cmdList->CmdBuffer[j];
+						vkCmdDrawIndexed(mCommandBuffer, cmd->ElemCount, 1, indexOffset, vertexOffset, 0);
+						indexOffset += cmd->ElemCount;
+					}
+					vertexOffset += cmdList->VtxBuffer.Size;
+				}
+			}
+		}
+
 		vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 	}
 
 	VkSemaphore Renderer::drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores, uint32_t waitSemaphoreCount) {
+		ImGuiIO& io = ImGui::GetIO();
+		ImGui::NewFrame();
 		// update uniforms
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
@@ -306,6 +669,14 @@ namespace hvk {
 			//ubo.modelViewProj[1][1] *= -1;
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
+
+		ImGui::Begin("Test Window");
+		ImGui::Text("Text Blah");
+		ImGui::End();
+		ImGui::ShowDemoWindow();
+
+		ImGui::EndFrame();
+		ImGui::Render();
 
 		// record the command buffer
 		recordCommandBuffer(framebuffer);
