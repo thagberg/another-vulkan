@@ -46,6 +46,7 @@ namespace hvk {
 		Renderer mRenderer;
 
 		double mLastX, mLastY;
+		bool mMouseLeftDown;
 
 		int mWindowWidth, mWindowHeight;
 
@@ -64,6 +65,7 @@ namespace hvk {
 		void run();
         void processKeyInput(int keyCode, bool pressed);
 		void processMouseInput(double x, double y);
+		void processMouseClick(int button, bool pressed);
 
 		window_ptr getWindow() { 
 			return mWindow; 

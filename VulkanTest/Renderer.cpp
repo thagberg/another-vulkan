@@ -39,8 +39,6 @@ namespace hvk {
 		VkFormat colorAttachmentFormat,
 		VkExtent2D extent) {
 
-		ImGui::CreateContext();
-
 		mDevice = device;
 		mGraphicsQueue = graphicsQueue;
 		mRenderPass = renderPass;
@@ -661,7 +659,6 @@ namespace hvk {
 
 	VkSemaphore Renderer::drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores, uint32_t waitSemaphoreCount) {
 		ImGuiIO& io = ImGui::GetIO();
-		io.DeltaTime = 1.f / 60.f;
 		ImGui::NewFrame();
 		// update uniforms
 		for (const auto& renderable : mRenderables) {
