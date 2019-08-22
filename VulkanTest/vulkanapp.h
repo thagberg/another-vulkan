@@ -69,9 +69,6 @@ namespace hvk {
 
 		void init();
 		void run();
-        void processKeyInput(int keyCode, bool pressed);
-		void processMouseInput(double x, double y);
-		void processMouseClick(int button, bool pressed);
 
 		window_ptr getWindow() { 
 			return mWindow; 

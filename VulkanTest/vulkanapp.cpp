@@ -75,18 +75,6 @@ const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0
 };
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    currentApp->processKeyInput(key, (action == GLFW_PRESS || action == GLFW_REPEAT));
-}
-
-void mouseCallback(GLFWwindow* window, double x, double y) {
-	currentApp->processMouseInput(x, y);
-}
-
-void clickCallback(GLFWwindow* window, int button, int action, int mods) {
-	currentApp->processMouseClick(button, action == GLFW_PRESS);
-}
-
 namespace hvk {
 
     VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
@@ -440,6 +428,10 @@ namespace hvk {
 			io.MousePos = ImVec2(mouse.x, mouse.y);
 			io.MouseDown[0] = mouse.leftDown;
 
+			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
+				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
+			}
+
 			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
 			bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
 			if (mouseClicked && !ImGui::IsAnyItemHovered()) {
@@ -488,50 +480,5 @@ namespace hvk {
 		}
 
 		mCameraNode->rotate(glm::radians(cameraRotation.pitch), glm::radians(cameraRotation.yaw));
-	}
-
-    void VulkanApp::processKeyInput(int keyCode, bool pressed) {
-        if (pressed) {
-            if (keyCode == GLFW_KEY_ESCAPE) {
-                glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
-            }
-            else if (keyCode == GLFW_KEY_LEFT) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(-0.1f, 0.0f, 0.0f)));
-            }
-            else if (keyCode == GLFW_KEY_RIGHT) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.1f, 0.0f, 0.0f)));
-            }
-            else if (keyCode == GLFW_KEY_UP) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, 0.1f)));
-            }
-            else if (keyCode == GLFW_KEY_DOWN) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, -0.1f)));
-            }
-			else if (keyCode == GLFW_KEY_Y) {
-				Renderer::setDrawNormals(!Renderer::getDrawNormals());
-			}
-        }
-
-		auto mapping = cameraControlMapping.find(keyCode);
-		if (mapping != cameraControlMapping.end()) {
-			cameraControls[mapping->second] = pressed;
-		}
-    }
-
-	void VulkanApp::processMouseInput(double x, double y) {
-		float sensitivity = 0.1f;
-		double deltaX = mLastX - x;
-		double deltaY = y - mLastY;
-		mLastX = x;
-		mLastY = y;
-
-		float pitch = deltaY * sensitivity;
-		float yaw = deltaX * sensitivity;
-
-		mCameraNode->rotate(glm::radians(pitch), glm::radians(yaw));
-	}
-
-	void VulkanApp::processMouseClick(int button, bool pressed) {
-		mMouseLeftDown = pressed;
 	}
 }
