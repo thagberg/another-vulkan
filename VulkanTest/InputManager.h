@@ -11,6 +11,13 @@ namespace hvk {
     typedef int KeyCode;
     typedef int MouseButton;
 
+	struct MouseState {
+		double x;
+		double y;
+		bool leftDown;
+		bool rightDown;
+	};
+
     class InputManager
     {
     private:
@@ -19,6 +26,7 @@ namespace hvk {
 
         static std::shared_ptr<GLFWwindow> window;
         static std::vector<KeyCode> keysToCheck;
+		static bool initialized;
 
     public:
         static void processKeyEvent(GLFWwindow* window, KeyCode key, int scancode, int action, int mods);
@@ -31,5 +39,8 @@ namespace hvk {
         static std::array<bool, GLFW_KEY_LAST> currentKeysPressed;
         static std::array<bool, GLFW_KEY_LAST> previousKeysPressed;
         static std::array<uint32_t, GLFW_KEY_LAST> keysFramesHeld;
+
+		static MouseState currentMouseState;
+		static MouseState previousMouseState;
     };
 }
