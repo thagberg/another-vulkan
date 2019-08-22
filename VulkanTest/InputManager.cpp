@@ -1,5 +1,6 @@
 #include "InputManager.h"
 
+#include <iostream>
 
 namespace hvk {
 
@@ -8,6 +9,9 @@ namespace hvk {
     std::array<uint32_t, GLFW_KEY_LAST> InputManager::keysFramesHeld;
     std::vector<KeyCode> InputManager::keysToCheck;
     std::shared_ptr<GLFWwindow> InputManager::window = nullptr;
+	MouseState InputManager::currentMouseState = { 0.f, 0.f, false, false };
+	MouseState InputManager::previousMouseState = { 0.f, 0.f, false, false };
+	bool InputManager::initialized = false;
 
     InputManager::InputManager() {
     }
@@ -23,9 +27,13 @@ namespace hvk {
         keysFramesHeld.fill(0);
         keysToCheck.reserve(GLFW_KEY_LAST);
 
+		glfwGetCursorPos(window.get(), &currentMouseState.x, &currentMouseState.y);
+
         glfwSetKeyCallback(window.get(), processKeyEvent);
         glfwSetCursorPosCallback(window.get(), processMouseMovementEvent);
         glfwSetMouseButtonCallback(window.get(), processMouseClickEvent);
+
+		initialized = true;
     }
 
     void InputManager::processKeyEvent(
@@ -35,12 +43,31 @@ namespace hvk {
         int action, 
         int mods) {
 
-        bool pressed = (action & (GLFW_PRESS | GLFW_RELEASE));
+        bool pressed = (action & (GLFW_PRESS | GLFW_REPEAT));
+		std::cout << "Key " << key << " pressed: " << pressed << std::endl;
         currentKeysPressed[key] = pressed;
         keysToCheck.push_back(key);
     }
 
+	void InputManager::processMouseMovementEvent(GLFWwindow* window, double x, double y) {
+		currentMouseState.x = x;
+		currentMouseState.y = y;
+	}
+
+	void InputManager::processMouseClickEvent(GLFWwindow* window, MouseButton button, int action, int mods) {
+		bool pressed = action == GLFW_PRESS;
+		if (button == GLFW_MOUSE_BUTTON_LEFT) {
+			currentMouseState.leftDown = pressed;
+		}
+		else if (button == GLFW_MOUSE_BUTTON_RIGHT) {
+			currentMouseState.rightDown = pressed;
+		}
+	}
+
     void InputManager::update() {
+		previousMouseState = currentMouseState;
+        previousKeysPressed = currentKeysPressed;
+
         glfwPollEvents();
 
         while (keysToCheck.size()) {
@@ -55,8 +82,5 @@ namespace hvk {
             }
             keysToCheck.pop_back();
         }
-
-        previousKeysPressed = currentKeysPressed;
-        currentKeysPressed.fill(0);
     }
 }

@@ -12,6 +12,7 @@
 #include "Node.h"
 #include "Camera.h"
 #include "Renderer.h"
+#include "Clock.h"
 
 namespace hvk {
 
@@ -45,6 +46,8 @@ namespace hvk {
 
 		Renderer mRenderer;
 
+		Clock mClock;
+
 		double mLastX, mLastY;
 		bool mMouseLeftDown;
 
@@ -57,15 +60,15 @@ namespace hvk {
 		void initializeApp();
 		void drawFrame();
 
+		/*-- Things which should be handled elsewhere later --*/
+		void updateCamera(double deltaT);
+
 	public:
 		VulkanApp(int width, int height, const char* windowTitle);
 		~VulkanApp();
 
 		void init();
 		void run();
-        void processKeyInput(int keyCode, bool pressed);
-		void processMouseInput(double x, double y);
-		void processMouseClick(int button, bool pressed);
 
 		window_ptr getWindow() { 
 			return mWindow; 

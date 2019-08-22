@@ -19,6 +19,7 @@
 #include "vulkanapp.h"
 #include "vulkan-util.h"
 #include "RenderObject.h"
+#include "InputManager.h"
 
 hvk::VulkanApp* currentApp;
 
@@ -49,6 +50,12 @@ std::unordered_map<CameraControl, bool> cameraControls({
 	{CameraControl::move_backward, false}
 });
 
+struct CameraRotation {
+	double yaw;
+	double pitch;
+	double roll;
+} cameraRotation;
+
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -68,18 +75,6 @@ const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0
 };
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    currentApp->processKeyInput(key, (action == GLFW_PRESS || action == GLFW_REPEAT));
-}
-
-void mouseCallback(GLFWwindow* window, double x, double y) {
-	currentApp->processMouseInput(x, y);
-}
-
-void clickCallback(GLFWwindow* window, int button, int action, int mods) {
-	currentApp->processMouseClick(button, action == GLFW_PRESS);
-}
-
 namespace hvk {
 
     VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
@@ -94,7 +89,8 @@ namespace hvk {
 		mRenderer(),
 		mLastX(0.f),
 		mLastY(0.f),
-		mMouseLeftDown(false)
+		mMouseLeftDown(false),
+		mClock()
     {
         // TODO: this is super bad, but IDGAF right now
         currentApp = this;
@@ -413,89 +409,76 @@ namespace hvk {
     }
 
     void VulkanApp::run() {
-        glfwSetKeyCallback(mWindow.get(), keyCallback);
-		glfwGetCursorPos(mWindow.get(), &mLastX, &mLastY);
-		glfwSetCursorPosCallback(mWindow.get(), mouseCallback);
-		glfwSetMouseButtonCallback(mWindow.get(), clickCallback);
+		InputManager::init(mWindow);
 		ImGuiIO& io = ImGui::GetIO();
-        while (!glfwWindowShouldClose(mWindow.get())) {
-            glfwPollEvents();
 
-			io.DeltaTime = 1.0f / 60.0f; // TODO: need to actually track time
-			io.MousePos = ImVec2(mLastX, mLastY);
-			io.MouseDown[0] = mMouseLeftDown;
+		double frameTime = mClock.getDelta();
+		bool cameraDrag = false;
+        while (!glfwWindowShouldClose(mWindow.get())) {
+			mClock.start();
+			frameTime = mClock.getDelta();
+
+			InputManager::update();
+			for (const auto& mappedKey : cameraControlMapping) {
+				cameraControls[mappedKey.second] = InputManager::currentKeysPressed[mappedKey.first];
+			}
+			MouseState mouse = InputManager::currentMouseState;
+			MouseState prevMouse = InputManager::previousMouseState;
+			io.DeltaTime = frameTime;
+			io.MousePos = ImVec2(mouse.x, mouse.y);
+			io.MouseDown[0] = mouse.leftDown;
+
+			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
+				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
+			}
+
+			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
+			bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
+			if (mouseClicked && !ImGui::IsAnyItemHovered()) {
+				cameraDrag = true;
+			}
+			if (mouseReleased) {
+				cameraDrag = false;
+			}
+			if (cameraDrag) {
+				float sensitivity = 0.1f;
+				cameraRotation.pitch = (mouse.y - prevMouse.y) * sensitivity;
+				cameraRotation.yaw = (prevMouse.x - mouse.x) * sensitivity;
+			}
 
 			// camera updates
-			glm::vec3 forwardMovement = 0.01f * mCameraNode->getForwardVector();
-			glm::vec3 lateralMovement = 0.01f * mCameraNode->getRightVector();
-			glm::vec3 verticalMovement = 0.01f * mCameraNode->getUpVector();
-			if (cameraControls[CameraControl::move_left]) {
-				mCameraNode->translateLocal(-1.0f * lateralMovement);
-			}
-			if (cameraControls[CameraControl::move_right]) {
-				mCameraNode->translateLocal(lateralMovement);
-			}
-			if (cameraControls[CameraControl::move_forward]) {
-				mCameraNode->translateLocal(-1.0f * forwardMovement);
-			}
-			if (cameraControls[CameraControl::move_backward]) {
-				mCameraNode->translateLocal(forwardMovement);
-			}
-			if (cameraControls[CameraControl::move_up]) {
-				mCameraNode->translateLocal(verticalMovement);
-			}
-			if (cameraControls[CameraControl::move_down]) {
-				mCameraNode->translateLocal(-1.0f * verticalMovement);
-			}
+			updateCamera(frameTime);
 
             drawFrame();
+			mClock.end();
         }
 
         vkDeviceWaitIdle(mDevice);
     }
 
-    void VulkanApp::processKeyInput(int keyCode, bool pressed) {
-        if (pressed) {
-            if (keyCode == GLFW_KEY_ESCAPE) {
-                glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
-            }
-            else if (keyCode == GLFW_KEY_LEFT) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(-0.1f, 0.0f, 0.0f)));
-            }
-            else if (keyCode == GLFW_KEY_RIGHT) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.1f, 0.0f, 0.0f)));
-            }
-            else if (keyCode == GLFW_KEY_UP) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, 0.1f)));
-            }
-            else if (keyCode == GLFW_KEY_DOWN) {
-                mObjectNode->setLocalTransform(glm::translate(mObjectNode->getLocalTransform(), glm::vec3(0.0f, 0.0f, -0.1f)));
-            }
-			else if (keyCode == GLFW_KEY_Y) {
-				Renderer::setDrawNormals(!Renderer::getDrawNormals());
-			}
-        }
-
-		auto mapping = cameraControlMapping.find(keyCode);
-		if (mapping != cameraControlMapping.end()) {
-			cameraControls[mapping->second] = pressed;
+	void VulkanApp::updateCamera(double deltaT) {
+		glm::vec3 forwardMovement = (float)deltaT *  mCameraNode->getForwardVector();
+		glm::vec3 lateralMovement = (float)deltaT * mCameraNode->getRightVector();
+		glm::vec3 verticalMovement = (float)deltaT * mCameraNode->getUpVector();
+		if (cameraControls[CameraControl::move_left]) {
+			mCameraNode->translateLocal(-1.0f * lateralMovement);
 		}
-    }
+		if (cameraControls[CameraControl::move_right]) {
+			mCameraNode->translateLocal(lateralMovement);
+		}
+		if (cameraControls[CameraControl::move_forward]) {
+			mCameraNode->translateLocal(-1.0f * forwardMovement);
+		}
+		if (cameraControls[CameraControl::move_backward]) {
+			mCameraNode->translateLocal(forwardMovement);
+		}
+		if (cameraControls[CameraControl::move_up]) {
+			mCameraNode->translateLocal(verticalMovement);
+		}
+		if (cameraControls[CameraControl::move_down]) {
+			mCameraNode->translateLocal(-1.0f * verticalMovement);
+		}
 
-	void VulkanApp::processMouseInput(double x, double y) {
-		float sensitivity = 0.1f;
-		double deltaX = mLastX - x;
-		double deltaY = y - mLastY;
-		mLastX = x;
-		mLastY = y;
-
-		float pitch = deltaY * sensitivity;
-		float yaw = deltaX * sensitivity;
-
-		mCameraNode->rotate(glm::radians(pitch), glm::radians(yaw));
-	}
-
-	void VulkanApp::processMouseClick(int button, bool pressed) {
-		mMouseLeftDown = pressed;
+		mCameraNode->rotate(glm::radians(cameraRotation.pitch), glm::radians(cameraRotation.yaw));
 	}
 }
