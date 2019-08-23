@@ -21,7 +21,10 @@ namespace hvk {
 	Renderer::Renderer() :
 		mFirstRenderIndexAvailable(-1),
 		mUiVbo{},
-		mUiIbo{}
+		mUiIbo{},
+		mPipelineInfo{},
+		mNormalsPipelineInfo{},
+		mUiPipelineInfo{}
 	{
 	}
 
@@ -73,6 +76,19 @@ namespace hvk {
 
 		assert(vkAllocateCommandBuffers(mDevice.device, &bufferAlloc, &mCommandBuffer) == VK_SUCCESS);
 
+		// Create initial viewport and scissor
+		mViewport = {};
+		mViewport.x = 0.0f;
+		mViewport.y = 0.0f;
+		mViewport.width = (float)extent.width;
+		mViewport.height = (float)extent.height;
+		mViewport.minDepth = 0.0f;
+		mViewport.maxDepth = 1.0f;
+
+		mScissor = {};
+		mScissor.offset = { 0, 0 };
+		mScissor.extent = extent;
+
 		// Create descriptor set layout and descriptor pool
 		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
 		uboLayoutBinding.binding = 0;
@@ -115,7 +131,7 @@ namespace hvk {
 		layoutCreate.pushConstantRangeCount = 0;
 		layoutCreate.pPushConstantRanges = nullptr;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		VkVertexInputBindingDescription modelBindingDescription = hvk::Vertex::getBindingDescription();
 		auto modelAttributeDescriptions = hvk::Vertex::getAttributeDescriptions();
@@ -125,21 +141,19 @@ namespace hvk {
 		modelVertexInputInfo.pVertexBindingDescriptions = &modelBindingDescription;
 		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
 		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
+		mPipelineInfo.vertexInputInfo = modelVertexInputInfo;
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
 		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments = { blendAttachment };
+		mPipelineInfo.blendAttachments = { blendAttachment };
+		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mPipelineInfo.extent = extent;
+		mPipelineInfo.vertShaderFile = "shaders/compiled/vert.spv";
+		mPipelineInfo.fragShaderFile = "shaders/compiled/frag.spv";
 
-		mPipeline = generatePipeline(
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-			"shaders/compiled/vert.spv",
-			"shaders/compiled/frag.spv",
-			extent,
-			modelVertexInputInfo,
-			mPipelineLayout,
-			blendAttachments);
+		mPipeline = generatePipeline(mPipelineInfo);
 
 		VkVertexInputBindingDescription normalBindingDescription = hvk::ColorVertex::getBindingDescription();
 		auto normalAttributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
@@ -150,14 +164,17 @@ namespace hvk {
 		normalVertexInputInfo.vertexAttributeDescriptionCount = normalAttributeDescriptions.size();
 		normalVertexInputInfo.pVertexAttributeDescriptions = normalAttributeDescriptions.data();
 
-		mNormalsPipeline = generatePipeline(
+		mNormalsPipelineInfo = {
 			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
 			"shaders/compiled/normal_v.spv",
 			"shaders/compiled/normal_f.spv",
 			extent,
 			normalVertexInputInfo,
-			mPipelineLayout,
-			blendAttachments);
+			mPipelineInfo.pipelineLayout,
+			mPipelineInfo.blendAttachments
+		};
+
+		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
 
 		// Initialize Imgui stuff
 		unsigned char* fontTextureData;
@@ -228,7 +245,7 @@ namespace hvk {
 		uiLayoutCreate.pushConstantRangeCount = 1;
 		uiLayoutCreate.pPushConstantRanges = &uiPushRange;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mUiPipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mUiPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		VkVertexInputBindingDescription uiBindingDescription = {};
 		uiBindingDescription.binding = 0;
@@ -268,33 +285,24 @@ namespace hvk {
 		uiBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		uiBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		std::vector<VkPipelineColorBlendAttachmentState> uiBlendAttachments = { uiBlendAttachment };
+		mUiPipelineInfo.blendAttachments = { uiBlendAttachment };
+		mUiPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mUiPipelineInfo.vertShaderFile = "shaders/compiled/ui_v.spv";
+		mUiPipelineInfo.fragShaderFile = "shaders/compiled/ui_f.spv";
+		mUiPipelineInfo.extent = extent;
+		mUiPipelineInfo.vertexInputInfo = uiVertexInputInfo;
 
-		mUiPipeline = generatePipeline(
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-			"shaders/compiled/ui_v.spv",
-			"shaders/compiled/ui_f.spv",
-			extent,
-			uiVertexInputInfo,
-			mUiPipelineLayout,
-			uiBlendAttachments);
+		mUiPipeline = generatePipeline(mUiPipelineInfo);
 
 		mInitialized = true;
 	}
 
-	VkPipeline Renderer::generatePipeline(
-		VkPrimitiveTopology topology, 
-		const char* vertShaderFile, 
-		const char* fragShaderFile,
-		VkExtent2D& extent,
-		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-		VkPipelineLayout& pipelineLayout,
-		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
+	VkPipeline Renderer::generatePipeline(RenderPipelineInfo& pipelineInfo) {
 
 		VkPipeline pipeline;
 
-		auto modelVertShaderCode = readFile(vertShaderFile);
-		auto modelFragShaderCode = readFile(fragShaderFile);
+		auto modelVertShaderCode = readFile(pipelineInfo.vertShaderFile);
+		auto modelFragShaderCode = readFile(pipelineInfo.fragShaderFile);
 		VkShaderModule modelVertShaderModule = createShaderModule(mDevice.device, modelVertShaderCode);
 		VkShaderModule modelFragShaderModule = createShaderModule(mDevice.device, modelFragShaderCode);
 
@@ -313,19 +321,19 @@ namespace hvk {
 		};
 
 		VkPipelineInputAssemblyStateCreateInfo modelInputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-		modelInputAssembly.topology = topology;
+		modelInputAssembly.topology = pipelineInfo.topology;
 		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
 
 
 		pipeline = createCustomizedGraphicsPipeline(
-			mDevice.device, 
-			extent, 
-			mRenderPass, 
-			pipelineLayout,
+			mDevice.device,
+			pipelineInfo.extent,
+			mRenderPass,
+			pipelineInfo.pipelineLayout,
 			modelShaderStages,
-			vertexInputInfo,
+			pipelineInfo.vertexInputInfo,
 			modelInputAssembly,
-			blendAttachments);
+			pipelineInfo.blendAttachments);
 
 		vkDestroyShaderModule(mDevice.device, modelVertShaderModule, nullptr);
 		vkDestroyShaderModule(mDevice.device, modelFragShaderModule, nullptr);
@@ -526,6 +534,10 @@ namespace hvk {
 		vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
+		// bind viewport and scissor
+		vkCmdSetViewport(mCommandBuffer, 0, 1, &mViewport);
+		vkCmdSetScissor(mCommandBuffer, 0, 1, &mScissor);
+
 		VkDeviceSize offsets[] = { 0 };
 		
 		for (const auto& renderable : mRenderables) {
@@ -534,7 +546,7 @@ namespace hvk {
 			vkCmdBindDescriptorSets(
 				mCommandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				mPipelineLayout, 
+				mPipelineInfo.pipelineLayout, 
 				0, 
 				1, 
 				&renderable.descriptorSet, 
@@ -550,7 +562,7 @@ namespace hvk {
 				vkCmdBindDescriptorSets(
 					mCommandBuffer,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					mPipelineLayout,
+					mNormalsPipelineInfo.pipelineLayout,
 					0,
 					1,
 					&renderable.descriptorSet,
@@ -568,7 +580,7 @@ namespace hvk {
 			vkCmdBindDescriptorSets(
 				mCommandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				mUiPipelineLayout, 
+				mUiPipelineInfo.pipelineLayout, 
 				0, 
 				1, 
 				&mUiDescriptorSet, 
@@ -577,7 +589,7 @@ namespace hvk {
 			UiPushConstant push = {};
 			push.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
 			push.pos = glm::vec2(-1.f);
-			vkCmdPushConstants(mCommandBuffer, mUiPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
+			vkCmdPushConstants(mCommandBuffer, mUiPipelineInfo.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
 			VkDeviceSize offsets[1] = { 0 };
 
 			// Create vertex buffer

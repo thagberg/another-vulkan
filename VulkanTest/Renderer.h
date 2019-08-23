@@ -31,6 +31,16 @@ namespace hvk {
 		size_t numNormalVertices;
 	};
 
+	struct RenderPipelineInfo {
+		VkPrimitiveTopology topology;
+		const char* vertShaderFile;
+		const char* fragShaderFile;
+		VkExtent2D extent;
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+		VkPipelineLayout pipelineLayout;
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+	};
+
 	class Renderer
 	{
 	private:
@@ -63,6 +73,12 @@ namespace hvk {
 		VkRenderPass mRenderPass;
 		VkExtent2D mExtent;
 		VkSemaphore mRenderFinished;
+		VkViewport mViewport;
+		VkRect2D mScissor;
+
+		RenderPipelineInfo mPipelineInfo;
+		RenderPipelineInfo mNormalsPipelineInfo;
+		RenderPipelineInfo mUiPipelineInfo;
 
 		CameraRef mCamera;
 		std::vector<Renderable> mRenderables;
@@ -71,14 +87,7 @@ namespace hvk {
 
 		void recordCommandBuffer(VkFramebuffer& framebuffer);
 		void findFirstRenderIndexAvailable();
-		VkPipeline generatePipeline(
-			VkPrimitiveTopology topology, 
-			const char* vertShaderFile, 
-			const char* fragShaderFile,
-			VkExtent2D& extent,
-			VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-			VkPipelineLayout& pipelineLayout,
-			std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments);
+		VkPipeline generatePipeline(RenderPipelineInfo& pipelineInfo);
 
 	public:
 		Renderer();

@@ -58,7 +58,11 @@ namespace hvk {
 		void initializeDevice();
 		void initializeRenderer();
 		void initializeApp();
+		void initFramebuffers();
 		void drawFrame();
+		void cleanupSwapchain();
+
+		static void handleWindowResize(GLFWwindow* window, int width, int height);
 
 		/*-- Things which should be handled elsewhere later --*/
 		void updateCamera(double deltaT);
