@@ -103,13 +103,8 @@ namespace hvk {
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
         //vkDestroyPipeline(mDevice, mGraphicsPipeline, nullptr);
         //vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
-        for (auto framebuffer : mFramebuffers) {
-            vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
-        }
-        for (auto imageView : mImageViews) {
-            vkDestroyImageView(mDevice, imageView, nullptr);
-        }
-        vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
+
+		cleanupSwapchain();
 	
 		// TODO: destroy Renderer
 
@@ -267,6 +262,25 @@ namespace hvk {
         mImageAvailable = createSemaphore(mDevice);
     }
 
+	void VulkanApp::recreateSwapchain() {
+		vkDeviceWaitIdle(mDevice);
+		mRenderer.invalidateRenderer();
+		cleanupSwapchain();
+		glfwGetFramebufferSize(mWindow.get(), &mWindowWidth, &mWindowHeight);
+
+        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mWindowWidth, mWindowHeight, mSwapchain) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create Swapchain");
+        }
+
+		initFramebuffers();
+		mCameraNode->updateProjection(
+			45.0f,
+			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+			0.1f,
+			1000.0f);
+		mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+	}
+
 	void VulkanApp::initializeApp() {
 		//glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetWindowUserPointer(mWindow.get(), this);
@@ -352,13 +366,16 @@ namespace hvk {
 		for (auto& imageView : mImageViews) {
 			vkDestroyImageView(mDevice, imageView, nullptr);
 		}
-		for (auto& image : mSwapchainImages) {
-			vkDestroyImage(mDevice, image, nullptr);
-		}
-		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
 		for (auto& framebuffer : mFramebuffers) {
 			vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
 		}
+		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
+		/*
+		for (auto& image : mSwapchainImages) {
+			vkDestroyImage(mDevice, image, nullptr);
+		}
+		*/
+		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 	}
 
     void VulkanApp::drawFrame() {
@@ -395,6 +412,8 @@ namespace hvk {
         while (!glfwWindowShouldClose(mWindow.get())) {
 			mClock.start();
 			frameTime = mClock.getDelta();
+
+			glfwPollEvents();
 
 			InputManager::update();
 			for (const auto& mappedKey : cameraControlMapping) {
@@ -462,5 +481,6 @@ namespace hvk {
 
 	void VulkanApp::handleWindowResize(GLFWwindow* window, int width, int height) {
 		VulkanApp* thisApp = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
+		thisApp->recreateSwapchain();
 	}
 }

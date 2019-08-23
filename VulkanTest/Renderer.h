@@ -31,12 +31,18 @@ namespace hvk {
 		size_t numNormalVertices;
 	};
 
+	struct VertexInfo {
+		VkVertexInputBindingDescription bindingDescription;
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+	};
+
 	struct RenderPipelineInfo {
 		VkPrimitiveTopology topology;
 		const char* vertShaderFile;
 		const char* fragShaderFile;
 		VkExtent2D extent;
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+		VertexInfo vertexInfo;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
 	};
@@ -96,6 +102,8 @@ namespace hvk {
 		void init(VulkanDevice device, VmaAllocator allocator, VkQueue graphicsQueue, VkRenderPass renderPass, CameraRef camera, VkFormat colorAttachmentFormat, VkExtent2D extent);
 		void addRenderable(RenderObjRef renderObject);
 		VkSemaphore drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores=nullptr, uint32_t waitSemaphoreCount=0);
+		void updateRenderPass(VkRenderPass renderPass, VkExtent2D extent);
+		void invalidateRenderer();
 	};
 }
 

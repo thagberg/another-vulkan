@@ -65,10 +65,7 @@ namespace hvk {
 	}
 
     void InputManager::update() {
-		previousMouseState = currentMouseState;
-        previousKeysPressed = currentKeysPressed;
-
-        glfwPollEvents();
+        //glfwPollEvents();
 
         while (keysToCheck.size()) {
             KeyCode nextKey = keysToCheck.back();
@@ -82,5 +79,8 @@ namespace hvk {
             }
             keysToCheck.pop_back();
         }
+
+		previousMouseState = currentMouseState;
+        previousKeysPressed = currentKeysPressed;
     }
 }

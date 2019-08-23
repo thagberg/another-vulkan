@@ -63,6 +63,7 @@ namespace hvk {
 		void cleanupSwapchain();
 
 		static void handleWindowResize(GLFWwindow* window, int width, int height);
+		void recreateSwapchain();
 
 		/*-- Things which should be handled elsewhere later --*/
 		void updateCamera(double deltaT);

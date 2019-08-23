@@ -18,14 +18,24 @@ namespace hvk {
         mFarPlane(far),
 		mLookVec(glm::vec3(0.f, 0.f, 1.f)),
 		mPitch(0.0f),
-		mYaw(0.0f) {
+		mYaw(0.0f),
+		mProjection(glm::mat4(1.f)) {
 
-        mProjection = glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane);
+		updateProjection(fov, aspectRatio, near, far);
     }
 
 
     Camera::~Camera() {
     }
+
+	void Camera::updateProjection(float fov, float aspectRatio, float near, float far) {
+		mFov = fov;
+		mAspectRatio = aspectRatio;
+		mNearPlane = near;
+		mFarPlane = far;
+
+        mProjection = glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane);
+	}
 
 	glm::vec3  Camera::getUpVector() const {
 		return glm::vec3(getLocalTransform()[1]);
