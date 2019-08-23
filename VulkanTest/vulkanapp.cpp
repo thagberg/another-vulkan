@@ -282,7 +282,6 @@ namespace hvk {
 	}
 
 	void VulkanApp::initializeApp() {
-		//glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		glfwSetWindowUserPointer(mWindow.get(), this);
 		glfwSetFramebufferSizeCallback(mWindow.get(), VulkanApp::handleWindowResize);
 	}
@@ -370,11 +369,6 @@ namespace hvk {
 			vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
 		}
 		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
-		/*
-		for (auto& image : mSwapchainImages) {
-			vkDestroyImage(mDevice, image, nullptr);
-		}
-		*/
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 	}
 
@@ -413,8 +407,8 @@ namespace hvk {
 			mClock.start();
 			frameTime = mClock.getDelta();
 
-			glfwPollEvents();
-
+			// TODO: figure out how to poll GLFW events outside of InputManager
+			//	while still capturing current vs previous mouse state correctly
 			InputManager::update();
 			for (const auto& mappedKey : cameraControlMapping) {
 				cameraControls[mappedKey.second] = InputManager::currentKeysPressed[mappedKey.first];
@@ -431,11 +425,13 @@ namespace hvk {
 
 			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
 			bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
-			if (mouseClicked && !ImGui::IsAnyItemHovered()) {
+			if (mouseClicked && !io.WantCaptureMouse) {
 				cameraDrag = true;
+				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			}
 			if (mouseReleased) {
 				cameraDrag = false;
+				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
 			if (cameraDrag) {
 				float sensitivity = 0.1f;
