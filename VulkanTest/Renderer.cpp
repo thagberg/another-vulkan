@@ -732,8 +732,8 @@ namespace hvk {
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 
-		ImGui::Begin("Test Window");
-		ImGui::Text("Text Blah");
+		ImGui::Begin("Renderer");
+		ImGui::Checkbox("Draw Normals", &sDrawNormals);
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 

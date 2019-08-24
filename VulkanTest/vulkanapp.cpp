@@ -407,6 +407,8 @@ namespace hvk {
 			mClock.start();
 			frameTime = mClock.getDelta();
 
+			//ImGui::Che
+
 			// TODO: figure out how to poll GLFW events outside of InputManager
 			//	while still capturing current vs previous mouse state correctly
 			InputManager::update();
@@ -421,6 +423,9 @@ namespace hvk {
 
 			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
 				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
+			}
+			if (InputManager::currentKeysPressed[GLFW_KEY_Y] && !InputManager::previousKeysPressed[GLFW_KEY_Y]) {
+				Renderer::setDrawNormals(!Renderer::getDrawNormals());
 			}
 
 			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
