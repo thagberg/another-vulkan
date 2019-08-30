@@ -820,6 +820,7 @@ namespace hvk {
 				//mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
 			ubo.lightPos = light->getWorldPosition();
 			ubo.lightColor = light->getColor();
+            ubo.lightIntensity = light->getIntensity();
 			uboLights.lights[i] = ubo;
 		}
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
@@ -827,12 +828,22 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
-        ImGui::ColorEdit3("Ambient Light", &mAmbientLight.lightColor.x);
+        ImGui::LabelText("Ambient Light", "");
+        ImGui::ColorEdit3("Color", &mAmbientLight.lightColor.x);
+        float min = 0.f;
+        float max = 1.f;
+        ImGui::SliderScalar("Intensity", ImGuiDataType_Float, &mAmbientLight.lightIntensity, &min, &max);
+        ImGui::LabelText("Dynamic Lights", "");
         for (size_t i = 0; i < mLights.size(); ++i) {
             LightRef light = mLights[i];
             glm::vec3 col = light->getColor();
-            ImGui::ColorEdit3("Dynamic Light " + i, &col.x);
+            ImGui::ColorEdit3("Light " + i, &col.x);
             light->setColor(col);
+            float dMin = 0.f;
+            float dMax = 1.f;
+            float lightIntensity = light->getIntensity();
+            ImGui::SliderScalar("Intensity#", ImGuiDataType_Float, &lightIntensity, &dMin, &dMax);
+            light->setIntensity(lightIntensity);
         }
 		ImGui::End();
 		ImGui::ShowDemoWindow();

@@ -141,6 +141,7 @@ namespace hvk {
 	struct UniformLight {
 		COMP3_4_ALIGN(float) glm::vec3 lightPos;
 		COMP3_4_ALIGN(float) glm::vec3 lightColor;
+        alignas(sizeof(float)) float lightIntensity;
 	};
 
 	struct AmbientLight {

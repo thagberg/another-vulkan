@@ -9,6 +9,7 @@ struct AmbientLight {
 struct Light {
 	vec3 pos;
 	vec3 color;
+    float intensity;
 };
 
 //layout(location = 0) in vec3 fragColor;
@@ -34,7 +35,7 @@ void main() {
 	//float d = dot(inNormal, gl_FragCoord);
 	for (int i = 0; i < lbo.numLights; i++) {
 		vec3 lightDir = normalize(lbo.lights[i].pos - fragPos);
-		float d = dot(inNormal, lightDir);
+		float d = lbo.lights[i].intensity * dot(inNormal, lightDir);
 		diffuseLight *= (d * vec4(lbo.lights[i].color, 1.0f));
 	}
 	outColor = (ambientLight + diffuseLight) * baseColor;

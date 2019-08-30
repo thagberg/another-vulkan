@@ -3,9 +3,10 @@
 
 namespace hvk {
 
-	Light::Light(NodeRef parent, glm::mat4 transform, glm::vec3 color) :
+	Light::Light(NodeRef parent, glm::mat4 transform, glm::vec3 color, float intensity) :
 		Node(parent, transform),
-		mColor(color)
+		mColor(color),
+        mIntensity(intensity)
 	{
 	}
 
