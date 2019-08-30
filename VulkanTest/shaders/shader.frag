@@ -8,6 +8,8 @@ struct Light {
 
 //layout(location = 0) in vec3 fragColor;
 layout(location = 0) in vec2 fragTexCoord;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec3 fragPos;
 
 layout(std140, set = 0, binding = 0) uniform UniformLight {
 	uint numLights;
@@ -20,8 +22,11 @@ layout(location = 0) out vec4 outColor;
 
 void main() {
 	vec4 baseColor = texture(texSampler, fragTexCoord);
+	//float d = dot(inNormal, gl_FragCoord);
 	for (int i = 0; i < lbo.numLights; i++) {
-		baseColor += vec4(lbo.lights[i].color, 1.0f);
+		vec3 lightDir = normalize(lbo.lights[i].pos - fragPos);
+		float d = dot(inNormal, lightDir);
+		baseColor *= (d * vec4(lbo.lights[i].color, 1.0f));
 	}
 	outColor = baseColor;
 }

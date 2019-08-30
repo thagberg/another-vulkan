@@ -811,8 +811,9 @@ namespace hvk {
 		for (int i = 0; i < mLights.size(); ++i) {
 			LightRef light = mLights[i];
 			UniformLight ubo = {};
-			ubo.lightPos = mCamera->getProjection() * 
-				mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
+			//ubo.lightPos = mCamera->getProjection() * 
+				//mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
+			ubo.lightPos = light->getWorldPosition();
 			ubo.lightColor = light->getColor();
 			uboLights.lights[i] = ubo;
 		}
