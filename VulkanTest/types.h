@@ -143,10 +143,16 @@ namespace hvk {
 		COMP3_4_ALIGN(float) glm::vec3 lightColor;
 	};
 
+	struct AmbientLight {
+		COMP3_4_ALIGN(float) glm::vec3 lightColor;
+		alignas(sizeof(float)) float lightIntensity;
+	};
+
 	template<size_t n>
 	struct UniformLightObject {
 		alignas(sizeof(uint32_t)) uint32_t numLights;
 		COMP3_4_ALIGN(float) std::array<UniformLight, n> lights;
+		COMP3_4_ALIGN(float) AmbientLight ambient;
 	};
 
 	struct UiPushConstant {

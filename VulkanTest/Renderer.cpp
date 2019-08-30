@@ -808,6 +808,10 @@ namespace hvk {
 		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
 		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
 		uboLights.numLights = mLights.size();
+		uboLights.ambient = AmbientLight{
+			glm::vec3(0.f, 1.f, 0.f),
+			1.f
+		};
 		for (int i = 0; i < mLights.size(); ++i) {
 			LightRef light = mLights[i];
 			UniformLight ubo = {};

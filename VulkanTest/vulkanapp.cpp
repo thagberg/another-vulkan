@@ -258,7 +258,10 @@ namespace hvk {
 		mRenderer.addRenderable(modelObj);
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
-		mLightNode = std::make_shared<Light>(nullptr, glm::mat4(1.0f), glm::vec3(1.0f, 1.0f, 1.0f));
+		mLightNode = std::make_shared<Light>(
+			nullptr, 
+			glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.f, 0.f)), 
+			glm::vec3(1.0f, 1.0f, 1.0f));
 		mRenderer.addLight(mLightNode);
 
         mImageAvailable = createSemaphore(mDevice);
