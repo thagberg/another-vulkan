@@ -813,7 +813,7 @@ namespace hvk {
 		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
 		uboLights.numLights = mLights.size();
         uboLights.ambient = mAmbientLight;
-		for (int i = 0; i < mLights.size(); ++i) {
+		for (size_t i = 0; i < mLights.size(); ++i) {
 			LightRef light = mLights[i];
 			UniformLight ubo = {};
 			//ubo.lightPos = mCamera->getProjection() * 
@@ -828,6 +828,12 @@ namespace hvk {
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
         ImGui::ColorEdit3("Ambient Light", &mAmbientLight.lightColor.x);
+        for (size_t i = 0; i < mLights.size(); ++i) {
+            LightRef light = mLights[i];
+            glm::vec3 col = light->getColor();
+            ImGui::ColorEdit3("Dynamic Light " + i, &col.x);
+            light->setColor(col);
+        }
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 
