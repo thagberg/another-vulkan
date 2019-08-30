@@ -67,7 +67,6 @@ namespace hvk {
     void InputManager::update() {
 		previousMouseState = currentMouseState;
         previousKeysPressed = currentKeysPressed;
-
         glfwPollEvents();
 
         while (keysToCheck.size()) {

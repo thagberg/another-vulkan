@@ -12,7 +12,10 @@
 #include "vulkan-util.h"
 
 #define MAX_DESCRIPTORS 20
+#define MAX_UBOS 40
+#define MAX_SAMPLERS 20
 #define NUM_INITIAL_RENDEROBJECTS 10
+#define NUM_INITIAL_LIGHTS 10
 
 namespace hvk {
 
@@ -21,7 +24,11 @@ namespace hvk {
 	Renderer::Renderer() :
 		mFirstRenderIndexAvailable(-1),
 		mUiVbo{},
-		mUiIbo{}
+		mUiIbo{},
+		mPipelineInfo{},
+		mNormalsPipelineInfo{},
+		mUiPipelineInfo{},
+		mLights()
 	{
 	}
 
@@ -47,6 +54,7 @@ namespace hvk {
 		mAllocator = allocator;
 
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
+		mLights.reserve(NUM_INITIAL_LIGHTS);
 
 		// Create fence for rendering complete
 		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -73,6 +81,19 @@ namespace hvk {
 
 		assert(vkAllocateCommandBuffers(mDevice.device, &bufferAlloc, &mCommandBuffer) == VK_SUCCESS);
 
+		// Create initial viewport and scissor
+		mViewport = {};
+		mViewport.x = 0.0f;
+		mViewport.y = 0.0f;
+		mViewport.width = (float)extent.width;
+		mViewport.height = (float)extent.height;
+		mViewport.minDepth = 0.0f;
+		mViewport.maxDepth = 1.0f;
+
+		mScissor = {};
+		mScissor.offset = { 0, 0 };
+		mScissor.extent = extent;
+
 		// Create descriptor set layout and descriptor pool
 		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
 		uboLayoutBinding.binding = 0;
@@ -97,9 +118,9 @@ namespace hvk {
 
 		std::array<VkDescriptorPoolSize, 2> poolSizes = {};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = MAX_DESCRIPTORS;
+		poolSizes[0].descriptorCount = MAX_UBOS;
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = MAX_DESCRIPTORS;
+		poolSizes[1].descriptorCount = MAX_SAMPLERS;
 
 		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
 		poolInfo.poolSizeCount = poolSizes.size();
@@ -108,56 +129,116 @@ namespace hvk {
 
 		assert(vkCreateDescriptorPool(mDevice.device, &poolInfo, nullptr, &mDescriptorPool) == VK_SUCCESS);
 
+		// Create Lights UBO
+        //uint32_t uboMemorySize = NUM_INITIAL_LIGHTS * sizeof(hvk::UniformLight) + sizeof(uint32_t);
+		uint32_t uboMemorySize = sizeof(hvk::UniformLightObject<NUM_INITIAL_LIGHTS>);
+        VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        uboInfo.size = uboMemorySize;
+        uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		VmaAllocationCreateInfo uniformAllocCreateInfo = {};
+		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		vmaCreateBuffer(
+			mAllocator,
+			&uboInfo,
+			&uniformAllocCreateInfo,
+			&mLightsUbo.memoryResource,
+			&mLightsUbo.allocation,
+			&mLightsUbo.allocationInfo);
+
+		// Create Lights descriptor set
+		VkDescriptorSetLayoutBinding lightLayoutBinding = {};
+		lightLayoutBinding.binding = 0;
+		lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		lightLayoutBinding.descriptorCount = 1;
+		lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		lightLayoutBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo lightsLayoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		lightsLayoutInfo.bindingCount = 1;
+		lightsLayoutInfo.pBindings = &lightLayoutBinding;
+
+		assert(vkCreateDescriptorSetLayout(mDevice.device, &lightsLayoutInfo, nullptr, &mLightsDescriptorSetLayout) == VK_SUCCESS);
+
+		VkDescriptorSetAllocateInfo lightsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		lightsAlloc.descriptorPool = mDescriptorPool;
+		lightsAlloc.descriptorSetCount = 1;
+		lightsAlloc.pSetLayouts = &mLightsDescriptorSetLayout;
+
+		assert(vkAllocateDescriptorSets(mDevice.device, &lightsAlloc, &mLightsDescriptorSet) == VK_SUCCESS);
+
+		VkDescriptorBufferInfo lightsBufferInfo = {};
+		lightsBufferInfo.buffer = mLightsUbo.memoryResource;
+		lightsBufferInfo.offset = 0;
+		lightsBufferInfo.range = NUM_INITIAL_LIGHTS * sizeof(hvk::UniformLight);
+
+		VkWriteDescriptorSet lightsDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		lightsDescriptorWrite.dstSet = mLightsDescriptorSet;
+		lightsDescriptorWrite.dstBinding = 0;
+		lightsDescriptorWrite.dstArrayElement = 0;
+		lightsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		lightsDescriptorWrite.descriptorCount = 1;
+		lightsDescriptorWrite.pBufferInfo = &lightsBufferInfo;
+
+		vkUpdateDescriptorSets(mDevice.device, 1, &lightsDescriptorWrite, 0, nullptr);
+
 		// Create graphics pipeline
+		std::array<VkDescriptorSetLayout, 2> dsLayouts = { mLightsDescriptorSetLayout, mDescriptorSetLayout };
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		layoutCreate.setLayoutCount = 1;
-		layoutCreate.pSetLayouts = &mDescriptorSetLayout;
+		layoutCreate.setLayoutCount = dsLayouts.size();
+		layoutCreate.pSetLayouts = dsLayouts.data();
 		layoutCreate.pushConstantRangeCount = 0;
 		layoutCreate.pPushConstantRanges = nullptr;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		VkVertexInputBindingDescription modelBindingDescription = hvk::Vertex::getBindingDescription();
-		auto modelAttributeDescriptions = hvk::Vertex::getAttributeDescriptions();
-
-		VkPipelineVertexInputStateCreateInfo modelVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-		modelVertexInputInfo.vertexBindingDescriptionCount = 1;
-		modelVertexInputInfo.pVertexBindingDescriptions = &modelBindingDescription;
-		modelVertexInputInfo.vertexAttributeDescriptionCount = modelAttributeDescriptions.size();
-		modelVertexInputInfo.pVertexAttributeDescriptions = modelAttributeDescriptions.data();
+		mPipelineInfo.vertexInfo = { };
+		mPipelineInfo.vertexInfo.bindingDescription = hvk::Vertex::getBindingDescription();
+		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::Vertex::getAttributeDescriptions();
+		mPipelineInfo.vertexInfo.vertexInputInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			1,
+			&mPipelineInfo.vertexInfo.bindingDescription,
+			static_cast<uint32_t>(mPipelineInfo.vertexInfo.attributeDescriptions.size()),
+			mPipelineInfo.vertexInfo.attributeDescriptions.data()
+		};
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
 		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments = { blendAttachment };
+		mPipelineInfo.blendAttachments = { blendAttachment };
+		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mPipelineInfo.extent = extent;
+		mPipelineInfo.vertShaderFile = "shaders/compiled/vert.spv";
+		mPipelineInfo.fragShaderFile = "shaders/compiled/frag.spv";
 
-		mPipeline = generatePipeline(
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-			"shaders/compiled/vert.spv",
-			"shaders/compiled/frag.spv",
-			extent,
-			modelVertexInputInfo,
-			mPipelineLayout,
-			blendAttachments);
+		mPipeline = generatePipeline(mPipelineInfo);
 
-		VkVertexInputBindingDescription normalBindingDescription = hvk::ColorVertex::getBindingDescription();
-		auto normalAttributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
+		mNormalsPipelineInfo.vertexInfo = {};
+		mNormalsPipelineInfo.vertexInfo.bindingDescription = hvk::ColorVertex::getBindingDescription();
+		mNormalsPipelineInfo.vertexInfo.attributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
+		mNormalsPipelineInfo.vertexInfo.vertexInputInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			1,
+			&mNormalsPipelineInfo.vertexInfo.bindingDescription,
+			static_cast<uint32_t>(mNormalsPipelineInfo.vertexInfo.attributeDescriptions.size()),
+			mNormalsPipelineInfo.vertexInfo.attributeDescriptions.data()
+		};
 
-		VkPipelineVertexInputStateCreateInfo normalVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-		normalVertexInputInfo.vertexBindingDescriptionCount = 1;
-		normalVertexInputInfo.pVertexBindingDescriptions = &normalBindingDescription;
-		normalVertexInputInfo.vertexAttributeDescriptionCount = normalAttributeDescriptions.size();
-		normalVertexInputInfo.pVertexAttributeDescriptions = normalAttributeDescriptions.data();
+		mNormalsPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+		mNormalsPipelineInfo.vertShaderFile = "shaders/compiled/normal_v.spv";
+		mNormalsPipelineInfo.fragShaderFile = "shaders/compiled/normal_f.spv";
+		mNormalsPipelineInfo.extent = extent;
+		mNormalsPipelineInfo.pipelineLayout = mPipelineInfo.pipelineLayout;
+		mNormalsPipelineInfo.blendAttachments = mPipelineInfo.blendAttachments;
 
-		mNormalsPipeline = generatePipeline(
-			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
-			"shaders/compiled/normal_v.spv",
-			"shaders/compiled/normal_f.spv",
-			extent,
-			normalVertexInputInfo,
-			mPipelineLayout,
-			blendAttachments);
+		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
 
 		// Initialize Imgui stuff
 		unsigned char* fontTextureData;
@@ -228,38 +309,48 @@ namespace hvk {
 		uiLayoutCreate.pushConstantRangeCount = 1;
 		uiLayoutCreate.pPushConstantRanges = &uiPushRange;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mUiPipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mUiPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		VkVertexInputBindingDescription uiBindingDescription = {};
-		uiBindingDescription.binding = 0;
-		uiBindingDescription.stride = sizeof(ImDrawVert);
-		uiBindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;	
+		mUiPipelineInfo.vertexInfo = {};
+		mUiPipelineInfo.vertexInfo.bindingDescription = {};
+		mUiPipelineInfo.vertexInfo.bindingDescription.binding = 0;
+		mUiPipelineInfo.vertexInfo.bindingDescription.stride = sizeof(ImDrawVert);
+		mUiPipelineInfo.vertexInfo.bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-		std::array<VkVertexInputAttributeDescription, 3> uiAttributeDescriptions = {};
-		uiAttributeDescriptions[0].binding = 0;
-		uiAttributeDescriptions[0].location = 0;
-		uiAttributeDescriptions[0].format = UiVertexPositionFormat;
-		uiAttributeDescriptions[0].offset = offsetof(ImDrawVert, pos);
+		mUiPipelineInfo.vertexInfo.attributeDescriptions.resize(3);
+		mUiPipelineInfo.vertexInfo.attributeDescriptions[0] = {
+			0,							// location
+			0,							// binding
+			UiVertexPositionFormat,		// format
+			offsetof(ImDrawVert, pos)	// offset
+			};
 
-		uiAttributeDescriptions[1].binding = 0;
-		uiAttributeDescriptions[1].location = 1;
-		uiAttributeDescriptions[1].format = UiVertexUVFormat;
-		uiAttributeDescriptions[1].offset = offsetof(ImDrawVert, uv);
+		mUiPipelineInfo.vertexInfo.attributeDescriptions[1] = {
+			1,
+			0,
+			UiVertexUVFormat,
+			offsetof(ImDrawVert, uv)
+			};
 
-		uiAttributeDescriptions[2].binding = 0;
-		uiAttributeDescriptions[2].location = 2;
-		uiAttributeDescriptions[2].format = UiVertexColorFormat;
-		uiAttributeDescriptions[2].offset = offsetof(ImDrawVert, col);
+		mUiPipelineInfo.vertexInfo.attributeDescriptions[2] = {
+			2,
+			0,
+			UiVertexColorFormat,
+			offsetof(ImDrawVert, col)
+			};
 
-		VkPipelineVertexInputStateCreateInfo uiVertexInputInfo = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-		uiVertexInputInfo.vertexBindingDescriptionCount = 1;
-		uiVertexInputInfo.pVertexBindingDescriptions = &uiBindingDescription;
-		uiVertexInputInfo.vertexAttributeDescriptionCount = uiAttributeDescriptions.size();
-		uiVertexInputInfo.pVertexAttributeDescriptions = uiAttributeDescriptions.data();
+		mUiPipelineInfo.vertexInfo.vertexInputInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			1,
+			&mUiPipelineInfo.vertexInfo.bindingDescription,
+			static_cast<uint32_t>(mUiPipelineInfo.vertexInfo.attributeDescriptions.size()),
+			mUiPipelineInfo.vertexInfo.attributeDescriptions.data()
+		};
 
 		VkPipelineColorBlendAttachmentState uiBlendAttachment = {};
 		uiBlendAttachment.blendEnable = VK_TRUE;
-		//uiBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_FLAG_BITS_MAX_ENUM; // all color components
 		uiBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 		uiBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		uiBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -268,33 +359,61 @@ namespace hvk {
 		uiBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		uiBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-		std::vector<VkPipelineColorBlendAttachmentState> uiBlendAttachments = { uiBlendAttachment };
+		mUiPipelineInfo.blendAttachments = { uiBlendAttachment };
+		mUiPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mUiPipelineInfo.vertShaderFile = "shaders/compiled/ui_v.spv";
+		mUiPipelineInfo.fragShaderFile = "shaders/compiled/ui_f.spv";
+		mUiPipelineInfo.extent = extent;
 
-		mUiPipeline = generatePipeline(
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-			"shaders/compiled/ui_v.spv",
-			"shaders/compiled/ui_f.spv",
-			extent,
-			uiVertexInputInfo,
-			mUiPipelineLayout,
-			uiBlendAttachments);
+		mUiPipeline = generatePipeline(mUiPipelineInfo);
+
 
 		mInitialized = true;
 	}
 
-	VkPipeline Renderer::generatePipeline(
-		VkPrimitiveTopology topology, 
-		const char* vertShaderFile, 
-		const char* fragShaderFile,
-		VkExtent2D& extent,
-		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-		VkPipelineLayout& pipelineLayout,
-		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
+	void Renderer::updateRenderPass(VkRenderPass renderPass, VkExtent2D extent) {
+		mRenderPass = renderPass;
+		mPipelineInfo.extent = extent;
+		mNormalsPipelineInfo.extent = extent;
+		mUiPipelineInfo.extent = extent;
+		mExtent = extent;
+
+		mViewport = {};
+		mViewport.x = 0.0f;
+		mViewport.y = 0.0f;
+		mViewport.width = (float)extent.width;
+		mViewport.height = (float)extent.height;
+		mViewport.minDepth = 0.0f;
+		mViewport.maxDepth = 1.0f;
+
+		mScissor = {};
+		mScissor.offset = { 0, 0 };
+		mScissor.extent = extent;
+
+		mPipeline = generatePipeline(mPipelineInfo);
+		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
+		mUiPipeline = generatePipeline(mUiPipelineInfo);
+
+		ImGuiIO& io = ImGui::GetIO();
+		io.DisplaySize = ImVec2(mExtent.width, mExtent.height);
+		io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
+
+		mInitialized = true;
+	}
+
+	void Renderer::invalidateRenderer() {
+		mInitialized = false;
+		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+		vkDestroyPipeline(mDevice.device, mNormalsPipeline, nullptr);
+		vkDestroyPipeline(mDevice.device, mUiPipeline, nullptr);
+	}
+
+	VkPipeline Renderer::generatePipeline(RenderPipelineInfo& pipelineInfo) {
 
 		VkPipeline pipeline;
 
-		auto modelVertShaderCode = readFile(vertShaderFile);
-		auto modelFragShaderCode = readFile(fragShaderFile);
+		auto modelVertShaderCode = readFile(pipelineInfo.vertShaderFile);
+		auto modelFragShaderCode = readFile(pipelineInfo.fragShaderFile);
 		VkShaderModule modelVertShaderModule = createShaderModule(mDevice.device, modelVertShaderCode);
 		VkShaderModule modelFragShaderModule = createShaderModule(mDevice.device, modelFragShaderCode);
 
@@ -313,19 +432,19 @@ namespace hvk {
 		};
 
 		VkPipelineInputAssemblyStateCreateInfo modelInputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-		modelInputAssembly.topology = topology;
+		modelInputAssembly.topology = pipelineInfo.topology;
 		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
 
 
 		pipeline = createCustomizedGraphicsPipeline(
-			mDevice.device, 
-			extent, 
-			mRenderPass, 
-			pipelineLayout,
+			mDevice.device,
+			pipelineInfo.extent,
+			mRenderPass,
+			pipelineInfo.pipelineLayout,
 			modelShaderStages,
-			vertexInputInfo,
+			pipelineInfo.vertexInfo.vertexInputInfo,
 			modelInputAssembly,
-			blendAttachments);
+			pipelineInfo.blendAttachments);
 
 		vkDestroyShaderModule(mDevice.device, modelVertShaderModule, nullptr);
 		vkDestroyShaderModule(mDevice.device, modelFragShaderModule, nullptr);
@@ -411,6 +530,7 @@ namespace hvk {
         newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
         newRenderable.textureSampler = createTextureSampler(mDevice.device);
 
+		// TODO: pre-allocate a number of descriptor sets for renderables
 		// create descriptor set
 		VkDescriptorSetAllocateInfo dsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 		dsAlloc.descriptorPool = mDescriptorPool;
@@ -526,7 +646,21 @@ namespace hvk {
 		vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
+		// bind viewport and scissor
+		vkCmdSetViewport(mCommandBuffer, 0, 1, &mViewport);
+		vkCmdSetScissor(mCommandBuffer, 0, 1, &mScissor);
+
 		VkDeviceSize offsets[] = { 0 };
+
+		vkCmdBindDescriptorSets(
+			mCommandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			mPipelineInfo.pipelineLayout,
+			0,
+			1,
+			&mLightsDescriptorSet,
+			0,
+			nullptr);
 		
 		for (const auto& renderable : mRenderables) {
 			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &renderable.vbo.memoryResource, offsets);
@@ -534,10 +668,10 @@ namespace hvk {
 			vkCmdBindDescriptorSets(
 				mCommandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				mPipelineLayout, 
-				0, 
+				mPipelineInfo.pipelineLayout, 
 				1, 
-				&renderable.descriptorSet, 
+				1,
+				&renderable.descriptorSet,
 				0, 
 				nullptr);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
@@ -550,8 +684,8 @@ namespace hvk {
 				vkCmdBindDescriptorSets(
 					mCommandBuffer,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					mPipelineLayout,
-					0,
+					mNormalsPipelineInfo.pipelineLayout,
+					1,
 					1,
 					&renderable.descriptorSet,
 					0,
@@ -568,7 +702,7 @@ namespace hvk {
 			vkCmdBindDescriptorSets(
 				mCommandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
-				mUiPipelineLayout, 
+				mUiPipelineInfo.pipelineLayout, 
 				0, 
 				1, 
 				&mUiDescriptorSet, 
@@ -577,7 +711,7 @@ namespace hvk {
 			UiPushConstant push = {};
 			push.scale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
 			push.pos = glm::vec2(-1.f);
-			vkCmdPushConstants(mCommandBuffer, mUiPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
+			vkCmdPushConstants(mCommandBuffer, mUiPipelineInfo.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
 			VkDeviceSize offsets[1] = { 0 };
 
 			// Create vertex buffer
@@ -660,7 +794,7 @@ namespace hvk {
 	VkSemaphore Renderer::drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores, uint32_t waitSemaphoreCount) {
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::NewFrame();
-		// update uniforms
+		// update uniforms for renderables
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
 			ubo.model = renderable.renderObject->getWorldTransform();
@@ -670,8 +804,28 @@ namespace hvk {
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 
-		ImGui::Begin("Test Window");
-		ImGui::Text("Text Blah");
+		int memOffset = 0;
+		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
+		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
+		uboLights.numLights = mLights.size();
+		uboLights.ambient = AmbientLight{
+			glm::vec3(0.f, 1.f, 0.f),
+			1.f
+		};
+		for (int i = 0; i < mLights.size(); ++i) {
+			LightRef light = mLights[i];
+			UniformLight ubo = {};
+			//ubo.lightPos = mCamera->getProjection() * 
+				//mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
+			ubo.lightPos = light->getWorldPosition();
+			ubo.lightColor = light->getColor();
+			uboLights.lights[i] = ubo;
+		}
+		memcpy(copyaddr, &uboLights, sizeof(uboLights));
+
+
+		ImGui::Begin("Renderer");
+		ImGui::Checkbox("Draw Normals", &sDrawNormals);
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 
@@ -695,5 +849,9 @@ namespace hvk {
 
 		// caller can determine when render is finished for present
 		return mRenderFinished;
+	}
+
+	void Renderer::addLight(LightRef lightObject) {
+		mLights.push_back(lightObject);
 	}
 }

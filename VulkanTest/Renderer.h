@@ -9,6 +9,7 @@
 #include "types.h"
 #include "Node.h"
 #include "Camera.h"
+#include "Light.h"
 #include "RenderObject.h"
 
 namespace hvk {
@@ -29,6 +30,22 @@ namespace hvk {
 
 		Resource<VkBuffer> normalVbo;
 		size_t numNormalVertices;
+	};
+
+	struct VertexInfo {
+		VkVertexInputBindingDescription bindingDescription;
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+	};
+
+	struct RenderPipelineInfo {
+		VkPrimitiveTopology topology;
+		const char* vertShaderFile;
+		const char* fragShaderFile;
+		VkExtent2D extent;
+		VertexInfo vertexInfo;
+		VkPipelineLayout pipelineLayout;
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
 	};
 
 	class Renderer
@@ -63,22 +80,26 @@ namespace hvk {
 		VkRenderPass mRenderPass;
 		VkExtent2D mExtent;
 		VkSemaphore mRenderFinished;
+		VkViewport mViewport;
+		VkRect2D mScissor;
+
+		RenderPipelineInfo mPipelineInfo;
+		RenderPipelineInfo mNormalsPipelineInfo;
+		RenderPipelineInfo mUiPipelineInfo;
 
 		CameraRef mCamera;
 		std::vector<Renderable> mRenderables;
+
+		std::vector<LightRef> mLights;
+		Resource<VkBuffer> mLightsUbo;
+		VkDescriptorSetLayout mLightsDescriptorSetLayout;
+		VkDescriptorSet mLightsDescriptorSet;
 
 		VmaAllocator mAllocator;
 
 		void recordCommandBuffer(VkFramebuffer& framebuffer);
 		void findFirstRenderIndexAvailable();
-		VkPipeline generatePipeline(
-			VkPrimitiveTopology topology, 
-			const char* vertShaderFile, 
-			const char* fragShaderFile,
-			VkExtent2D& extent,
-			VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-			VkPipelineLayout& pipelineLayout,
-			std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments);
+		VkPipeline generatePipeline(RenderPipelineInfo& pipelineInfo);
 
 	public:
 		Renderer();
@@ -86,7 +107,10 @@ namespace hvk {
 
 		void init(VulkanDevice device, VmaAllocator allocator, VkQueue graphicsQueue, VkRenderPass renderPass, CameraRef camera, VkFormat colorAttachmentFormat, VkExtent2D extent);
 		void addRenderable(RenderObjRef renderObject);
+		void addLight(LightRef lightObject);
 		VkSemaphore drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores=nullptr, uint32_t waitSemaphoreCount=0);
+		void updateRenderPass(VkRenderPass renderPass, VkExtent2D extent);
+		void invalidateRenderer();
 	};
 }
 

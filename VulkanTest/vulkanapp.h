@@ -11,6 +11,7 @@
 #include "types.h"
 #include "Node.h"
 #include "Camera.h"
+#include "Light.h"
 #include "Renderer.h"
 #include "Clock.h"
 
@@ -43,6 +44,7 @@ namespace hvk {
 
         NodeRef mObjectNode;
 		CameraRef mCameraNode;
+		LightRef mLightNode;
 
 		Renderer mRenderer;
 
@@ -58,7 +60,12 @@ namespace hvk {
 		void initializeDevice();
 		void initializeRenderer();
 		void initializeApp();
+		void initFramebuffers();
 		void drawFrame();
+		void cleanupSwapchain();
+
+		static void handleWindowResize(GLFWwindow* window, int width, int height);
+		void recreateSwapchain();
 
 		/*-- Things which should be handled elsewhere later --*/
 		void updateCamera(double deltaT);

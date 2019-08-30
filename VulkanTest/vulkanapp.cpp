@@ -103,13 +103,8 @@ namespace hvk {
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
         //vkDestroyPipeline(mDevice, mGraphicsPipeline, nullptr);
         //vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
-        for (auto framebuffer : mFramebuffers) {
-            vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
-        }
-        for (auto imageView : mImageViews) {
-            vkDestroyImageView(mDevice, imageView, nullptr);
-        }
-        vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
+
+		cleanupSwapchain();
 	
 		// TODO: destroy Renderer
 
@@ -213,7 +208,14 @@ namespace hvk {
     }
 
     void VulkanApp::initializeRenderer() {
+		// create allocator
+		VmaAllocatorCreateInfo allocatorCreate = {};
+		allocatorCreate.physicalDevice = mPhysicalDevice;
+		allocatorCreate.device = mDevice;
+		vmaCreateAllocator(&allocatorCreate, &mAllocator);
+
         vkGetDeviceQueue(mDevice, mGraphicsIndex, 0, &mGraphicsQueue);
+        mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
 
         if (glfwCreateWindowSurface(mInstance, mWindow.get(), nullptr, &mSurface) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Window Surface");
@@ -229,6 +231,86 @@ namespace hvk {
             throw std::runtime_error("Failed to create Swapchain");
         }
 
+		initFramebuffers();
+
+		// create Camera object
+		mCameraNode = std::make_shared<Camera>(
+			45.0f,
+			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+			0.1f,
+			1000.0f,
+			nullptr,
+			glm::mat4(1.0f));
+		QueueFamilies families = {
+			mGraphicsIndex,
+			mGraphicsIndex
+		};
+		VulkanDevice device = {
+			mPhysicalDevice,
+			mDevice,
+			families
+		};
+		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
+
+		glm::mat4 modelTransform = glm::mat4(1.0f);
+		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
+		RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
+		mRenderer.addRenderable(modelObj);
+
+        mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
+		mLightNode = std::make_shared<Light>(
+			nullptr, 
+			glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.f, 0.f)), 
+			glm::vec3(1.0f, 1.0f, 1.0f));
+		mRenderer.addLight(mLightNode);
+
+        mImageAvailable = createSemaphore(mDevice);
+    }
+
+	void VulkanApp::recreateSwapchain() {
+		vkDeviceWaitIdle(mDevice);
+		mRenderer.invalidateRenderer();
+		cleanupSwapchain();
+		glfwGetFramebufferSize(mWindow.get(), &mWindowWidth, &mWindowHeight);
+
+        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mWindowWidth, mWindowHeight, mSwapchain) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create Swapchain");
+        }
+
+		initFramebuffers();
+		mCameraNode->updateProjection(
+			45.0f,
+			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+			0.1f,
+			1000.0f);
+		mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+	}
+
+	void VulkanApp::initializeApp() {
+		glfwSetWindowUserPointer(mWindow.get(), this);
+		glfwSetFramebufferSizeCallback(mWindow.get(), VulkanApp::handleWindowResize);
+	}
+
+    void VulkanApp::init() {
+        try {
+			ImGui::CreateContext();
+            std::cout << "init vulkan" << std::endl;
+            initializeVulkan();
+            enableVulkanValidationLayers();
+            std::cout << "init device" << std::endl;
+            initializeDevice();
+            std::cout << "init renderer" << std::endl;
+            initializeRenderer();
+            std::cout << "init application" << std::endl;
+			initializeApp();
+            std::cout << "done initializing" << std::endl;
+        }
+        catch (const std::runtime_error& error) {
+            std::cout << "Error during initialization: " << error.what() << std::endl;
+        }
+    }
+
+	void VulkanApp::initFramebuffers() {
         uint32_t imageCount = 0;
         vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
         vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
@@ -239,14 +321,6 @@ namespace hvk {
         for (size_t i = 0; i < mSwapchainImages.size(); i++) {
             mImageViews[i] = createImageView(mDevice, mSwapchainImages[i], mSwapchain.swapchainImageFormat);
         }
-
-        mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
-
-		// create allocator
-		VmaAllocatorCreateInfo allocatorCreate = {};
-		allocatorCreate.physicalDevice = mPhysicalDevice;
-		allocatorCreate.device = mDevice;
-		vmaCreateAllocator(&allocatorCreate, &mAllocator);
 
 		// create depth image and view
 		VkImageCreateInfo depthImageCreate = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -288,100 +362,20 @@ namespace hvk {
         mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
 
         createFramebuffers(mDevice, mImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
-
-		// create Camera object
-		mCameraNode = std::make_shared<Camera>(
-			45.0f,
-			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-			0.1f,
-			1000.0f,
-			nullptr,
-			glm::mat4(1.0f));
-		QueueFamilies families = {
-			mGraphicsIndex,
-			mGraphicsIndex
-		};
-		VulkanDevice device = {
-			mPhysicalDevice,
-			mDevice,
-			families
-		};
-		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
-
-		/*
-		RenderObjRef newObj = std::make_shared<RenderObject>(
-            nullptr, 
-            glm::mat4(1.0f), 
-            std::make_shared<std::vector<Vertex>>(vertices),
-            std::make_shared<std::vector<uint16_t>>(indices));
-		glm::mat4 obj2Trans = glm::mat4(1.0f);
-		obj2Trans = glm::translate(obj2Trans, glm::vec3(0.3f, 0.2f, -5.0f));
-		glm::mat4 obj3Trans  = glm::rotate(glm::mat4(1.0f), 0.1f, glm::vec3(0.f, 1.f, 0.f));
-		obj3Trans = glm::translate(obj3Trans, glm::vec3(1.f, -4.f, 1.f));
-		RenderObjRef obj2 = std::make_shared<RenderObject>(
-            nullptr, 
-            obj2Trans,
-            std::make_shared<std::vector<Vertex>>(vertices),
-            std::make_shared<std::vector<uint16_t>>(indices));
-		RenderObjRef obj3 = std::make_shared<RenderObject>(
-            nullptr, 
-            obj3Trans,
-            std::make_shared<std::vector<Vertex>>(vertices),
-            std::make_shared<std::vector<uint16_t>>(indices));
-		mRenderer.addRenderable(obj2);
-		mRenderer.addRenderable(newObj);
-		mRenderer.addRenderable(obj3);
-		*/
-
-        //bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, "resources/duck/Duck.gltf");
-		glm::mat4 modelTransform = glm::mat4(1.0f);
-		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
-		RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
-		mRenderer.addRenderable(modelObj);
-
-
-
-		//glm::lookAt(mCameraNode->getWorldPosition(), )
-		//mCameraNode->setLocalTransform(mCameraNode->getLocalTransform() * glm::lookAt());
-		//mCameraNode->lookAt()
-
-		//mCameraNode->setLocalPosition(glm::vec3(0.f, 2.f, 2.f));
-
-		//std::cout << "Obj 1 position: " << glm::to_string(newObj->getWorldPosition()) << std::endl;
-		//std::cout << "Obj 2 position: " << glm::to_string(obj2->getWorldPosition()) << std::endl;
-		std::cout << "Camera position: " << glm::to_string(mCameraNode->getWorldPosition()) << std::endl;
-		std::cout << "Camera Up Vector: " << glm::to_string(mCameraNode->getUpVector()) << std::endl;
-		std::cout << "Camera Forward Vector: " << glm::to_string(mCameraNode->getForwardVector()) << std::endl;
-		std::cout << "Camera Right Vector: " << glm::to_string(mCameraNode->getRightVector()) << std::endl;
-
-        mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
-
-
-        mImageAvailable = createSemaphore(mDevice);
-    }
-
-	void VulkanApp::initializeApp() {
-		//glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 	}
 
-    void VulkanApp::init() {
-        try {
-			ImGui::CreateContext();
-            std::cout << "init vulkan" << std::endl;
-            initializeVulkan();
-            enableVulkanValidationLayers();
-            std::cout << "init device" << std::endl;
-            initializeDevice();
-            std::cout << "init renderer" << std::endl;
-            initializeRenderer();
-            std::cout << "init application" << std::endl;
-			initializeApp();
-            std::cout << "done initializing" << std::endl;
-        }
-        catch (const std::runtime_error& error) {
-            std::cout << "Error during initialization: " << error.what() << std::endl;
-        }
-    }
+	void VulkanApp::cleanupSwapchain() {
+		vkDestroyImageView(mDevice, mDepthView, nullptr);
+		vmaDestroyImage(mAllocator, mDepthResource.memoryResource, mDepthResource.allocation);
+		for (auto& imageView : mImageViews) {
+			vkDestroyImageView(mDevice, imageView, nullptr);
+		}
+		for (auto& framebuffer : mFramebuffers) {
+			vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
+		}
+		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
+		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
+	}
 
     void VulkanApp::drawFrame() {
         uint32_t imageIndex;
@@ -418,6 +412,10 @@ namespace hvk {
 			mClock.start();
 			frameTime = mClock.getDelta();
 
+			//ImGui::Che
+
+			// TODO: figure out how to poll GLFW events outside of InputManager
+			//	while still capturing current vs previous mouse state correctly
 			InputManager::update();
 			for (const auto& mappedKey : cameraControlMapping) {
 				cameraControls[mappedKey.second] = InputManager::currentKeysPressed[mappedKey.first];
@@ -431,14 +429,19 @@ namespace hvk {
 			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
 				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
 			}
+			if (InputManager::currentKeysPressed[GLFW_KEY_Y] && !InputManager::previousKeysPressed[GLFW_KEY_Y]) {
+				Renderer::setDrawNormals(!Renderer::getDrawNormals());
+			}
 
 			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
 			bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
-			if (mouseClicked && !ImGui::IsAnyItemHovered()) {
+			if (mouseClicked && !io.WantCaptureMouse) {
 				cameraDrag = true;
+				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			}
 			if (mouseReleased) {
 				cameraDrag = false;
+				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
 			if (cameraDrag) {
 				float sensitivity = 0.1f;
@@ -480,5 +483,10 @@ namespace hvk {
 		}
 
 		mCameraNode->rotate(glm::radians(cameraRotation.pitch), glm::radians(cameraRotation.yaw));
+	}
+
+	void VulkanApp::handleWindowResize(GLFWwindow* window, int width, int height) {
+		VulkanApp* thisApp = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
+		thisApp->recreateSwapchain();
 	}
 }
