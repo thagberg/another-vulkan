@@ -130,7 +130,8 @@ namespace hvk {
 		assert(vkCreateDescriptorPool(mDevice.device, &poolInfo, nullptr, &mDescriptorPool) == VK_SUCCESS);
 
 		// Create Lights UBO
-        uint32_t uboMemorySize = NUM_INITIAL_LIGHTS * sizeof(hvk::UniformLight);
+        //uint32_t uboMemorySize = NUM_INITIAL_LIGHTS * sizeof(hvk::UniformLight) + sizeof(uint32_t);
+		uint32_t uboMemorySize = sizeof(hvk::UniformLightObject<NUM_INITIAL_LIGHTS>);
         VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         uboInfo.size = uboMemorySize;
         uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -803,17 +804,20 @@ namespace hvk {
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 
-		// update uniforms for lights
 		int memOffset = 0;
-		UniformLight* copyaddr = reinterpret_cast<UniformLight*>(mLightsUbo.allocationInfo.pMappedData);
-		for (const auto& light : mLights) {
+		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
+		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
+		uboLights.numLights = mLights.size();
+		for (int i = 0; i < mLights.size(); ++i) {
+			LightRef light = mLights[i];
 			UniformLight ubo = {};
 			ubo.lightPos = mCamera->getProjection() * 
 				mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
 			ubo.lightColor = light->getColor();
-			memcpy(copyaddr, &ubo, sizeof(ubo));
-			memOffset += sizeof(ubo);
+			uboLights.lights[i] = ubo;
 		}
+		memcpy(copyaddr, &uboLights, sizeof(uboLights));
+
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
