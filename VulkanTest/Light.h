@@ -16,6 +16,7 @@ namespace hvk {
 		~Light();
 
 		glm::vec3 getColor() const { return mColor; }
+        void setColor(glm::vec3 color) { mColor = color; }
 	};
 
 }

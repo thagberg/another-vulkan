@@ -808,11 +808,8 @@ namespace hvk {
 		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
 		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
 		uboLights.numLights = mLights.size();
-		uboLights.ambient = AmbientLight{
-			glm::vec3(0.f, 1.f, 0.f),
-			1.f
-		};
-		for (int i = 0; i < mLights.size(); ++i) {
+        uboLights.ambient = mAmbientLight;
+		for (size_t i = 0; i < mLights.size(); ++i) {
 			LightRef light = mLights[i];
 			UniformLight ubo = {};
 			//ubo.lightPos = mCamera->getProjection() * 
@@ -826,6 +823,13 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
+		ImGui::ColorEdit3("Ambient Light", &mAmbientLight.lightColor.x);
+		for (size_t i = 0; i < mLights.size(); ++i) {
+		    LightRef light = mLights[i];
+		    glm::vec3 col = light->getColor();
+		    ImGui::ColorEdit3("Dynamic Light " + i, &col.x);
+		    light->setColor(col);
+		}
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 
