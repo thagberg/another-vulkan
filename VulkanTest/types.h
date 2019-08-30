@@ -17,6 +17,9 @@
 #define UiVertexUVFormat VK_FORMAT_R32G32_SFLOAT
 #define UiVertexColorFormat VK_FORMAT_R8G8B8A8_UNORM
 
+#define COMP3_4_ALIGN(t) alignas(4*sizeof(t))
+#define COMP2_ALIGN(t) alignas(2*sizeof(t))
+
 namespace hvk {
 
 	typedef std::vector<VkImageView> SwapchainImageViews;
@@ -130,13 +133,18 @@ namespace hvk {
 	};
 
 	struct UniformBufferObject {
-		glm::mat4 model;
-		glm::mat4 view;
-		glm::mat4 modelViewProj;
+		COMP3_4_ALIGN(float) glm::mat4 model;
+		COMP3_4_ALIGN(float) glm::mat4 view;
+		COMP3_4_ALIGN(float) glm::mat4 modelViewProj;
+	};
+
+	struct UniformLight {
+		COMP3_4_ALIGN(float) glm::vec3 lightPos;
+		COMP3_4_ALIGN(float) glm::vec3 lightColor;
 	};
 
 	struct UiPushConstant {
-		glm::vec2 scale;
-		glm::vec2 pos;
+		COMP2_ALIGN(float) glm::vec2 scale;
+		COMP2_ALIGN(float) glm::vec2 pos;
 	};
 }

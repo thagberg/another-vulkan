@@ -9,6 +9,7 @@
 #include "types.h"
 #include "Node.h"
 #include "Camera.h"
+#include "Light.h"
 #include "RenderObject.h"
 
 namespace hvk {
@@ -89,6 +90,11 @@ namespace hvk {
 		CameraRef mCamera;
 		std::vector<Renderable> mRenderables;
 
+		std::vector<LightRef> mLights;
+		Resource<VkBuffer> mLightsUbo;
+		VkDescriptorSetLayout mLightsDescriptorSetLayout;
+		VkDescriptorSet mLightsDescriptorSet;
+
 		VmaAllocator mAllocator;
 
 		void recordCommandBuffer(VkFramebuffer& framebuffer);
@@ -101,6 +107,7 @@ namespace hvk {
 
 		void init(VulkanDevice device, VmaAllocator allocator, VkQueue graphicsQueue, VkRenderPass renderPass, CameraRef camera, VkFormat colorAttachmentFormat, VkExtent2D extent);
 		void addRenderable(RenderObjRef renderObject);
+		void addLight(LightRef lightObject);
 		VkSemaphore drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores=nullptr, uint32_t waitSemaphoreCount=0);
 		void updateRenderPass(VkRenderPass renderPass, VkExtent2D extent);
 		void invalidateRenderer();

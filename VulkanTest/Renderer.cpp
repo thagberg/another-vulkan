@@ -12,7 +12,10 @@
 #include "vulkan-util.h"
 
 #define MAX_DESCRIPTORS 20
+#define MAX_UBOS 40
+#define MAX_SAMPLERS 20
 #define NUM_INITIAL_RENDEROBJECTS 10
+#define NUM_INITIAL_LIGHTS 10
 
 namespace hvk {
 
@@ -24,7 +27,8 @@ namespace hvk {
 		mUiIbo{},
 		mPipelineInfo{},
 		mNormalsPipelineInfo{},
-		mUiPipelineInfo{}
+		mUiPipelineInfo{},
+		mLights()
 	{
 	}
 
@@ -50,6 +54,7 @@ namespace hvk {
 		mAllocator = allocator;
 
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
+		mLights.reserve(NUM_INITIAL_LIGHTS);
 
 		// Create fence for rendering complete
 		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -113,9 +118,9 @@ namespace hvk {
 
 		std::array<VkDescriptorPoolSize, 2> poolSizes = {};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = MAX_DESCRIPTORS;
+		poolSizes[0].descriptorCount = MAX_UBOS;
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = MAX_DESCRIPTORS;
+		poolSizes[1].descriptorCount = MAX_SAMPLERS;
 
 		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
 		poolInfo.poolSizeCount = poolSizes.size();
@@ -124,10 +129,64 @@ namespace hvk {
 
 		assert(vkCreateDescriptorPool(mDevice.device, &poolInfo, nullptr, &mDescriptorPool) == VK_SUCCESS);
 
+		// Create Lights UBO
+        uint32_t uboMemorySize = NUM_INITIAL_LIGHTS * sizeof(hvk::UniformLight);
+        VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        uboInfo.size = uboMemorySize;
+        uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		VmaAllocationCreateInfo uniformAllocCreateInfo = {};
+		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		vmaCreateBuffer(
+			mAllocator,
+			&uboInfo,
+			&uniformAllocCreateInfo,
+			&mLightsUbo.memoryResource,
+			&mLightsUbo.allocation,
+			&mLightsUbo.allocationInfo);
+
+		// Create Lights descriptor set
+		VkDescriptorSetLayoutBinding lightLayoutBinding = {};
+		lightLayoutBinding.binding = 0;
+		lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		lightLayoutBinding.descriptorCount = 1;
+		lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		lightLayoutBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutCreateInfo lightsLayoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		lightsLayoutInfo.bindingCount = 1;
+		lightsLayoutInfo.pBindings = &lightLayoutBinding;
+
+		assert(vkCreateDescriptorSetLayout(mDevice.device, &lightsLayoutInfo, nullptr, &mLightsDescriptorSetLayout) == VK_SUCCESS);
+
+		VkDescriptorSetAllocateInfo lightsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		lightsAlloc.descriptorPool = mDescriptorPool;
+		lightsAlloc.descriptorSetCount = 1;
+		lightsAlloc.pSetLayouts = &mLightsDescriptorSetLayout;
+
+		assert(vkAllocateDescriptorSets(mDevice.device, &lightsAlloc, &mLightsDescriptorSet) == VK_SUCCESS);
+
+		VkDescriptorBufferInfo lightsBufferInfo = {};
+		lightsBufferInfo.buffer = mLightsUbo.memoryResource;
+		lightsBufferInfo.offset = 0;
+		lightsBufferInfo.range = NUM_INITIAL_LIGHTS * sizeof(hvk::UniformLight);
+
+		VkWriteDescriptorSet lightsDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+		lightsDescriptorWrite.dstSet = mLightsDescriptorSet;
+		lightsDescriptorWrite.dstBinding = 0;
+		lightsDescriptorWrite.dstArrayElement = 0;
+		lightsDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		lightsDescriptorWrite.descriptorCount = 1;
+		lightsDescriptorWrite.pBufferInfo = &lightsBufferInfo;
+
+		vkUpdateDescriptorSets(mDevice.device, 1, &lightsDescriptorWrite, 0, nullptr);
+
 		// Create graphics pipeline
+		std::array<VkDescriptorSetLayout, 2> dsLayouts = { mLightsDescriptorSetLayout, mDescriptorSetLayout };
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		layoutCreate.setLayoutCount = 1;
-		layoutCreate.pSetLayouts = &mDescriptorSetLayout;
+		layoutCreate.setLayoutCount = dsLayouts.size();
+		layoutCreate.pSetLayouts = dsLayouts.data();
 		layoutCreate.pushConstantRangeCount = 0;
 		layoutCreate.pPushConstantRanges = nullptr;
 
@@ -307,6 +366,7 @@ namespace hvk {
 
 		mUiPipeline = generatePipeline(mUiPipelineInfo);
 
+
 		mInitialized = true;
 	}
 
@@ -469,6 +529,7 @@ namespace hvk {
         newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
         newRenderable.textureSampler = createTextureSampler(mDevice.device);
 
+		// TODO: pre-allocate a number of descriptor sets for renderables
 		// create descriptor set
 		VkDescriptorSetAllocateInfo dsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 		dsAlloc.descriptorPool = mDescriptorPool;
@@ -589,6 +650,16 @@ namespace hvk {
 		vkCmdSetScissor(mCommandBuffer, 0, 1, &mScissor);
 
 		VkDeviceSize offsets[] = { 0 };
+
+		vkCmdBindDescriptorSets(
+			mCommandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			mPipelineInfo.pipelineLayout,
+			0,
+			1,
+			&mLightsDescriptorSet,
+			0,
+			nullptr);
 		
 		for (const auto& renderable : mRenderables) {
 			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &renderable.vbo.memoryResource, offsets);
@@ -597,9 +668,9 @@ namespace hvk {
 				mCommandBuffer, 
 				VK_PIPELINE_BIND_POINT_GRAPHICS, 
 				mPipelineInfo.pipelineLayout, 
-				0, 
 				1, 
-				&renderable.descriptorSet, 
+				1,
+				&renderable.descriptorSet,
 				0, 
 				nullptr);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
@@ -613,7 +684,7 @@ namespace hvk {
 					mCommandBuffer,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
 					mNormalsPipelineInfo.pipelineLayout,
-					0,
+					1,
 					1,
 					&renderable.descriptorSet,
 					0,
@@ -722,7 +793,7 @@ namespace hvk {
 	VkSemaphore Renderer::drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores, uint32_t waitSemaphoreCount) {
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::NewFrame();
-		// update uniforms
+		// update uniforms for renderables
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
 			ubo.model = renderable.renderObject->getWorldTransform();
@@ -730,6 +801,18 @@ namespace hvk {
 			ubo.modelViewProj = mCamera->getProjection() * ubo.view * ubo.model;
 			//ubo.modelViewProj[1][1] *= -1;
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
+		}
+
+		// update uniforms for lights
+		int memOffset = 0;
+		UniformLight* copyaddr = reinterpret_cast<UniformLight*>(mLightsUbo.allocationInfo.pMappedData);
+		for (const auto& light : mLights) {
+			UniformLight ubo = {};
+			ubo.lightPos = mCamera->getProjection() * 
+				mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
+			ubo.lightColor = light->getColor();
+			memcpy(copyaddr, &ubo, sizeof(ubo));
+			memOffset += sizeof(ubo);
 		}
 
 		ImGui::Begin("Renderer");
@@ -757,5 +840,9 @@ namespace hvk {
 
 		// caller can determine when render is finished for present
 		return mRenderFinished;
+	}
+
+	void Renderer::addLight(LightRef lightObject) {
+		mLights.push_back(lightObject);
 	}
 }
