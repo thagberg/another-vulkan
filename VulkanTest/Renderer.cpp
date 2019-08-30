@@ -28,7 +28,11 @@ namespace hvk {
 		mPipelineInfo{},
 		mNormalsPipelineInfo{},
 		mUiPipelineInfo{},
-		mLights()
+		mLights(),
+        mAmbientLight {
+			glm::vec3(0.f, 1.f, 0.f),
+			1.f
+        }
 	{
 	}
 
@@ -808,10 +812,7 @@ namespace hvk {
 		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
 		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
 		uboLights.numLights = mLights.size();
-		uboLights.ambient = AmbientLight{
-			glm::vec3(0.f, 1.f, 0.f),
-			1.f
-		};
+        uboLights.ambient = mAmbientLight;
 		for (int i = 0; i < mLights.size(); ++i) {
 			LightRef light = mLights[i];
 			UniformLight ubo = {};
@@ -826,6 +827,7 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
+        ImGui::ColorEdit3("Ambient Light", &mAmbientLight.lightColor.x);
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 

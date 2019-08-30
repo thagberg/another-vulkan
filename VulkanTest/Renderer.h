@@ -90,6 +90,7 @@ namespace hvk {
 		CameraRef mCamera;
 		std::vector<Renderable> mRenderables;
 
+        AmbientLight mAmbientLight;
 		std::vector<LightRef> mLights;
 		Resource<VkBuffer> mLightsUbo;
 		VkDescriptorSetLayout mLightsDescriptorSetLayout;
