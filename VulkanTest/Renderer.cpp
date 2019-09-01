@@ -28,7 +28,11 @@ namespace hvk {
 		mPipelineInfo{},
 		mNormalsPipelineInfo{},
 		mUiPipelineInfo{},
-		mLights()
+		mLights(),
+		mAmbientLight{
+			glm::vec3(0.f, 1.f, 0.f),
+			0.1f
+		}
 	{
 	}
 
@@ -215,6 +219,7 @@ namespace hvk {
 		mPipelineInfo.extent = extent;
 		mPipelineInfo.vertShaderFile = "shaders/compiled/vert.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/frag.spv";
+		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mPipeline = generatePipeline(mPipelineInfo);
 
@@ -237,6 +242,7 @@ namespace hvk {
 		mNormalsPipelineInfo.extent = extent;
 		mNormalsPipelineInfo.pipelineLayout = mPipelineInfo.pipelineLayout;
 		mNormalsPipelineInfo.blendAttachments = mPipelineInfo.blendAttachments;
+		mNormalsPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
 
@@ -364,6 +370,7 @@ namespace hvk {
 		mUiPipelineInfo.vertShaderFile = "shaders/compiled/ui_v.spv";
 		mUiPipelineInfo.fragShaderFile = "shaders/compiled/ui_f.spv";
 		mUiPipelineInfo.extent = extent;
+		mUiPipelineInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
 		mUiPipeline = generatePipeline(mUiPipelineInfo);
 
@@ -441,6 +448,7 @@ namespace hvk {
 			pipelineInfo.extent,
 			mRenderPass,
 			pipelineInfo.pipelineLayout,
+			pipelineInfo.frontFace,
 			modelShaderStages,
 			pipelineInfo.vertexInfo.vertexInputInfo,
 			modelInputAssembly,
@@ -798,7 +806,9 @@ namespace hvk {
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
 			ubo.model = renderable.renderObject->getWorldTransform();
+			ubo.model[1][1] *= -1;
 			ubo.view = mCamera->getViewTransform();
+			//ubo.view[1][1] *= -1;
 			ubo.modelViewProj = mCamera->getProjection() * ubo.view * ubo.model;
 			//ubo.modelViewProj[1][1] *= -1;
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
@@ -816,6 +826,7 @@ namespace hvk {
 				//mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
 			ubo.lightPos = light->getWorldPosition();
 			ubo.lightColor = light->getColor();
+			ubo.lightIntensity = light->getIntensity();
 			uboLights.lights[i] = ubo;
 		}
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
@@ -823,12 +834,20 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
-		ImGui::ColorEdit3("Ambient Light", &mAmbientLight.lightColor.x);
+		ImGui::Text("Ambient Lights");
+		ImGui::ColorEdit3("Color", &mAmbientLight.lightColor.x);
+		float ambientMin = 0.f;
+		float ambientMax = 1.f;
+		ImGui::SliderFloat("Intensity", &mAmbientLight.lightIntensity, 0.f, 1.f);
+		ImGui::Text("Dynamic Lights");
 		for (size_t i = 0; i < mLights.size(); ++i) {
 		    LightRef light = mLights[i];
 		    glm::vec3 col = light->getColor();
 		    ImGui::ColorEdit3("Dynamic Light " + i, &col.x);
 		    light->setColor(col);
+			float intensity = light->getIntensity();
+			ImGui::SliderFloat("Intensity#", &intensity, 0.f, 1.f);
+			light->setIntensity(intensity);
 		}
 		ImGui::End();
 		ImGui::ShowDemoWindow();
