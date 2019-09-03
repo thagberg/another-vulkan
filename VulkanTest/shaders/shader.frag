@@ -31,12 +31,12 @@ void main() {
 	vec4 baseColor = texture(texSampler, fragTexCoord);
 	vec4 ambientLight = vec4(lbo.ambient.intensity * lbo.ambient.color, 1.f);
 	//baseColor += ambientLight;
-	vec4 diffuseLight = vec4(1.f, 1.f, 1.f, 1.f);
+	vec4 diffuseLight = vec4(0.f, 0.f, 0.f, 1.f);
 	//float d = dot(inNormal, gl_FragCoord);
 	for (int i = 0; i < lbo.numLights; i++) {
 		vec3 lightDir = normalize(lbo.lights[i].pos - fragPos);
-		float d = lbo.lights[i].intensity * dot(inNormal, lightDir);
-		diffuseLight *= (d * vec4(lbo.lights[i].color, 1.0f));
+		float d = max(lbo.lights[i].intensity * dot(inNormal, lightDir), 0);
+		diffuseLight += (d * vec4(lbo.lights[i].color, 1.0f));
 	}
 	outColor = (ambientLight + diffuseLight) * baseColor;
 }
