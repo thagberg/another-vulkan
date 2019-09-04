@@ -44,7 +44,7 @@ void main() {
 		vec3 lightDir = normalize(thisLight.pos - fragPos);
 		vec3 reflectDir = reflect(-lightDir, inNormal);
 		float d = thisLight.intensity * max(dot(inNormal, lightDir), 0);
-		float s = pow(max(dot(viewDir, reflectDir), 0.f), 32);
+		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
 		diffuseLight += d * thisLight.color;
 		specularLight += 0.5f * s * thisLight.color;
 	}
