@@ -32,7 +32,8 @@ namespace hvk {
         mVertices(vertices),
         mIndices(indices),
 		mTexture(texture),
-		mSpecularStrength(0.f)
+		mSpecularStrength(0.f),
+		mShininess(1)
 	{
 	}
 
@@ -58,6 +59,14 @@ namespace hvk {
 
 	void RenderObject::setSpecularStrength(float specularStrength) {
 		mSpecularStrength = specularStrength;
+	}
+
+	uint32_t RenderObject::getShininess() const {
+		return mShininess;
+	}
+
+	void RenderObject::setShininess(uint32_t shininess) {
+		mShininess = shininess;
 	}
 
 	void RenderObject::processGltfNode(

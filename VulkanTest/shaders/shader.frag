@@ -33,6 +33,7 @@ layout(set = 1, binding = 1) uniform sampler2D texSampler;
 
 layout (push_constant) uniform PushConstant {
 	float specularStrength;
+	uint shininess;
 } push;
 
 layout(location = 0) out vec4 outColor;
@@ -48,7 +49,7 @@ void main() {
 		vec3 lightDir = normalize(thisLight.pos - fragPos);
 		vec3 reflectDir = reflect(-lightDir, inNormal);
 		float d = thisLight.intensity * max(dot(inNormal, lightDir), 0);
-		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
+		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), push.shininess);
 		diffuseLight += d * thisLight.color;
 		specularLight += push.specularStrength * s * thisLight.color;
 	}

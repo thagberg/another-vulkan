@@ -691,6 +691,7 @@ namespace hvk {
 
 			PushConstant push = {};
 			push.specular = renderable.renderObject->getSpecularStrength();
+			push.shininess = renderable.renderObject->getShininess();
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
@@ -852,6 +853,9 @@ namespace hvk {
 			float specular = ro.renderObject->getSpecularStrength();
 			ImGui::SliderFloat("Specular", &specular, 0.f, 1.f);
 			ro.renderObject->setSpecularStrength(specular);
+			int shininess = static_cast<int>(ro.renderObject->getShininess());
+			ImGui::SliderInt("Shininess", &shininess, 1, 256);
+			ro.renderObject->setShininess(static_cast<uint32_t>(shininess));
 		}
 		ImGui::Separator();
 		ImGui::Text("Ambient Lights");
