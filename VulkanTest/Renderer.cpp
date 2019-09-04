@@ -188,12 +188,18 @@ namespace hvk {
 		vkUpdateDescriptorSets(mDevice.device, 1, &lightsDescriptorWrite, 0, nullptr);
 
 		// Create graphics pipeline
+
+		VkPushConstantRange pushRange = {};
+		pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushRange.size = sizeof(hvk::PushConstant);
+		pushRange.offset = 0;
+
 		std::array<VkDescriptorSetLayout, 2> dsLayouts = { mLightsDescriptorSetLayout, mDescriptorSetLayout };
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 		layoutCreate.setLayoutCount = dsLayouts.size();
 		layoutCreate.pSetLayouts = dsLayouts.data();
-		layoutCreate.pushConstantRangeCount = 0;
-		layoutCreate.pPushConstantRanges = nullptr;
+		layoutCreate.pushConstantRangeCount = 1;
+		layoutCreate.pPushConstantRanges = &pushRange;
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
@@ -682,6 +688,10 @@ namespace hvk {
 				&renderable.descriptorSet,
 				0, 
 				nullptr);
+
+			PushConstant push = {};
+			push.specular = renderable.renderObject->getSpecularStrength();
+			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
 
@@ -835,11 +845,19 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
+		ImGui::Separator();
+		ImGui::Text("Objects");
+		for (size_t i = 0; i < mRenderables.size(); ++i) {
+			Renderable& ro = mRenderables[i];
+			float specular = ro.renderObject->getSpecularStrength();
+			ImGui::SliderFloat("Specular", &specular, 0.f, 1.f);
+			ro.renderObject->setSpecularStrength(specular);
+		}
+		ImGui::Separator();
 		ImGui::Text("Ambient Lights");
 		ImGui::ColorEdit3("Color", &mAmbientLight.lightColor.x);
-		float ambientMin = 0.f;
-		float ambientMax = 1.f;
 		ImGui::SliderFloat("Intensity", &mAmbientLight.lightIntensity, 0.f, 1.f);
+		ImGui::Separator();
 		ImGui::Text("Dynamic Lights");
 		for (size_t i = 0; i < mLights.size(); ++i) {
 		    LightRef light = mLights[i];

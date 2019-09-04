@@ -31,6 +31,10 @@ layout(set = 1, binding = 0) uniform UniformBufferObject {
 
 layout(set = 1, binding = 1) uniform sampler2D texSampler;
 
+layout (push_constant) uniform PushConstant {
+	float specularStrength;
+} push;
+
 layout(location = 0) out vec4 outColor;
 
 void main() {
@@ -46,7 +50,7 @@ void main() {
 		float d = thisLight.intensity * max(dot(inNormal, lightDir), 0);
 		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
 		diffuseLight += d * thisLight.color;
-		specularLight += 0.5f * s * thisLight.color;
+		specularLight += push.specularStrength * s * thisLight.color;
 	}
 	outColor = vec4((ambientLight + diffuseLight + specularLight), 1.f) * baseColor;
 	//outColor = vec4(ubo.cameraPos, 1.f);

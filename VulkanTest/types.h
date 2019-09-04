@@ -162,4 +162,8 @@ namespace hvk {
 		COMP2_ALIGN(float) glm::vec2 scale;
 		COMP2_ALIGN(float) glm::vec2 pos;
 	};
+
+	struct PushConstant {
+		COMP1_ALIGN(float) float specular;
+	};
 }

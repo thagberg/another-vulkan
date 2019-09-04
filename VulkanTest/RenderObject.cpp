@@ -31,7 +31,8 @@ namespace hvk {
         Node(parent, transform),
         mVertices(vertices),
         mIndices(indices),
-		mTexture(texture)
+		mTexture(texture),
+		mSpecularStrength(0.f)
 	{
 	}
 
@@ -39,16 +40,24 @@ namespace hvk {
 	{
 	}
 
-	const VerticesRef RenderObject::getVertices() {
+	const VerticesRef RenderObject::getVertices() const {
 		return mVertices;
 	}
 
-	const IndicesRef RenderObject::getIndices() {
+	const IndicesRef RenderObject::getIndices() const {
 		return mIndices;
 	}
 
-	const TextureRef RenderObject::getTexture() {
+	const TextureRef RenderObject::getTexture() const {
 		return mTexture;
+	}
+
+	float RenderObject::getSpecularStrength() const {
+		return mSpecularStrength;
+	}
+
+	void RenderObject::setSpecularStrength(float specularStrength) {
+		mSpecularStrength = specularStrength;
 	}
 
 	void RenderObject::processGltfNode(

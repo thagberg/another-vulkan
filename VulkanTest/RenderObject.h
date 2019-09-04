@@ -24,6 +24,7 @@ namespace hvk {
         VerticesRef mVertices;
         IndicesRef mIndices;
 		TextureRef mTexture;
+		float mSpecularStrength;
 
 		static tinygltf::TinyGLTF sModelLoader;
 
@@ -43,9 +44,12 @@ namespace hvk {
 			TextureRef texture);
 		~RenderObject();
 
-		const VerticesRef getVertices();
-		const IndicesRef getIndices();
-		const TextureRef getTexture();
+		const VerticesRef getVertices() const;
+		const IndicesRef getIndices() const;
+		const TextureRef getTexture() const;
+		float getSpecularStrength() const;
+		void setSpecularStrength(float specularStrength);
+
 
 		static void allocateVertices(size_t reservedSize, VerticesRef vertices);
 		static void allocateIndices(size_t reservedSize, IndicesRef indices);
