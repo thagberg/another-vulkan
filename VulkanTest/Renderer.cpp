@@ -103,7 +103,7 @@ namespace hvk {
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;
 
 		VkDescriptorSetLayoutBinding samplerLayoutBiding = {};
@@ -811,6 +811,7 @@ namespace hvk {
 			//ubo.view[1][1] *= -1;
 			ubo.modelViewProj = mCamera->getProjection() * ubo.view * ubo.model;
 			//ubo.modelViewProj[1][1] *= -1;
+			ubo.cameraPos = mCamera->getWorldPosition();
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 

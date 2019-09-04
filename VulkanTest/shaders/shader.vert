@@ -5,6 +5,7 @@ layout(set = 1, binding = 0) uniform UniformBufferObject {
 	mat4 model;
 	mat4 view;
 	mat4 modelViewProj;
+	vec3 cameraPos;
 } ubo;
 
 layout(location = 0) in vec3 inPosition;
