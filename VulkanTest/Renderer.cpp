@@ -30,8 +30,8 @@ namespace hvk {
 		mUiPipelineInfo{},
 		mLights(),
 		mAmbientLight{
-			glm::vec3(0.f, 1.f, 0.f),
-			0.1f
+			glm::vec3(1.f, 1.f, 1.f),
+			0.3f
 		}
 	{
 	}
@@ -869,8 +869,15 @@ namespace hvk {
 		    ImGui::ColorEdit3("Dynamic Light " + i, &col.x);
 		    light->setColor(col);
 			float intensity = light->getIntensity();
-			ImGui::SliderFloat("Intensity#", &intensity, 0.f, 1.f);
+			ImGui::SliderFloat("#Intensity", &intensity, 0.f, 1.f);
 			light->setIntensity(intensity);
+			glm::vec3 oldPos = light->getWorldPosition();
+			glm::vec3 newPos = oldPos;
+			ImGui::DragFloat3("Position", &newPos.x, 0.1f);
+			glm::vec3 posDiff = newPos - oldPos;
+			if (posDiff != glm::vec3(0.f, 0.f, 0.f)) {
+				light->translateLocal(posDiff);
+			}
 		}
 		ImGui::End();
 		ImGui::ShowDemoWindow();
