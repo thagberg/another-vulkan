@@ -162,7 +162,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="CameraController.h" />
     <ClInclude Include="Clock.h" />
+    <ClInclude Include="ContextManager.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
     <ClInclude Include="include\imgui\imgui.h" />
     <ClInclude Include="include\imgui\imgui_internal.h" />
@@ -170,11 +172,13 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="InputManager.h" />
+    <ClInclude Include="Inputs.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Node.h" />
     <ClInclude Include="Renderer.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Subscription.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="vk_mem_alloc.h" />
@@ -183,7 +187,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Camera.cpp" />
+    <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="Clock.cpp" />
+    <ClCompile Include="ContextManager.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
     <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
@@ -199,6 +205,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Subscription.cpp" />
     <ClCompile Include="vulkanapp.cpp" />
     <ClCompile Include="VulkanTest.cpp" />
   </ItemGroup>

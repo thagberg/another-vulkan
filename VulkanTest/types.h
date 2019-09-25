@@ -3,6 +3,7 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <variant>
 
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
@@ -166,5 +167,11 @@ namespace hvk {
 	struct PushConstant {
 		COMP1_ALIGN(float) float specular;
 		COMP1_ALIGN(uint32_t) uint32_t shininess;
+	};
+
+	struct Command {
+		uint16_t id;
+		std::string name;
+		std::variant<uint32_t, float, bool> payload;
 	};
 }

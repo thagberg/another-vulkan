@@ -19,7 +19,7 @@
 
 namespace hvk {
 
-	bool Renderer::sDrawNormals = true;
+	bool Renderer::sDrawNormals = false;
 
 	Renderer::Renderer() :
 		mFirstRenderIndexAvailable(-1),

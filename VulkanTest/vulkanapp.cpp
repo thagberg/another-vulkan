@@ -23,39 +23,6 @@
 
 hvk::VulkanApp* currentApp;
 
-enum CameraControl {
-	move_left,
-	move_right,
-	move_up,
-	move_down,
-	move_forward,
-	move_backward
-};
-
-std::unordered_map<int, CameraControl> cameraControlMapping({
-	{GLFW_KEY_A, CameraControl::move_left},
-	{GLFW_KEY_D, CameraControl::move_right},
-	{GLFW_KEY_W, CameraControl::move_forward},
-	{GLFW_KEY_S, CameraControl::move_backward},
-	{GLFW_KEY_Q, CameraControl::move_up},
-	{GLFW_KEY_E, CameraControl::move_down}
-});
-
-std::unordered_map<CameraControl, bool> cameraControls({
-	{CameraControl::move_left, false},
-	{CameraControl::move_right, false},
-	{CameraControl::move_up, false},
-	{CameraControl::move_down, false},
-	{CameraControl::move_forward, false},
-	{CameraControl::move_backward, false}
-});
-
-struct CameraRotation {
-	double yaw;
-	double pitch;
-	double roll;
-} cameraRotation;
-
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
 };
@@ -90,7 +57,8 @@ namespace hvk {
 		mLastX(0.f),
 		mLastY(0.f),
 		mMouseLeftDown(false),
-		mClock()
+		mClock(),
+		mCameraController(nullptr)
     {
         // TODO: this is super bad, but IDGAF right now
         currentApp = this;
@@ -241,6 +209,7 @@ namespace hvk {
 			1000.0f,
 			nullptr,
 			glm::mat4(1.0f));
+		mCameraController = CameraController(mCameraNode);
 		QueueFamilies families = {
 			mGraphicsIndex,
 			mGraphicsIndex
@@ -417,9 +386,6 @@ namespace hvk {
 			// TODO: figure out how to poll GLFW events outside of InputManager
 			//	while still capturing current vs previous mouse state correctly
 			InputManager::update();
-			for (const auto& mappedKey : cameraControlMapping) {
-				cameraControls[mappedKey.second] = InputManager::currentKeysPressed[mappedKey.first];
-			}
 			MouseState mouse = InputManager::currentMouseState;
 			MouseState prevMouse = InputManager::previousMouseState;
 			io.DeltaTime = frameTime;
@@ -443,14 +409,50 @@ namespace hvk {
 				cameraDrag = false;
 				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 			}
+
+			/*
 			if (cameraDrag) {
 				float sensitivity = 0.1f;
 				cameraRotation.pitch = (mouse.y - prevMouse.y) * sensitivity;
 				cameraRotation.yaw = (prevMouse.x - mouse.x) * sensitivity;
 			}
+			*/
+
+			float sensitivity = 0.1f;
+			float mouseDeltY = mouse.y - prevMouse.y;
+			float mouseDeltX = prevMouse.x - mouse.x;
 
 			// camera updates
-			updateCamera(frameTime);
+			//updateCamera(frameTime);
+			std::vector<Command> cameraCommands;
+			cameraCommands.reserve(6);
+			if (InputManager::isPressed(GLFW_KEY_W)) {
+				cameraCommands.push_back({ 0, "move_forward", -1.0f });
+			}
+			if (InputManager::isPressed(GLFW_KEY_S)) {
+				cameraCommands.push_back({ 0, "move_forward", 1.0f });
+			}
+			if (InputManager::isPressed(GLFW_KEY_A)) {
+				cameraCommands.push_back({ 1, "move_right", -1.0f });
+			}
+			if (InputManager::isPressed(GLFW_KEY_D)) {
+				cameraCommands.push_back({ 1, "move_right", 1.0f });
+			}
+			if (InputManager::isPressed(GLFW_KEY_Q)) {
+				cameraCommands.push_back({ 2, "move_up", -1.0f });
+			}
+			if (InputManager::isPressed(GLFW_KEY_E)) {
+				cameraCommands.push_back({ 2, "move_up", 1.0f });
+			}
+			if (cameraDrag) {
+				if (mouseDeltY) {
+					cameraCommands.push_back({ 3, "camera_pitch", mouseDeltY * sensitivity });
+				}
+				if (mouseDeltX) {
+					cameraCommands.push_back({ 4, "camera_yaw", mouseDeltX * sensitivity });
+				}
+			}
+			mCameraController.update(frameTime, cameraCommands);
 
             drawFrame();
 			mClock.end();
@@ -459,7 +461,7 @@ namespace hvk {
         vkDeviceWaitIdle(mDevice);
     }
 
-	void VulkanApp::updateCamera(double deltaT) {
+	/*void VulkanApp::updateCamera(double deltaT) {
 		glm::vec3 forwardMovement = (float)deltaT *  mCameraNode->getForwardVector();
 		glm::vec3 lateralMovement = (float)deltaT * mCameraNode->getRightVector();
 		glm::vec3 verticalMovement = (float)deltaT * mCameraNode->getUpVector();
@@ -483,7 +485,7 @@ namespace hvk {
 		}
 
 		mCameraNode->rotate(glm::radians(cameraRotation.pitch), glm::radians(cameraRotation.yaw));
-	}
+	}*/
 
 	void VulkanApp::handleWindowResize(GLFWwindow* window, int width, int height) {
 		VulkanApp* thisApp = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
