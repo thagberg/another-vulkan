@@ -853,7 +853,7 @@ namespace hvk {
         VmaAllocator allocator,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-		unsigned char* imageData,
+		const unsigned char* imageData,
 		int imageWidth,
 		int imageHeight,
 		int bitDepth) {

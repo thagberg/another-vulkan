@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include "vk_mem_alloc.h"
+#include "tiny_gltf.h"
 
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
@@ -173,5 +174,17 @@ namespace hvk {
 		uint16_t id;
 		std::string name;
 		std::variant<uint32_t, float, bool> payload;
+	};
+
+	struct MaterialProperty {
+		tinygltf::Image* texture;
+		float scale;
+	};
+
+	struct Material {
+		MaterialProperty diffuseProp;
+		MaterialProperty metalProp;
+		MaterialProperty roughnessProp;
+		MaterialProperty specularProp;
 	};
 }

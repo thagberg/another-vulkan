@@ -12,6 +12,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "tiny_gltf.h"
 #include "imgui/imgui.h"
@@ -20,6 +21,8 @@
 #include "vulkan-util.h"
 #include "RenderObject.h"
 #include "InputManager.h"
+#include "StaticMesh.h"
+#include "ResourceManager.h"
 
 hvk::VulkanApp* currentApp;
 
@@ -42,7 +45,121 @@ const std::vector<uint16_t> indices = {
 	0, 1, 2, 2, 3, 0
 };
 
+tinygltf::TinyGLTF modelLoader = tinygltf::TinyGLTF();
+
 namespace hvk {
+
+	void processGltfNode(
+		tinygltf::Node& node, 
+		tinygltf::Model& model, 
+		std::vector<Vertex>& vertices, 
+		std::vector<VertIndex>& indices, 
+		Material& mat)
+	{
+		if (node.mesh >= 0) {
+			tinygltf::Mesh mesh = model.meshes[node.mesh];
+			for (size_t j = 0; j < mesh.primitives.size(); ++j) {
+				tinygltf::Primitive prim = mesh.primitives[j];
+				const auto positionAttr = prim.attributes.find("POSITION");
+				const auto uvAttr = prim.attributes.find("TEXCOORD_0");
+				const auto normalAttr = prim.attributes.find("NORMAL");
+
+				assert(positionAttr != prim.attributes.end());
+				assert(uvAttr != prim.attributes.end());
+				assert(normalAttr != prim.attributes.end());
+
+				// process position data
+				const tinygltf::Accessor positionAccess = model.accessors[positionAttr->second];
+				assert(positionAccess.type == TINYGLTF_TYPE_VEC3);
+				const int numPositions = positionAccess.count;
+				const tinygltf::BufferView positionView = model.bufferViews[positionAccess.bufferView];
+				const float* positionData = reinterpret_cast<const float*>(
+					&(model.buffers[positionView.buffer].data[positionView.byteOffset + positionAccess.byteOffset]));
+
+				// process UV data
+				const tinygltf::Accessor uvAccess = model.accessors[uvAttr->second];
+				assert(uvAccess.type == TINYGLTF_TYPE_VEC2);
+				const tinygltf::BufferView uvView = model.bufferViews[uvAccess.bufferView];
+				const float* uvData = reinterpret_cast<const float*>(
+					&(model.buffers[uvView.buffer].data[uvView.byteOffset + uvAccess.byteOffset]));
+
+				// process normal data
+				const tinygltf::Accessor normalAccess = model.accessors[normalAttr->second];
+				assert(normalAccess.type == TINYGLTF_TYPE_VEC3);
+				const tinygltf::BufferView normalView = model.bufferViews[normalAccess.bufferView];
+				const float* normalData = reinterpret_cast<const float*>(
+					&(model.buffers[normalView.buffer].data[normalView.byteOffset + normalAccess.byteOffset]));
+
+				assert(positionAccess.count == uvAccess.count);
+
+				//RenderObject::allocateVertices(numPositions, vertices);
+				vertices.reserve(numPositions);
+
+				for (size_t k = 0; k < numPositions; ++k) {
+					Vertex v{};
+					v.pos = glm::make_vec3(&positionData[k * 3]);
+					v.normal = glm::make_vec3(&normalData[k * 3]);
+					v.texCoord = glm::make_vec2(&uvData[k * 2]);
+					vertices.push_back(v);
+				}
+
+				// process indices
+				const tinygltf::Accessor indexAccess = model.accessors[prim.indices];
+				assert(indexAccess.type == TINYGLTF_TYPE_SCALAR);
+				const int numIndices = indexAccess.count;
+				const tinygltf::BufferView indexView = model.bufferViews[indexAccess.bufferView];
+				// TODO: need to handle more than just uint16_t indices (unsigned short)
+				const uint16_t* indexData = reinterpret_cast<const uint16_t*>(
+					&(model.buffers[indexView.buffer].data[indexView.byteOffset + indexAccess.byteOffset]));
+
+				//RenderObject::allocateIndices(numIndices, indices);
+				indices.reserve(numIndices);
+
+				for (size_t k = 0; k < numIndices; ++k) {
+					indices.push_back(indexData[k]);
+				}
+
+				// process material
+				mat.diffuseProp.texture = Pool<tinygltf::Image>::alloc(model.images[model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index]);
+			}
+		}
+
+		for (const int& childId : node.children) {
+			tinygltf::Node& childNode = model.nodes[childId];
+			processGltfNode(childNode, model, vertices, indices, mat);
+		}
+	}
+
+	StaticMesh* createMeshFromGltf(const std::string& filename) 
+	{
+		// TODO: use a real allocation system instead of "new"
+		std::vector<Vertex>* vertices = new std::vector<Vertex>();
+		std::vector<VertIndex>* indices = new std::vector<VertIndex>();
+		Material* mat = new Material();
+
+		tinygltf::Model model;
+		std::string err, warn;
+
+		bool modelLoaded = modelLoader.LoadASCIIFromFile(&model, &err, &warn, filename);
+		if (!err.empty()) {
+			std::cout << err << std::endl;
+		}
+		if (!warn.empty()) {
+			std::cout << warn << std::endl;
+		}
+		assert(modelLoaded);
+
+		const tinygltf::Scene modelScene = model.scenes[model.defaultScene];
+		for (const int& nodeId : modelScene.nodes) {
+			tinygltf::Node& sceneNode = model.nodes[nodeId];
+			processGltfNode(sceneNode, model, *vertices, *indices, *mat);
+		}
+
+		// TODO: this is going to result in a memory leak!!!  See above comment
+		//return StaticMesh(*vertices, *indices, *mat);
+		return Pool<StaticMesh>::alloc(*vertices, *indices, *mat);
+	}
+
 
     VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
         mWindowWidth(width),
@@ -223,8 +340,10 @@ namespace hvk {
 
 		glm::mat4 modelTransform = glm::mat4(1.0f);
 		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
-		RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
-		mRenderer.addRenderable(modelObj);
+		StaticMesh* duckMesh = createMeshFromGltf("resources/duck/Duck.gltf");
+		std::shared_ptr<StaticMeshRenderObject> duckObj = std::make_shared<StaticMeshRenderObject>(nullptr, modelTransform, *duckMesh);
+		//RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
+		mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 		mLightNode = std::make_shared<Light>(
@@ -234,6 +353,18 @@ namespace hvk {
 		mRenderer.addLight(mLightNode);
 
         mImageAvailable = createSemaphore(mDevice);
+
+		uint32_t* t1 = Pool<uint32_t>::alloc(15);
+		uint32_t* t2 = Pool<uint32_t>::alloc(6);
+		std::cout << "t1: " << t1 << "-> " << *t1 << std::endl;
+		std::cout << "t2: " << t2 << "-> " << *t2 << std::endl;
+		Pool<uint32_t>::free(t1);
+		uint32_t* t3 = Pool<uint32_t>::alloc(73);
+		uint32_t* t4 = Pool<uint32_t>::alloc(27);
+		uint32_t* t5 = Pool<uint32_t>::alloc(05);
+		std::cout << "t3: " << t3 << "-> " << *t3 << std::endl;
+		std::cout << "t4: " << t4 << "-> " << *t4 << std::endl;
+		std::cout << "t5: " << t5 << "-> " << *t5 << std::endl;
     }
 
 	void VulkanApp::recreateSwapchain() {
@@ -460,32 +591,6 @@ namespace hvk {
 
         vkDeviceWaitIdle(mDevice);
     }
-
-	/*void VulkanApp::updateCamera(double deltaT) {
-		glm::vec3 forwardMovement = (float)deltaT *  mCameraNode->getForwardVector();
-		glm::vec3 lateralMovement = (float)deltaT * mCameraNode->getRightVector();
-		glm::vec3 verticalMovement = (float)deltaT * mCameraNode->getUpVector();
-		if (cameraControls[CameraControl::move_left]) {
-			mCameraNode->translateLocal(-1.0f * lateralMovement);
-		}
-		if (cameraControls[CameraControl::move_right]) {
-			mCameraNode->translateLocal(lateralMovement);
-		}
-		if (cameraControls[CameraControl::move_forward]) {
-			mCameraNode->translateLocal(-1.0f * forwardMovement);
-		}
-		if (cameraControls[CameraControl::move_backward]) {
-			mCameraNode->translateLocal(forwardMovement);
-		}
-		if (cameraControls[CameraControl::move_up]) {
-			mCameraNode->translateLocal(verticalMovement);
-		}
-		if (cameraControls[CameraControl::move_down]) {
-			mCameraNode->translateLocal(-1.0f * verticalMovement);
-		}
-
-		mCameraNode->rotate(glm::radians(cameraRotation.pitch), glm::radians(cameraRotation.yaw));
-	}*/
 
 	void VulkanApp::handleWindowResize(GLFWwindow* window, int width, int height) {
 		VulkanApp* thisApp = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));

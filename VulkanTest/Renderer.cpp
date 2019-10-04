@@ -470,13 +470,13 @@ namespace hvk {
 		Renderable newRenderable;
 		newRenderable.renderObject = renderObject;
 
-		VerticesRef vertices = renderObject->getVertices();
-		IndicesRef indices = renderObject->getIndices();
-		newRenderable.numVertices = vertices->size();
-		newRenderable.numIndices = indices->size();
+		const std::vector<Vertex>& vertices = renderObject->getVertices();
+		const std::vector<VertIndex>& indices = renderObject->getIndices();
+		newRenderable.numVertices = vertices.size();
+		newRenderable.numIndices = indices.size();
 
 		// Create vertex buffer
-        uint32_t vertexMemorySize = sizeof(Vertex) * vertices->size();
+        uint32_t vertexMemorySize = sizeof(Vertex) * vertices.size();
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size = vertexMemorySize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -492,10 +492,10 @@ namespace hvk {
             &newRenderable.vbo.allocation,
             &newRenderable.vbo.allocationInfo);
 
-        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), (size_t)vertexMemorySize);
+        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
 
 		// Create index buffer
-        uint32_t indexMemorySize = sizeof(uint16_t) * indices->size();
+        uint32_t indexMemorySize = sizeof(uint16_t) * indices.size();
         VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         iboInfo.size = indexMemorySize;
         iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -511,7 +511,7 @@ namespace hvk {
             &newRenderable.ibo.allocation,
             &newRenderable.ibo.allocationInfo);
 
-        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices->data(), (size_t)indexMemorySize);
+        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
         // create UBOs
         uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
@@ -531,18 +531,22 @@ namespace hvk {
 			&newRenderable.ubo.allocationInfo);
 
 		// create texture
-		TextureRef tex = renderObject->getTexture();
-        newRenderable.texture = createTextureImage(
-			mDevice.device, 
-			mAllocator, 
-			mCommandPool, 
-			mGraphicsQueue,
-			tex->image.data(),
-			tex->width,
-			tex->height,
-			tex->component * (tex->bits/8));
-        newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-        newRenderable.textureSampler = createTextureSampler(mDevice.device);
+		const Material& mat = renderObject->getMaterial();
+		if (mat.diffuseProp.texture != nullptr) {
+			const tinygltf::Image& diffuseTex = *mat.diffuseProp.texture;
+			//TextureRef tex = renderObject->getTexture();
+			newRenderable.texture = createTextureImage(
+				mDevice.device,
+				mAllocator,
+				mCommandPool,
+				mGraphicsQueue,
+				diffuseTex.image.data(),
+				diffuseTex.width,
+				diffuseTex.height,
+				diffuseTex.component * (diffuseTex.bits / 8));
+			newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+			newRenderable.textureSampler = createTextureSampler(mDevice.device);
+		}
 
 		// TODO: pre-allocate a number of descriptor sets for renderables
 		// create descriptor set
@@ -589,7 +593,7 @@ namespace hvk {
 		}
 
 		// create buffers for rendering normals
-		newRenderable.numNormalVertices = vertices->size() * 2;
+		newRenderable.numNormalVertices = vertices.size() * 2;
         uint32_t normalMemorySize = sizeof(ColorVertex) * newRenderable.numNormalVertices;
         VkBufferCreateInfo normalBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         normalBufferInfo.size = normalMemorySize;
@@ -608,8 +612,8 @@ namespace hvk {
 
 		int memOffset = 0;
 		char* copyAddr = reinterpret_cast<char*>(newRenderable.normalVbo.allocationInfo.pMappedData);
-		for (size_t i = 0; i < vertices->size(); ++i) {
-			Vertex v = vertices->at(i);
+		for (size_t i = 0; i < vertices.size(); ++i) {
+			Vertex v = vertices[i];
 			ColorVertex cv = {
 				v.pos,
 				glm::vec3(1.0f, 0.f, 0.f)
@@ -690,8 +694,9 @@ namespace hvk {
 				nullptr);
 
 			PushConstant push = {};
-			push.specular = renderable.renderObject->getSpecularStrength();
-			push.shininess = renderable.renderObject->getShininess();
+			const Material& mat = renderable.renderObject->getMaterial();
+			push.specular = mat.specularProp.scale;
+			push.shininess = 1.f - mat.roughnessProp.scale;
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
@@ -850,12 +855,14 @@ namespace hvk {
 		ImGui::Text("Objects");
 		for (size_t i = 0; i < mRenderables.size(); ++i) {
 			Renderable& ro = mRenderables[i];
-			float specular = ro.renderObject->getSpecularStrength();
+			Material& mat = ro.renderObject->getMaterial();
+			float specular = mat.specularProp.scale;
 			ImGui::SliderFloat("Specular", &specular, 0.f, 1.f);
-			ro.renderObject->setSpecularStrength(specular);
-			int shininess = static_cast<int>(ro.renderObject->getShininess());
+			mat.specularProp.scale = specular;
+			//ro.renderObject->setSpecularStrength(specular);
+			/*int shininess = static_cast<int>(ro.renderObject->getShininess());
 			ImGui::SliderInt("Shininess", &shininess, 1, 256);
-			ro.renderObject->setShininess(static_cast<uint32_t>(shininess));
+			ro.renderObject->setShininess(static_cast<uint32_t>(shininess));*/
 		}
 		ImGui::Separator();
 		ImGui::Text("Ambient Lights");
