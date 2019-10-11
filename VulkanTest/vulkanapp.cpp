@@ -120,7 +120,8 @@ namespace hvk {
 				}
 
 				// process material
-				mat.diffuseProp.texture = Pool<tinygltf::Image>::alloc(model.images[model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index]);
+				//mat.diffuseProp.texture = Pool<tinygltf::Image>::alloc(model.images[model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index]);
+				mat.diffuseProp.texture = new tinygltf::Image(model.images[model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index]);
 			}
 		}
 
@@ -130,12 +131,14 @@ namespace hvk {
 		}
 	}
 
-	StaticMesh* createMeshFromGltf(const std::string& filename) 
+	//std::unique_ptr<StaticMesh> createMeshFromGltf(const std::string& filename) 
+	auto createMeshFromGltf(const std::string& filename) 
 	{
 		// TODO: use a real allocation system instead of "new"
 		std::vector<Vertex>* vertices = new std::vector<Vertex>();
 		std::vector<VertIndex>* indices = new std::vector<VertIndex>();
 		Material* mat = new Material();
+		//Material* mat = Pool<Material>::alloc();
 
 		tinygltf::Model model;
 		std::string err, warn;
@@ -340,8 +343,8 @@ namespace hvk {
 
 		glm::mat4 modelTransform = glm::mat4(1.0f);
 		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
-		StaticMesh* duckMesh = createMeshFromGltf("resources/duck/Duck.gltf");
-		std::shared_ptr<StaticMeshRenderObject> duckObj = std::make_shared<StaticMeshRenderObject>(nullptr, modelTransform, *duckMesh);
+		std::shared_ptr<StaticMesh> duckMesh(std::move(createMeshFromGltf("resources/duck/Duck.gltf")));
+		std::shared_ptr<StaticMeshRenderObject> duckObj = std::make_shared<StaticMeshRenderObject>(nullptr, modelTransform, duckMesh);
 		//RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
 		mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
 
@@ -354,6 +357,7 @@ namespace hvk {
 
         mImageAvailable = createSemaphore(mDevice);
 
+		/*
 		uint32_t* t1 = Pool<uint32_t>::alloc(15);
 		uint32_t* t2 = Pool<uint32_t>::alloc(6);
 		std::cout << "t1: " << t1 << "-> " << *t1 << std::endl;
@@ -365,6 +369,28 @@ namespace hvk {
 		std::cout << "t3: " << t3 << "-> " << *t3 << std::endl;
 		std::cout << "t4: " << t4 << "-> " << *t4 << std::endl;
 		std::cout << "t5: " << t5 << "-> " << *t5 << std::endl;
+		*/
+
+		//auto t1 = Pool<uint32_t>::alloc(15);
+		//std::cout << "t1: " << *t1 << std::endl;
+
+		//Pool<tinygltf::Image>::free(duckMesh->getMaterial().diffuseProp.texture);
+		//Pool<Material>::free(&duckMesh->getMaterial());
+		//Pool<tinygltf::Model>::free
+
+		std::vector<uint32_t, Hallocator<uint32_t>> testInts;
+		testInts.reserve(3000);
+		testInts.push_back(37);
+		std::cout << testInts[0] << std::endl;
+		std::vector<float, Hallocator<float>> testFloats;
+		testFloats.reserve(3);
+		testFloats.push_back(1.f);
+		testFloats.push_back(2.f);
+		testFloats.push_back(3.f);
+		testFloats.push_back(4.f);
+		testFloats.push_back(5.f);
+		testFloats.push_back(6.f);
+		testFloats.push_back(7.f);
     }
 
 	void VulkanApp::recreateSwapchain() {
@@ -393,6 +419,7 @@ namespace hvk {
 
     void VulkanApp::init() {
         try {
+			ResourceManager::initialize(200 * 1000 * 1000);
 			ImGui::CreateContext();
             std::cout << "init vulkan" << std::endl;
             initializeVulkan();

@@ -33,9 +33,9 @@ namespace hvk {
 	class StaticMeshRenderObject : public RenderObject
 	{
 	private:
-		StaticMesh& mMesh;
+		std::shared_ptr<StaticMesh> mMesh;
 	public:
-		StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, StaticMesh& mesh);
+		StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh);
 		~StaticMeshRenderObject();
 
 		const std::vector<Vertex>& getVertices() const override;
