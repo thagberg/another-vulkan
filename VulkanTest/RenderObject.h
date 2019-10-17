@@ -8,6 +8,7 @@
 
 #include "types.h"
 #include "Node.h"
+#include "StaticMesh.h"
 
 namespace hvk {
 
@@ -20,38 +21,25 @@ namespace hvk {
 
 	class RenderObject : public Node
 	{
-    private:
-        VerticesRef mVertices;
-        IndicesRef mIndices;
-		TextureRef mTexture;
-
-		static tinygltf::TinyGLTF sModelLoader;
-
-		static void processGltfNode(
-			VerticesRef vertices, 
-			IndicesRef indices, 
-			tinygltf::Image& texture, 
-			tinygltf::Node& node, 
-			tinygltf::Model& model);
-
 	public:
-		RenderObject(
-            NodeRef parent, 
-            glm::mat4 transform, 
-            VerticesRef vertices, 
-            IndicesRef indices,
-			TextureRef texture);
+		RenderObject(NodeRef parent, glm::mat4 transform);
 		~RenderObject();
 
-		const VerticesRef getVertices();
-		const IndicesRef getIndices();
-		const TextureRef getTexture();
+		virtual const std::vector<Vertex>& getVertices() const = 0;
+		virtual const std::vector<VertIndex>& getIndices() const = 0;
+		virtual Material& getMaterial() const = 0;
+	};
 
-		static void allocateVertices(size_t reservedSize, VerticesRef vertices);
-		static void allocateIndices(size_t reservedSize, IndicesRef indices);
-		static RenderObjRef createFromGltf(
-			const std::string& gltfFilename, 
-			NodeRef parent, 
-			glm::mat4 transform);
+	class StaticMeshRenderObject : public RenderObject
+	{
+	private:
+		std::shared_ptr<StaticMesh> mMesh;
+	public:
+		StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh);
+		~StaticMeshRenderObject();
+
+		const std::vector<Vertex>& getVertices() const override;
+		const std::vector<VertIndex>& getIndices() const override;
+		Material& getMaterial() const override;
 	};
 }

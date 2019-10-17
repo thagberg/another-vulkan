@@ -19,7 +19,7 @@
 
 namespace hvk {
 
-	bool Renderer::sDrawNormals = true;
+	bool Renderer::sDrawNormals = false;
 
 	Renderer::Renderer() :
 		mFirstRenderIndexAvailable(-1),
@@ -29,10 +29,17 @@ namespace hvk {
 		mNormalsPipelineInfo{},
 		mUiPipelineInfo{},
 		mLights(),
+<<<<<<< HEAD
         mAmbientLight {
 			glm::vec3(0.f, 1.f, 0.f),
 			1.f
         }
+=======
+		mAmbientLight{
+			glm::vec3(1.f, 1.f, 1.f),
+			0.3f
+		}
+>>>>>>> a93a0fc212a1103c1a0a8dae251f962a85c07c91
 	{
 	}
 
@@ -103,7 +110,7 @@ namespace hvk {
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;
 
 		VkDescriptorSetLayoutBinding samplerLayoutBiding = {};
@@ -188,12 +195,18 @@ namespace hvk {
 		vkUpdateDescriptorSets(mDevice.device, 1, &lightsDescriptorWrite, 0, nullptr);
 
 		// Create graphics pipeline
+
+		VkPushConstantRange pushRange = {};
+		pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushRange.size = sizeof(hvk::PushConstant);
+		pushRange.offset = 0;
+
 		std::array<VkDescriptorSetLayout, 2> dsLayouts = { mLightsDescriptorSetLayout, mDescriptorSetLayout };
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 		layoutCreate.setLayoutCount = dsLayouts.size();
 		layoutCreate.pSetLayouts = dsLayouts.data();
-		layoutCreate.pushConstantRangeCount = 0;
-		layoutCreate.pPushConstantRanges = nullptr;
+		layoutCreate.pushConstantRangeCount = 1;
+		layoutCreate.pPushConstantRanges = &pushRange;
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
@@ -219,6 +232,7 @@ namespace hvk {
 		mPipelineInfo.extent = extent;
 		mPipelineInfo.vertShaderFile = "shaders/compiled/vert.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/frag.spv";
+		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mPipeline = generatePipeline(mPipelineInfo);
 
@@ -241,6 +255,7 @@ namespace hvk {
 		mNormalsPipelineInfo.extent = extent;
 		mNormalsPipelineInfo.pipelineLayout = mPipelineInfo.pipelineLayout;
 		mNormalsPipelineInfo.blendAttachments = mPipelineInfo.blendAttachments;
+		mNormalsPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
 
@@ -368,6 +383,7 @@ namespace hvk {
 		mUiPipelineInfo.vertShaderFile = "shaders/compiled/ui_v.spv";
 		mUiPipelineInfo.fragShaderFile = "shaders/compiled/ui_f.spv";
 		mUiPipelineInfo.extent = extent;
+		mUiPipelineInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
 		mUiPipeline = generatePipeline(mUiPipelineInfo);
 
@@ -445,6 +461,7 @@ namespace hvk {
 			pipelineInfo.extent,
 			mRenderPass,
 			pipelineInfo.pipelineLayout,
+			pipelineInfo.frontFace,
 			modelShaderStages,
 			pipelineInfo.vertexInfo.vertexInputInfo,
 			modelInputAssembly,
@@ -460,13 +477,13 @@ namespace hvk {
 		Renderable newRenderable;
 		newRenderable.renderObject = renderObject;
 
-		VerticesRef vertices = renderObject->getVertices();
-		IndicesRef indices = renderObject->getIndices();
-		newRenderable.numVertices = vertices->size();
-		newRenderable.numIndices = indices->size();
+		const std::vector<Vertex>& vertices = renderObject->getVertices();
+		const std::vector<VertIndex>& indices = renderObject->getIndices();
+		newRenderable.numVertices = vertices.size();
+		newRenderable.numIndices = indices.size();
 
 		// Create vertex buffer
-        uint32_t vertexMemorySize = sizeof(Vertex) * vertices->size();
+        uint32_t vertexMemorySize = sizeof(Vertex) * vertices.size();
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size = vertexMemorySize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -482,10 +499,10 @@ namespace hvk {
             &newRenderable.vbo.allocation,
             &newRenderable.vbo.allocationInfo);
 
-        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), (size_t)vertexMemorySize);
+        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices.data(), (size_t)vertexMemorySize);
 
 		// Create index buffer
-        uint32_t indexMemorySize = sizeof(uint16_t) * indices->size();
+        uint32_t indexMemorySize = sizeof(uint16_t) * indices.size();
         VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         iboInfo.size = indexMemorySize;
         iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -501,7 +518,7 @@ namespace hvk {
             &newRenderable.ibo.allocation,
             &newRenderable.ibo.allocationInfo);
 
-        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices->data(), (size_t)indexMemorySize);
+        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices.data(), (size_t)indexMemorySize);
 
         // create UBOs
         uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
@@ -521,18 +538,22 @@ namespace hvk {
 			&newRenderable.ubo.allocationInfo);
 
 		// create texture
-		TextureRef tex = renderObject->getTexture();
-        newRenderable.texture = createTextureImage(
-			mDevice.device, 
-			mAllocator, 
-			mCommandPool, 
-			mGraphicsQueue,
-			tex->image.data(),
-			tex->width,
-			tex->height,
-			tex->component * (tex->bits/8));
-        newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-        newRenderable.textureSampler = createTextureSampler(mDevice.device);
+		const Material& mat = renderObject->getMaterial();
+		if (mat.diffuseProp.texture != nullptr) {
+			const tinygltf::Image& diffuseTex = *mat.diffuseProp.texture;
+			//TextureRef tex = renderObject->getTexture();
+			newRenderable.texture = createTextureImage(
+				mDevice.device,
+				mAllocator,
+				mCommandPool,
+				mGraphicsQueue,
+				diffuseTex.image.data(),
+				diffuseTex.width,
+				diffuseTex.height,
+				diffuseTex.component * (diffuseTex.bits / 8));
+			newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+			newRenderable.textureSampler = createTextureSampler(mDevice.device);
+		}
 
 		// TODO: pre-allocate a number of descriptor sets for renderables
 		// create descriptor set
@@ -579,7 +600,7 @@ namespace hvk {
 		}
 
 		// create buffers for rendering normals
-		newRenderable.numNormalVertices = vertices->size() * 2;
+		newRenderable.numNormalVertices = vertices.size() * 2;
         uint32_t normalMemorySize = sizeof(ColorVertex) * newRenderable.numNormalVertices;
         VkBufferCreateInfo normalBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         normalBufferInfo.size = normalMemorySize;
@@ -598,8 +619,8 @@ namespace hvk {
 
 		int memOffset = 0;
 		char* copyAddr = reinterpret_cast<char*>(newRenderable.normalVbo.allocationInfo.pMappedData);
-		for (size_t i = 0; i < vertices->size(); ++i) {
-			Vertex v = vertices->at(i);
+		for (size_t i = 0; i < vertices.size(); ++i) {
+			Vertex v = vertices[i];
 			ColorVertex cv = {
 				v.pos,
 				glm::vec3(1.0f, 0.f, 0.f)
@@ -678,6 +699,12 @@ namespace hvk {
 				&renderable.descriptorSet,
 				0, 
 				nullptr);
+
+			PushConstant push = {};
+			const Material& mat = renderable.renderObject->getMaterial();
+			push.specular = mat.specularProp.scale;
+			push.shininess = 1.f - mat.roughnessProp.scale;
+			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
 
@@ -802,9 +829,12 @@ namespace hvk {
 		for (const auto& renderable : mRenderables) {
 			UniformBufferObject ubo = {};
 			ubo.model = renderable.renderObject->getWorldTransform();
+			ubo.model[1][1] *= -1;
 			ubo.view = mCamera->getViewTransform();
+			//ubo.view[1][1] *= -1;
 			ubo.modelViewProj = mCamera->getProjection() * ubo.view * ubo.model;
 			//ubo.modelViewProj[1][1] *= -1;
+			ubo.cameraPos = mCamera->getWorldPosition();
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 
@@ -820,7 +850,11 @@ namespace hvk {
 				//mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
 			ubo.lightPos = light->getWorldPosition();
 			ubo.lightColor = light->getColor();
+<<<<<<< HEAD
             ubo.lightIntensity = light->getIntensity();
+=======
+			ubo.lightIntensity = light->getIntensity();
+>>>>>>> a93a0fc212a1103c1a0a8dae251f962a85c07c91
 			uboLights.lights[i] = ubo;
 		}
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
@@ -828,6 +862,7 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
+<<<<<<< HEAD
         ImGui::LabelText("Ambient Light", "");
         ImGui::ColorEdit3("Color", &mAmbientLight.lightColor.x);
         float min = 0.f;
@@ -845,6 +880,43 @@ namespace hvk {
             ImGui::SliderScalar("Intensity#", ImGuiDataType_Float, &lightIntensity, &dMin, &dMax);
             light->setIntensity(lightIntensity);
         }
+=======
+		ImGui::Separator();
+		ImGui::Text("Objects");
+		for (size_t i = 0; i < mRenderables.size(); ++i) {
+			Renderable& ro = mRenderables[i];
+			Material& mat = ro.renderObject->getMaterial();
+			float specular = mat.specularProp.scale;
+			ImGui::SliderFloat("Specular", &specular, 0.f, 1.f);
+			mat.specularProp.scale = specular;
+			//ro.renderObject->setSpecularStrength(specular);
+			/*int shininess = static_cast<int>(ro.renderObject->getShininess());
+			ImGui::SliderInt("Shininess", &shininess, 1, 256);
+			ro.renderObject->setShininess(static_cast<uint32_t>(shininess));*/
+		}
+		ImGui::Separator();
+		ImGui::Text("Ambient Lights");
+		ImGui::ColorEdit3("Color", &mAmbientLight.lightColor.x);
+		ImGui::SliderFloat("Intensity", &mAmbientLight.lightIntensity, 0.f, 1.f);
+		ImGui::Separator();
+		ImGui::Text("Dynamic Lights");
+		for (size_t i = 0; i < mLights.size(); ++i) {
+		    LightRef light = mLights[i];
+		    glm::vec3 col = light->getColor();
+		    ImGui::ColorEdit3("Dynamic Light " + i, &col.x);
+		    light->setColor(col);
+			float intensity = light->getIntensity();
+			ImGui::SliderFloat("#Intensity", &intensity, 0.f, 1.f);
+			light->setIntensity(intensity);
+			glm::vec3 oldPos = light->getWorldPosition();
+			glm::vec3 newPos = oldPos;
+			ImGui::DragFloat3("Position", &newPos.x, 0.1f);
+			glm::vec3 posDiff = newPos - oldPos;
+			if (posDiff != glm::vec3(0.f, 0.f, 0.f)) {
+				light->translateLocal(posDiff);
+			}
+		}
+>>>>>>> a93a0fc212a1103c1a0a8dae251f962a85c07c91
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 

@@ -14,6 +14,7 @@
 #include "Light.h"
 #include "Renderer.h"
 #include "Clock.h"
+#include "CameraController.h"
 
 namespace hvk {
 
@@ -44,6 +45,7 @@ namespace hvk {
 
         NodeRef mObjectNode;
 		CameraRef mCameraNode;
+		CameraController mCameraController;
 		LightRef mLightNode;
 
 		Renderer mRenderer;
@@ -68,7 +70,7 @@ namespace hvk {
 		void recreateSwapchain();
 
 		/*-- Things which should be handled elsewhere later --*/
-		void updateCamera(double deltaT);
+		//void updateCamera(double deltaT);
 
 	public:
 		VulkanApp(int width, int height, const char* windowTitle);

@@ -3,11 +3,13 @@
 #include <array>
 #include <vector>
 #include <memory>
+#include <variant>
 
 #include <GLFW/glfw3.h>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include "vk_mem_alloc.h"
+#include "tiny_gltf.h"
 
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
@@ -19,6 +21,7 @@
 
 #define COMP3_4_ALIGN(t) alignas(4*sizeof(t))
 #define COMP2_ALIGN(t) alignas(2*sizeof(t))
+#define COMP1_ALIGN(t) alignas(sizeof(t))
 
 namespace hvk {
 
@@ -136,22 +139,23 @@ namespace hvk {
 		COMP3_4_ALIGN(float) glm::mat4 model;
 		COMP3_4_ALIGN(float) glm::mat4 view;
 		COMP3_4_ALIGN(float) glm::mat4 modelViewProj;
+		COMP3_4_ALIGN(float) glm::vec3 cameraPos;
 	};
 
 	struct UniformLight {
 		COMP3_4_ALIGN(float) glm::vec3 lightPos;
 		COMP3_4_ALIGN(float) glm::vec3 lightColor;
-        alignas(sizeof(float)) float lightIntensity;
+		COMP1_ALIGN(float) float lightIntensity;
 	};
 
 	struct AmbientLight {
 		COMP3_4_ALIGN(float) glm::vec3 lightColor;
-		alignas(sizeof(float)) float lightIntensity;
+		COMP1_ALIGN(float) float lightIntensity;
 	};
 
 	template<size_t n>
 	struct UniformLightObject {
-		alignas(sizeof(uint32_t)) uint32_t numLights;
+		COMP1_ALIGN(uint32_t) uint32_t numLights;
 		COMP3_4_ALIGN(float) std::array<UniformLight, n> lights;
 		COMP3_4_ALIGN(float) AmbientLight ambient;
 	};
@@ -159,5 +163,28 @@ namespace hvk {
 	struct UiPushConstant {
 		COMP2_ALIGN(float) glm::vec2 scale;
 		COMP2_ALIGN(float) glm::vec2 pos;
+	};
+
+	struct PushConstant {
+		COMP1_ALIGN(float) float specular;
+		COMP1_ALIGN(uint32_t) uint32_t shininess;
+	};
+
+	struct Command {
+		uint16_t id;
+		std::string name;
+		std::variant<uint32_t, float, bool> payload;
+	};
+
+	struct MaterialProperty {
+		tinygltf::Image* texture;
+		float scale;
+	};
+
+	struct Material {
+		MaterialProperty diffuseProp;
+		MaterialProperty metalProp;
+		MaterialProperty roughnessProp;
+		MaterialProperty specularProp;
 	};
 }

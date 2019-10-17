@@ -11,16 +11,15 @@ namespace hvk {
 	{
 	private:
 		glm::vec3 mColor;
-        float mIntensity;
+		float mIntensity;
 	public:
 		Light(NodeRef parent, glm::mat4 transform, glm::vec3 color, float intensity);
 		~Light();
 
 		glm::vec3 getColor() const { return mColor; }
         void setColor(glm::vec3 color) { mColor = color; }
-
-        float getIntensity() const { return mIntensity; }
-        void setIntensity(float intensity) { mIntensity = intensity; }
+		float getIntensity() const { return mIntensity; }
+		void setIntensity(float intensity) { mIntensity = intensity; }
 	};
 
 }

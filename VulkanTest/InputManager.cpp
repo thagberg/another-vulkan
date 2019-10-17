@@ -12,6 +12,7 @@ namespace hvk {
 	MouseState InputManager::currentMouseState = { 0.f, 0.f, false, false };
 	MouseState InputManager::previousMouseState = { 0.f, 0.f, false, false };
 	bool InputManager::initialized = false;
+	//uint32_t InputManager::nextListenerId = 0;
 
     InputManager::InputManager() {
     }
@@ -82,4 +83,10 @@ namespace hvk {
             keysToCheck.pop_back();
         }
     }
+
+	bool InputManager::isPressed(InputID input) {
+		if (input <= GLFW_KEY_LAST) {
+			return currentKeysPressed[input];
+		}
+	}
 }

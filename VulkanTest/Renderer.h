@@ -46,6 +46,7 @@ namespace hvk {
 		VertexInfo vertexInfo;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+		VkFrontFace frontFace;
 	};
 
 	class Renderer
@@ -92,6 +93,7 @@ namespace hvk {
 
         AmbientLight mAmbientLight;
 		std::vector<LightRef> mLights;
+		AmbientLight mAmbientLight;
 		Resource<VkBuffer> mLightsUbo;
 		VkDescriptorSetLayout mLightsDescriptorSetLayout;
 		VkDescriptorSet mLightsDescriptorSet;
