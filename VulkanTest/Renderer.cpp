@@ -30,17 +30,10 @@ namespace hvk {
 		mUiPipelineInfo{},
 		mDebugPipelineInfo{},
 		mLights(),
-<<<<<<< HEAD
-        mAmbientLight {
-			glm::vec3(0.f, 1.f, 0.f),
-			1.f
-        }
-=======
 		mAmbientLight{
 			glm::vec3(1.f, 1.f, 1.f),
 			0.3f
 		}
->>>>>>> a93a0fc212a1103c1a0a8dae251f962a85c07c91
 	{
 	}
 
@@ -866,11 +859,7 @@ namespace hvk {
 				//mCamera->getViewTransform() * glm::vec4(light->getWorldPosition(), 0.f);
 			ubo.lightPos = light->getWorldPosition();
 			ubo.lightColor = light->getColor();
-<<<<<<< HEAD
-            ubo.lightIntensity = light->getIntensity();
-=======
 			ubo.lightIntensity = light->getIntensity();
->>>>>>> a93a0fc212a1103c1a0a8dae251f962a85c07c91
 			uboLights.lights[i] = ubo;
 		}
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
@@ -878,25 +867,6 @@ namespace hvk {
 
 		ImGui::Begin("Renderer");
 		ImGui::Checkbox("Draw Normals", &sDrawNormals);
-<<<<<<< HEAD
-        ImGui::LabelText("Ambient Light", "");
-        ImGui::ColorEdit3("Color", &mAmbientLight.lightColor.x);
-        float min = 0.f;
-        float max = 1.f;
-        ImGui::SliderScalar("Intensity", ImGuiDataType_Float, &mAmbientLight.lightIntensity, &min, &max);
-        ImGui::LabelText("Dynamic Lights", "");
-        for (size_t i = 0; i < mLights.size(); ++i) {
-            LightRef light = mLights[i];
-            glm::vec3 col = light->getColor();
-            ImGui::ColorEdit3("Light " + i, &col.x);
-            light->setColor(col);
-            float dMin = 0.f;
-            float dMax = 1.f;
-            float lightIntensity = light->getIntensity();
-            ImGui::SliderScalar("Intensity#", ImGuiDataType_Float, &lightIntensity, &dMin, &dMax);
-            light->setIntensity(lightIntensity);
-        }
-=======
 		ImGui::Separator();
 		ImGui::Text("Objects");
 		for (size_t i = 0; i < mRenderables.size(); ++i) {
@@ -932,7 +902,6 @@ namespace hvk {
 				light->translateLocal(posDiff);
 			}
 		}
->>>>>>> a93a0fc212a1103c1a0a8dae251f962a85c07c91
 		ImGui::End();
 		ImGui::ShowDemoWindow();
 
