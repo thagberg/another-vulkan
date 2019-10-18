@@ -20,6 +20,7 @@ namespace hvk {
     public:
 		const NodeRef getParent() { return mParent; }
 		const std::vector<NodeRef>& getChildren() { return mChildren; }
+		void addChild(NodeRef child);
 
         virtual void setLocalTransform(glm::mat4 transform);
 		virtual void translateLocal(const glm::vec3& trans);

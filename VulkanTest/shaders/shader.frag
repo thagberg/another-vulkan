@@ -38,21 +38,41 @@ layout (push_constant) uniform PushConstant {
 
 layout(location = 0) out vec4 outColor;
 
+vec3 getSchlickFresnel(float dotP, vec3 F0) {
+	return F0 + (1.0f - F0) * pow(1.0 - dotP, 5);
+}
+
 void main() {
 	vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 	vec4 baseColor = texture(texSampler, fragTexCoord);
 	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
 	vec3 diffuseLight = vec3(0.f, 0.f, 0.f);
 	vec3 specularLight = vec3(0.f, 0.f, 0.f);
+
+	vec4 dynamicColor = vec4(0.f, 0.f, 0.f, 0.f);
 	for (int i = 0; i < lbo.numLights; i++) {
 		Light thisLight = lbo.lights[i];
 		vec3 lightDir = normalize(thisLight.pos - fragPos);
 		vec3 reflectDir = reflect(-lightDir, inNormal);
+		vec3 halfVec = normalize(lightDir + viewDir);
 		float d = thisLight.intensity * max(dot(inNormal, lightDir), 0);
-		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), push.shininess);
-		diffuseLight += d * thisLight.color;
-		specularLight += push.specularStrength * s * thisLight.color;
+		//float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), push.shininess);
+		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
+		//vec4 colorFromLight = vec3(0.f, 0.f, 0.f);
+		//diffuseLight += (1.0 - (push.specularStrength * s)) * d * thisLight.color;
+		//diffuseLight += d * thisLight.color;
+		//specularLight += push.specularStrength * s * thisLight.color;
+		//specularLight += push.specularStrength * s * vec3(1.0, 1.0, 1.0);
+
+
+		specularLight += push.specularStrength * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
+		//specularLight += push.specularStrength * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04));
+		diffuseLight = (1.0 - specularLight) * thisLight.color * d;
+		dynamicColor += vec4(diffuseLight, 1.f) * baseColor;
+		dynamicColor += vec4(specularLight, 1.f);
 	}
-	outColor = vec4((ambientLight + diffuseLight + specularLight), 1.f) * baseColor;
+	vec4 ambientColor = vec4(ambientLight, 1.f) * baseColor;
+	//outColor = vec4((ambientLight + diffuseLight + specularLight), 1.f) * baseColor;
+	outColor = ambientColor + dynamicColor;
 	//outColor = vec4(ubo.cameraPos, 1.f);
 }
