@@ -70,46 +70,69 @@ namespace hvk
 		bool mInitialized;
 		size_t mFirstRenderIndexAvailable;
 
+		// provided externally
+		VkRenderPass mRenderPass; // only needed for creating pipeline?  Make pipeline externally and provide that instead?
+		VkExtent2D mExtent;
+		CameraRef mCamera;
+		VulkanDevice mDevice;
+		VkQueue mGraphicsQueue;
+
+		// created internally
 		VkFence mRenderFence;
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mCommandBuffer;
-		VulkanDevice mDevice;
-		VkQueue mGraphicsQueue;
 		VkDescriptorPool mDescriptorPool;
 		VkDescriptorSetLayout mDescriptorSetLayout;
+
+		// pipelines -- create these externally and provide 1 per renderer?
 		VkPipelineLayout mPipelineLayout;
 		VkPipeline mPipeline;
 		VkPipeline mNormalsPipeline;
 		VkPipeline mUiPipeline;
 		VkPipeline mDebugPipeline;
 		VkPipelineLayout mUiPipelineLayout;
-		VkDescriptorSet mUiDescriptorSet;
-		VkImageView mUiFontView;
-		VkSampler mUiFontSampler;
-		Resource<VkBuffer> mUiVbo;
-		Resource<VkBuffer> mUiIbo;
-		VkRenderPass mRenderPass;
-		VkExtent2D mExtent;
-		VkSemaphore mRenderFinished;
-		VkViewport mViewport;
-		VkRect2D mScissor;
 
 		RenderPipelineInfo mPipelineInfo;
 		RenderPipelineInfo mNormalsPipelineInfo;
 		RenderPipelineInfo mUiPipelineInfo;
 		RenderPipelineInfo mDebugPipelineInfo;
 
-		CameraRef mCamera;
+		// these should somehow be captured in with the appropriate renderer only
+		VkDescriptorSet mUiDescriptorSet;
+		VkImageView mUiFontView;
+		VkSampler mUiFontSampler;
+		Resource<VkBuffer> mUiVbo;
+		Resource<VkBuffer> mUiIbo;
+
+		VkSemaphore mRenderFinished;
+		VkViewport mViewport;
+		VkRect2D mScissor;
+
+
 		std::vector<Renderable> mRenderables;
 
 		std::vector<LightRef> mLights;
 		AmbientLight mAmbientLight;
+		RenderPipelineInfo mPipelineInfo;
+		RenderPipelineInfo mNormalsPipelineInfo;
+		RenderPipelineInfo mUiPipelineInfo;
+		RenderPipelineInfo mDebugPipelineInfo;
 		Resource<VkBuffer> mLightsUbo;
 		VkDescriptorSetLayout mLightsDescriptorSetLayout;
 		VkDescriptorSet mLightsDescriptorSet;
 
 		VmaAllocator mAllocator;
 
+		/* what's needed for recording command buffer?
+		*	framebuffer
+		*	mRenderPass
+		*	mCommandBuffer
+		*	mRenderFence
+		*	mViewport
+		*	mScissor
+		*	mAllocator?  -- seems to only be the case for UI
+		*	
+		*/
 		void recordCommandBuffer(VkFramebuffer& framebuffer);
 		void findFirstRenderIndexAvailable();
 		VkPipeline generatePipeline(RenderPipelineInfo& pipelineInfo);
