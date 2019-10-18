@@ -47,6 +47,7 @@ namespace hvk {
 		CameraRef mCameraNode;
 		CameraController mCameraController;
 		LightRef mLightNode;
+		NodeRef mLightBox;
 
 		Renderer mRenderer;
 

@@ -42,4 +42,5 @@ namespace hvk {
 		const std::vector<VertIndex>& getIndices() const override;
 		Material& getMaterial() const override;
 	};
+
 }

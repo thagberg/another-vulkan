@@ -6,23 +6,28 @@
 namespace hvk {
     Node::Node(NodeRef parent, glm::mat4 transform) :
         mParent(parent),
-        mTransform(transform) {
+        mTransform(transform) 
+	{
 
     }
 
-    Node::~Node() {
+    Node::~Node() 
+	{
 
     }
 
-    void Node::setLocalTransform(glm::mat4 transform) {
+    void Node::setLocalTransform(glm::mat4 transform) 
+	{
         mTransform = transform;
     }
 	
-	void Node::translateLocal(const glm::vec3& trans) {
+	void Node::translateLocal(const glm::vec3& trans) 
+	{
 		setLocalTransform(glm::translate(mTransform, trans));
 	}
 
-    glm::mat4 Node::getWorldTransform() const {
+    glm::mat4 Node::getWorldTransform() const 
+	{
         if (mParent != nullptr) {
             return mParent->getWorldTransform() * getLocalTransform();
         } else {
@@ -30,7 +35,13 @@ namespace hvk {
         }
     }
 	
-	glm::vec3 Node::getWorldPosition() const {
+	glm::vec3 Node::getWorldPosition() const 
+	{
 		return glm::vec3(getWorldTransform()[3]);
+	}
+
+	void Node::addChild(NodeRef child)
+	{
+		mChildren.push_back(child);
 	}
 }

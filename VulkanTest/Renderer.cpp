@@ -28,6 +28,7 @@ namespace hvk {
 		mPipelineInfo{},
 		mNormalsPipelineInfo{},
 		mUiPipelineInfo{},
+		mDebugPipelineInfo{},
 		mLights(),
 		mAmbientLight{
 			glm::vec3(1.f, 1.f, 1.f),
@@ -229,6 +230,7 @@ namespace hvk {
 
 		mPipeline = generatePipeline(mPipelineInfo);
 
+		// normals pipeline
 		mNormalsPipelineInfo.vertexInfo = {};
 		mNormalsPipelineInfo.vertexInfo.bindingDescription = hvk::ColorVertex::getBindingDescription();
 		mNormalsPipelineInfo.vertexInfo.attributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
@@ -251,6 +253,18 @@ namespace hvk {
 		mNormalsPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
+
+		// debug graphics pipeline
+		mDebugPipelineInfo.vertexInfo = mNormalsPipelineInfo.vertexInfo;
+		mDebugPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mDebugPipelineInfo.vertShaderFile = "shaders/compiled/normal_v.spv";
+		mDebugPipelineInfo.fragShaderFile = "shaders/compiled/normal_f.spv";
+		mDebugPipelineInfo.extent = extent;
+		mDebugPipelineInfo.pipelineLayout = mPipelineInfo.pipelineLayout;
+		mDebugPipelineInfo.blendAttachments = mPipelineInfo.blendAttachments;
+		mDebugPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+		mDebugPipeline = generatePipeline(mDebugPipelineInfo);
 
 		// Initialize Imgui stuff
 		unsigned char* fontTextureData;
@@ -389,6 +403,7 @@ namespace hvk {
 		mPipelineInfo.extent = extent;
 		mNormalsPipelineInfo.extent = extent;
 		mUiPipelineInfo.extent = extent;
+		mDebugPipelineInfo.extent = extent;
 		mExtent = extent;
 
 		mViewport = {};
@@ -406,6 +421,7 @@ namespace hvk {
 		mPipeline = generatePipeline(mPipelineInfo);
 		mNormalsPipeline = generatePipeline(mNormalsPipelineInfo);
 		mUiPipeline = generatePipeline(mUiPipelineInfo);
+		mDebugPipeline = generatePipeline(mDebugPipelineInfo);
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = ImVec2(mExtent.width, mExtent.height);

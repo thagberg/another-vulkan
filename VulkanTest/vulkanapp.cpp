@@ -178,7 +178,11 @@ namespace hvk {
 		mLastY(0.f),
 		mMouseLeftDown(false),
 		mClock(),
-		mCameraController(nullptr)
+		mCameraController(nullptr),
+		mObjectNode(nullptr),
+		mCameraNode(nullptr),
+		mLightNode(nullptr),
+		mLightBox(nullptr)
     {
         // TODO: this is super bad, but IDGAF right now
         currentApp = this;
@@ -354,6 +358,8 @@ namespace hvk {
 			glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.f, 0.f)), 
 			glm::vec3(1.0f, 1.0f, 1.0f));
 		mRenderer.addLight(mLightNode);
+
+		mLightBox = std::make_shared<Node>(mLightNode, glm::mat4(1.0f));
 
         mImageAvailable = createSemaphore(mDevice);
 

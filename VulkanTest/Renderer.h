@@ -12,9 +12,11 @@
 #include "Light.h"
 #include "RenderObject.h"
 
-namespace hvk {
+namespace hvk 
+{
 
-	struct Renderable {
+	struct Renderable 
+	{
 		RenderObjRef renderObject;
 
 		Resource<VkBuffer> vbo;
@@ -32,13 +34,20 @@ namespace hvk {
 		size_t numNormalVertices;
 	};
 
-	struct VertexInfo {
+	struct DebugRenderable
+	{
+		
+	};
+
+	struct VertexInfo 
+	{
 		VkVertexInputBindingDescription bindingDescription;
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
 	};
 
-	struct RenderPipelineInfo {
+	struct RenderPipelineInfo 
+	{
 		VkPrimitiveTopology topology;
 		const char* vertShaderFile;
 		const char* fragShaderFile;
@@ -72,6 +81,7 @@ namespace hvk {
 		VkPipeline mPipeline;
 		VkPipeline mNormalsPipeline;
 		VkPipeline mUiPipeline;
+		VkPipeline mDebugPipeline;
 		VkPipelineLayout mUiPipelineLayout;
 		VkDescriptorSet mUiDescriptorSet;
 		VkImageView mUiFontView;
@@ -87,6 +97,7 @@ namespace hvk {
 		RenderPipelineInfo mPipelineInfo;
 		RenderPipelineInfo mNormalsPipelineInfo;
 		RenderPipelineInfo mUiPipelineInfo;
+		RenderPipelineInfo mDebugPipelineInfo;
 
 		CameraRef mCamera;
 		std::vector<Renderable> mRenderables;
