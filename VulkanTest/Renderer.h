@@ -76,6 +76,11 @@ namespace hvk
 		CameraRef mCamera;
 		VulkanDevice mDevice;
 		VkQueue mGraphicsQueue;
+		VmaAllocator mAllocator;
+
+		// created internally but directly dependent on mExtent
+		VkViewport mViewport;
+		VkRect2D mScissor;
 
 		// created internally
 		VkFence mRenderFence;
@@ -83,6 +88,9 @@ namespace hvk
 		VkCommandBuffer mCommandBuffer;
 		VkDescriptorPool mDescriptorPool;
 		VkDescriptorSetLayout mDescriptorSetLayout;
+
+		// created internally and is also the output of drawFrame, which callers rely on
+		VkSemaphore mRenderFinished;
 
 		// pipelines -- create these externally and provide 1 per renderer?
 		VkPipelineLayout mPipelineLayout;
@@ -104,24 +112,13 @@ namespace hvk
 		Resource<VkBuffer> mUiVbo;
 		Resource<VkBuffer> mUiIbo;
 
-		VkSemaphore mRenderFinished;
-		VkViewport mViewport;
-		VkRect2D mScissor;
-
-
+		// specific to particular renderer implementations
 		std::vector<Renderable> mRenderables;
-
 		std::vector<LightRef> mLights;
 		AmbientLight mAmbientLight;
-		RenderPipelineInfo mPipelineInfo;
-		RenderPipelineInfo mNormalsPipelineInfo;
-		RenderPipelineInfo mUiPipelineInfo;
-		RenderPipelineInfo mDebugPipelineInfo;
 		Resource<VkBuffer> mLightsUbo;
 		VkDescriptorSetLayout mLightsDescriptorSetLayout;
 		VkDescriptorSet mLightsDescriptorSet;
-
-		VmaAllocator mAllocator;
 
 		/* what's needed for recording command buffer?
 		*	framebuffer
