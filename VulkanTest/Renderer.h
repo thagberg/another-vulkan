@@ -72,11 +72,13 @@ namespace hvk
 
 		// provided externally
 		VkRenderPass mRenderPass; // only needed for creating pipeline?  Make pipeline externally and provide that instead?
-		VkExtent2D mExtent;
-		CameraRef mCamera;
+		VkExtent2D mExtent; // might not need to store this... Used for setting ImGui display size and renderpass render area
 		VulkanDevice mDevice;
 		VkQueue mGraphicsQueue;
 		VmaAllocator mAllocator;
+
+        // provided externally but might be implementation specific
+		CameraRef mCamera;
 
 		// created internally but directly dependent on mExtent
 		VkViewport mViewport;
