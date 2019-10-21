@@ -31,6 +31,7 @@ namespace hvk {
 		VkSurfaceKHR mSurface;
 		VkRenderPass mRenderPass;
 		VkCommandPool mCommandPool;
+		VkCommandBuffer mPrimaryCommandBuffer;
 
 		SwapchainImageViews mImageViews;
 		SwapchainImages mSwapchainImages;
