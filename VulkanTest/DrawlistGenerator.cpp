@@ -331,14 +331,13 @@ namespace hvk
 		mLights.push_back(light);
 	}
 
-	VkSemaphore StaticMeshGenerator::drawFrame(
+	VkCommandBuffer& StaticMeshGenerator::drawFrame(
 		const VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
 		const Camera& camera,
 		const AmbientLight& ambientLight,
-		const VkSemaphore* waitSemaphores /* = nullptr */,
-		uint32_t waitSemaphoreCount /* = 0 */)
+		VkFence waitFence)
 	{
 		/****************
 		 update MVP uniform for renderables
@@ -374,8 +373,7 @@ namespace hvk
 		/******************
 		 record commands
 		******************/
-		assert(vkWaitForFences(mDevice.device, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
-		assert(vkResetFences(mDevice.device, 1, &mRenderFence) == VK_SUCCESS);
+		//assert(vkWaitForFences(mDevice.device, 1, &waitFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -435,25 +433,11 @@ namespace hvk
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
 
+		assert(vkResetFences(mDevice.device, 1, &waitFence) == VK_SUCCESS);
 		vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
-		
-		/**************
-		 submit to graphics queue
-		 *************/
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.waitSemaphoreCount = waitSemaphoreCount;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &mCommandBuffer;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &mRenderFinished;
 
-		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
-
-		return mRenderFinished;
+		return mCommandBuffer;
 	}
 
 	StaticMeshGenerator::~StaticMeshGenerator()
@@ -647,12 +631,11 @@ namespace hvk
 		setInitialized(true);
 	}
 
-	VkSemaphore UiDrawGenerator::drawFrame(
+	VkCommandBuffer& UiDrawGenerator::drawFrame(
 		VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
-		const VkSemaphore* waitSemaphores /* = nullptr */,
-		uint32_t waitSemaphoreCount /* = 0 */)
+		VkFence waitFence)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::NewFrame();
@@ -660,8 +643,8 @@ namespace hvk
 		ImGui::EndFrame();
 		ImGui::Render();
 
-		assert(vkWaitForFences(mDevice.device, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
-		assert(vkResetFences(mDevice.device, 1, &mRenderFence) == VK_SUCCESS);
+		//assert(vkWaitForFences(mDevice.device, 1, &waitFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+		//assert(vkResetFences(mDevice.device, 1, &waitFence) == VK_SUCCESS);
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -782,22 +765,7 @@ namespace hvk
 		vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 
-		/**************
-		 submit to graphics queue
-		 *************/
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.waitSemaphoreCount = waitSemaphoreCount;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &mCommandBuffer;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &mRenderFinished;
-
-		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
-
-		return mRenderFinished;
+		return mCommandBuffer;
 	}
 
 }

@@ -345,6 +345,14 @@ namespace hvk {
 			mDevice,
 			families
 		};
+
+		// Create fence for rendering complete
+		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+		fenceCreate.pNext = nullptr;
+		fenceCreate.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		assert(vkCreateFence(device.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
+
 		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass);
 		mUiRenderer = std::make_shared<UiDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mSwapchain.swapchainExtent);
@@ -545,23 +553,21 @@ namespace hvk {
 			glm::vec3(1.f, 1.f, 1.f),
 			0.3f
 		};
-		std::array<VkSemaphore, 2> waitSemaphores;
-		waitSemaphores[0] = mMeshRenderer->drawFrame(
-			mFramebuffers[imageIndex], 
-			viewport, 
-			scissor, 
-			*mCameraNode.get(), 
-			ambient, 
-			&mImageAvailable, 
-			1);
-
-		waitSemaphores[1] = mUiRenderer->drawFrame(
+		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
+		std::array<VkCommandBuffer, 2> commandBuffers;
+		commandBuffers[0] = mMeshRenderer->drawFrame(
 			mFramebuffers[imageIndex],
 			viewport,
 			scissor,
-			&mImageAvailable,
-			1
-		);
+			*mCameraNode.get(),
+			ambient,
+			mRenderFence);
+
+		commandBuffers[1] = mUiRenderer->drawFrame(
+			mFramebuffers[imageIndex],
+			viewport,
+			scissor,
+			mRenderFence);
 
 		/**************
 		 submit to graphics queue
@@ -571,20 +577,18 @@ namespace hvk {
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = &mImageAvailable;
 		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &mCommandBuffer;
+		submitInfo.commandBufferCount = commandBuffers.size();
+		submitInfo.pCommandBuffers = commandBuffers.data();
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &mRenderFinished;
 
 		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
 
-		return mRenderFinished;
-
         VkSwapchainKHR swapchains[] = { mSwapchain.swapchain };
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = waitSemaphores.size();
-        presentInfo.pWaitSemaphores = waitSemaphores.data();
+        presentInfo.waitSemaphoreCount = 1;
+        presentInfo.pWaitSemaphores = &mRenderFinished;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapchains;
         presentInfo.pImageIndices = &imageIndex;

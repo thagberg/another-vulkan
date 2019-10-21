@@ -55,6 +55,8 @@ namespace hvk {
 
 		Clock mClock;
 
+		VkFence mRenderFence;
+
 		double mLastX, mLastY;
 		bool mMouseLeftDown;
 

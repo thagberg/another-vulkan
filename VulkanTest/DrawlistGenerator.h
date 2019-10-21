@@ -86,14 +86,13 @@ namespace hvk
 		void updateRenderPass(VkRenderPass renderPass);
 		void addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object);
 		void addLight(std::shared_ptr<Light> light);
-        VkSemaphore drawFrame(
-			const VkFramebuffer& framebuffer, 
+		VkCommandBuffer& drawFrame(
+			const VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
-			const VkRect2D& scissor, 
+			const VkRect2D& scissor,
 			const Camera& camera,
 			const AmbientLight& ambientLight,
-			const VkSemaphore* waitSemaphores = nullptr, 
-			uint32_t waitSemaphoreCount = 0);
+			VkFence waitFence);
 	};
 
 	class UiDrawGenerator : public DrawlistGenerator
@@ -119,11 +118,10 @@ namespace hvk
 		virtual ~UiDrawGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass, VkExtent2D windowExtent);
-		VkSemaphore drawFrame(
-			VkFramebuffer& framebuffer, 
+		VkCommandBuffer& drawFrame(
+			VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
 			const VkRect2D& scissor,
-			const VkSemaphore* waitSemaphores = nullptr,
-			uint32_t waitSemaphoreCount = 0);
+			VkFence waitFence);
 	};
 }
