@@ -351,6 +351,7 @@ namespace hvk {
 		fenceCreate.pNext = nullptr;
 		fenceCreate.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+		mRenderFinished = createSemaphore(mDevice);
 		assert(vkCreateFence(device.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
 		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
@@ -554,8 +555,10 @@ namespace hvk {
 			glm::vec3(1.f, 1.f, 1.f),
 			0.3f
 		};
+		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
 		std::array<VkCommandBuffer, 2> commandBuffers;
+		
 		commandBuffers[0] = mMeshRenderer->drawFrame(
 			mFramebuffers[imageIndex],
 			viewport,
@@ -580,6 +583,8 @@ namespace hvk {
 		submitInfo.pWaitDstStageMask = waitStages;
 		submitInfo.commandBufferCount = commandBuffers.size();
 		submitInfo.pCommandBuffers = commandBuffers.data();
+		//submitInfo.commandBufferCount = 1;
+		//submitInfo.pCommandBuffers = commandBuffers.data();
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &mRenderFinished;
 
