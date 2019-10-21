@@ -1,17 +1,54 @@
-<<<<<<< HEAD
-=======
 #include <assert.h>
 
 #include "imgui/imgui.h"
 
->>>>>>> 5e9c104... Implementing UI renderer
 #include "DrawlistGenerator.h"
 
 namespace hvk
 {
 
-    DrawlistGenerator::DrawlistGenerator()
+    DrawlistGenerator::DrawlistGenerator(
+		VulkanDevice device, 
+		VmaAllocator allocator, 
+		VkQueue graphicsQueue, 
+		VkRenderPass renderPass,
+		VkCommandPool commandPool) :
+
+		mInitialized(false),
+		mDevice(device),
+		mAllocator(allocator),
+		mGraphicsQueue(graphicsQueue),
+		mRenderPass(renderPass),
+		mRenderFinished(VK_NULL_HANDLE),
+		mCommandPool(commandPool),
+		mCommandBuffer(VK_NULL_HANDLE)
     {
+		// Create fence for rendering complete
+		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+		fenceCreate.pNext = nullptr;
+		fenceCreate.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		assert(vkCreateFence(mDevice.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
+
+		// create semaphore for rendering finished
+		mRenderFinished = createSemaphore(mDevice.device);
+
+		// Create command pool
+		/*
+		VkCommandPoolCreateInfo poolCreate = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
+		poolCreate.queueFamilyIndex = device.queueFamilies.graphics;
+		poolCreate.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+		assert(vkCreateCommandPool(mDevice.device, &poolCreate, nullptr, &mCommandPool) == VK_SUCCESS);
+		*/
+
+		// Allocate command buffer
+		VkCommandBufferAllocateInfo bufferAlloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		bufferAlloc.commandBufferCount = 1;
+		bufferAlloc.commandPool = mCommandPool;
+		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+
+		assert(vkAllocateCommandBuffers(mDevice.device, &bufferAlloc, &mCommandBuffer) == VK_SUCCESS);
     }
 
 
@@ -23,9 +60,10 @@ namespace hvk
 		VulkanDevice device, 
 		VmaAllocator allocator, 
 		VkQueue graphicsQueue, 
-		VkRenderPass renderPass) :
+		VkRenderPass renderPass,
+		VkCommandPool commandPool) :
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass),
+		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mLightsDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
@@ -383,15 +421,17 @@ namespace hvk
 		commandBegin.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
 		commandBegin.pInheritanceInfo = nullptr;
 
+		/*
 		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		renderBegin.renderPass = mRenderPass;
 		renderBegin.framebuffer = framebuffer;
 		renderBegin.renderArea = scissor;
 		renderBegin.clearValueCount = clearValues.size();
 		renderBegin.pClearValues = clearValues.data();
+		*/
 
 		assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
-		vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
+		//vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
 		// bind viewport and scissor
@@ -434,7 +474,7 @@ namespace hvk
 		}
 
 		assert(vkResetFences(mDevice.device, 1, &waitFence) == VK_SUCCESS);
-		vkCmdEndRenderPass(mCommandBuffer);
+		//vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 
 		return mCommandBuffer;
@@ -450,9 +490,10 @@ namespace hvk
 		VmaAllocator allocator,
 		VkQueue graphicsQueue,
 		VkRenderPass renderPass,
+		VkCommandPool commandPool,
 		VkExtent2D windowExtent) :
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass),
+		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mDescriptorSet(VK_NULL_HANDLE),
@@ -662,7 +703,7 @@ namespace hvk
 		renderBegin.pClearValues = clearValues.data();
 
 		assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
-		vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
+		//vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
 		// bind viewport and scissor
@@ -762,7 +803,7 @@ namespace hvk
 			}
 		}
 
-		vkCmdEndRenderPass(mCommandBuffer);
+		//vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 
 		return mCommandBuffer;

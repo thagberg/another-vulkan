@@ -32,7 +32,12 @@ namespace hvk
         VkDescriptorPool mDescriptorPool;
         VkDescriptorSetLayout mDescriptorSetLayout;
 
-        DrawlistGenerator();
+        DrawlistGenerator(
+			VulkanDevice device, 
+			VmaAllocator allocator, 
+			VkQueue mGraphicsQueue, 
+			VkRenderPass renderPass,
+			VkCommandPool commandPool);
         void setInitialized(bool init) { mInitialized = init; }
 
     public:
@@ -80,7 +85,8 @@ namespace hvk
 			VulkanDevice device, 
 			VmaAllocator allocator, 
 			VkQueue graphicsQueue,
-			VkRenderPass renderPass);
+			VkRenderPass renderPass,
+			VkCommandPool commandPool);
 		virtual ~StaticMeshGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);
@@ -114,6 +120,7 @@ namespace hvk
 			VmaAllocator  allocator,
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
+			VkCommandPool commandPool,
 			VkExtent2D windowExtent);
 		virtual ~UiDrawGenerator();
 		virtual void invalidate() override;

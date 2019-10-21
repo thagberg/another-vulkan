@@ -354,9 +354,40 @@ namespace hvk {
 		mRenderFinished = createSemaphore(mDevice);
 		assert(vkCreateFence(device.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
+		// Allocate command buffer
+		VkCommandBufferAllocateInfo bufferAlloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+		bufferAlloc.commandBufferCount = 1;
+		bufferAlloc.commandPool = mCommandPool;
+		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+		assert(vkAllocateCommandBuffers(mDevice, &bufferAlloc, &mPrimaryCommandBuffer) == VK_SUCCESS);
+
 		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
-		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass);
-		mUiRenderer = std::make_shared<UiDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mSwapchain.swapchainExtent);
+		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool);
+
+        VkAttachmentDescription colorAttachment = {};
+        colorAttachment.format = mSwapchain.swapchainImageFormat;
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        //colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		VkAttachmentDescription depthAttachment = {};
+		depthAttachment.format = VK_FORMAT_D32_SFLOAT;  // TODO: make this dynamic
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		//depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		VkRenderPass uiRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorAttachment, depthAttachment);
+		mUiRenderer = std::make_shared<UiDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool, mSwapchain.swapchainExtent);
 
 		glm::mat4 modelTransform = glm::mat4(1.0f);
 		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
@@ -557,6 +588,20 @@ namespace hvk {
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
 		std::array<VkCommandBuffer, 2> commandBuffers;
+
+		std::array<VkClearValue, 2> clearValues = {};
+		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		renderBegin.renderPass = mRenderPass;
+		renderBegin.framebuffer = mFramebuffers[imageIndex];
+		renderBegin.renderArea = scissor;
+		renderBegin.clearValueCount = clearValues.size();
+		renderBegin.pClearValues = clearValues.data();
+
+		vkBeginCommandBuffer(mPrimaryCommandBuffer);
+		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 		
 		commandBuffers[0] = mMeshRenderer->drawFrame(
 			mFramebuffers[imageIndex],
@@ -571,6 +616,10 @@ namespace hvk {
 			viewport,
 			scissor,
 			mRenderFence);
+
+		vkCmdExecuteCommands(mPrimaryCommandBuffer, commandBuffers.size(), commandBuffers.data());
+		vkCmdEndRenderPass(mPrimaryCommandBuffer);
+		vkEndCommandBuffer(mPrimaryCommandBuffer);
 
 		/**************
 		 submit to graphics queue
