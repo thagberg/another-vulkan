@@ -3,16 +3,69 @@
 #include "imgui/imgui.h"
 
 #include "DrawlistGenerator.h"
+#define HVK_UTIL_IMPLEMENTATION
+#include "vulkan-util.h"
+
 
 namespace hvk
 {
+	const uint32_t MAX_DESCRIPTORS = 20;
+	const uint32_t MAX_UBOS = 40;
+	const uint32_t MAX_SAMPLERS = 20;
+	const uint32_t NUM_INITIAL_RENDEROBJECTS = 10;
+	const uint32_t NUM_INITIAL_LIGHTS = 10;
+	const uint32_t NUM_INITIAL_STATICMESHES = 10;
+
+	VkPipeline generatePipeline(const VulkanDevice& device, VkRenderPass renderPass, const RenderPipelineInfo& pipelineInfo) {
+
+		VkPipeline pipeline;
+
+		auto modelVertShaderCode = readFile(pipelineInfo.vertShaderFile);
+		auto modelFragShaderCode = readFile(pipelineInfo.fragShaderFile);
+		VkShaderModule modelVertShaderModule = createShaderModule(device.device, modelVertShaderCode);
+		VkShaderModule modelFragShaderModule = createShaderModule(device.device, modelFragShaderCode);
+
+		VkPipelineShaderStageCreateInfo modelVertStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+		modelVertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
+		modelVertStageInfo.module = modelVertShaderModule;
+		modelVertStageInfo.pName = "main";
+
+		VkPipelineShaderStageCreateInfo modelFragStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+		modelFragStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+		modelFragStageInfo.module = modelFragShaderModule;
+		modelFragStageInfo.pName = "main";
+
+		std::vector<VkPipelineShaderStageCreateInfo> modelShaderStages = {
+			modelVertStageInfo, modelFragStageInfo
+		};
+
+		VkPipelineInputAssemblyStateCreateInfo modelInputAssembly = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
+		modelInputAssembly.topology = pipelineInfo.topology;
+		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
+
+
+		pipeline = createCustomizedGraphicsPipeline(
+			device.device,
+			renderPass,
+			pipelineInfo.pipelineLayout,
+			pipelineInfo.frontFace,
+			modelShaderStages,
+			pipelineInfo.vertexInfo.vertexInputInfo,
+			modelInputAssembly,
+			pipelineInfo.blendAttachments);
+
+		vkDestroyShaderModule(device.device, modelVertShaderModule, nullptr);
+		vkDestroyShaderModule(device.device, modelFragShaderModule, nullptr);
+
+		return pipeline;
+	}
 
     DrawlistGenerator::DrawlistGenerator(
-		VulkanDevice device, 
-		VmaAllocator allocator, 
-		VkQueue graphicsQueue, 
-		VkRenderPass renderPass,
-		VkCommandPool commandPool) :
+        VulkanDevice device, 
+        VmaAllocator allocator, 
+        VkQueue graphicsQueue, 
+        VkRenderPass renderPass,
+        VkCommandPool commandPool) :
 
 		mInitialized(false),
 		mDevice(device),
@@ -370,6 +423,7 @@ namespace hvk
 	}
 
 	VkCommandBuffer& StaticMeshGenerator::drawFrame(
+        const VkCommandBufferInheritanceInfo& inheritance,
 		const VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
@@ -418,8 +472,8 @@ namespace hvk
 		clearValues[1].depthStencil = { 1.0f, 0 };
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		commandBegin.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-		commandBegin.pInheritanceInfo = nullptr;
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+		commandBegin.pInheritanceInfo = &inheritance;
 
 		/*
 		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
@@ -656,7 +710,8 @@ namespace hvk
 
 	void UiDrawGenerator::invalidate()
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+        setInitialized(false);
+		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
 	}
 
 	void UiDrawGenerator::updateRenderPass(VkRenderPass renderPass, VkExtent2D windowExtent)
@@ -673,6 +728,7 @@ namespace hvk
 	}
 
 	VkCommandBuffer& UiDrawGenerator::drawFrame(
+        const VkCommandBufferInheritanceInfo& inheritance,
 		VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
@@ -692,8 +748,8 @@ namespace hvk
 		clearValues[1].depthStencil = { 1.0f, 0 };
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		commandBegin.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-		commandBegin.pInheritanceInfo = nullptr;
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+		commandBegin.pInheritanceInfo = &inheritance;
 
 		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		renderBegin.renderPass = mRenderPass;

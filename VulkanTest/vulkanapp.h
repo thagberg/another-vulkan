@@ -12,7 +12,8 @@
 #include "Node.h"
 #include "Camera.h"
 #include "Light.h"
-#include "Renderer.h"
+//#include "Renderer.h"
+#include "DrawlistGenerator.h"
 #include "Clock.h"
 #include "CameraController.h"
 

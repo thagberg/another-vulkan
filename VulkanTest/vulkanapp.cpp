@@ -309,7 +309,7 @@ namespace hvk {
 		vmaCreateAllocator(&allocatorCreate, &mAllocator);
 
         vkGetDeviceQueue(mDevice, mGraphicsIndex, 0, &mGraphicsQueue);
-        mCommandPool = createCommandPool(mDevice, mGraphicsIndex);
+        mCommandPool = createCommandPool(mDevice, mGraphicsIndex, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
         if (glfwCreateWindowSurface(mInstance, mWindow.get(), nullptr, &mSurface) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Window Surface");
@@ -394,15 +394,17 @@ namespace hvk {
 		std::shared_ptr<StaticMesh> duckMesh(std::move(createMeshFromGltf("resources/duck/Duck.gltf")));
 		std::shared_ptr<StaticMeshRenderObject> duckObj = std::make_shared<StaticMeshRenderObject>(nullptr, modelTransform, duckMesh);
 		//RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
-		mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
+		//mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
+		mMeshRenderer->addStaticMeshObject(duckObj);
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 		mLightNode = std::make_shared<Light>(
 			nullptr, 
 			glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.f, 0.f)), 
 			glm::vec3(1.0f, 1.0f, 1.0f),
-            1.0f);
-		mRenderer.addLight(mLightNode);
+            0.3f);
+		//mRenderer.addLight(mLightNode);
+		mMeshRenderer->addLight(mLightNode);
 
 		mLightBox = std::make_shared<Node>(mLightNode, glm::mat4(1.0f));
 
@@ -593,6 +595,10 @@ namespace hvk {
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
 		clearValues[1].depthStencil = { 1.0f, 0 };
 
+		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		commandBegin.pInheritanceInfo = nullptr;
+
 		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		renderBegin.renderPass = mRenderPass;
 		renderBegin.framebuffer = mFramebuffers[imageIndex];
@@ -600,10 +606,18 @@ namespace hvk {
 		renderBegin.clearValueCount = clearValues.size();
 		renderBegin.pClearValues = clearValues.data();
 
-		vkBeginCommandBuffer(mPrimaryCommandBuffer);
-		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
+		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
+		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+        VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+        inheritanceInfo.pNext = nullptr;
+        inheritanceInfo.renderPass = mRenderPass;
+        inheritanceInfo.subpass = 0;
+        inheritanceInfo.framebuffer = mFramebuffers[imageIndex];
+        inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 		
 		commandBuffers[0] = mMeshRenderer->drawFrame(
+            inheritanceInfo,
 			mFramebuffers[imageIndex],
 			viewport,
 			scissor,
@@ -612,6 +626,7 @@ namespace hvk {
 			mRenderFence);
 
 		commandBuffers[1] = mUiRenderer->drawFrame(
+            inheritanceInfo,
 			mFramebuffers[imageIndex],
 			viewport,
 			scissor,
@@ -629,8 +644,8 @@ namespace hvk {
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = &mImageAvailable;
 		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = commandBuffers.size();
-		submitInfo.pCommandBuffers = commandBuffers.data();
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &mPrimaryCommandBuffer;
 		//submitInfo.commandBufferCount = 1;
 		//submitInfo.pCommandBuffers = commandBuffers.data();
 		submitInfo.signalSemaphoreCount = 1;
@@ -676,7 +691,8 @@ namespace hvk {
 				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
 			}
 			if (InputManager::currentKeysPressed[GLFW_KEY_Y] && !InputManager::previousKeysPressed[GLFW_KEY_Y]) {
-				Renderer::setDrawNormals(!Renderer::getDrawNormals());
+				// TODO: add normals renderer
+				//Renderer::setDrawNormals(!Renderer::getDrawNormals());
 			}
 
 			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;

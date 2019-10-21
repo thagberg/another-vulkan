@@ -7,30 +7,44 @@
 #include "types.h"
 #include "Node.h"
 #include "Camera.h"
-#include "Renderer.h"
+#include "ResourceManager.h"
+#include "RenderObject.h"
+#include "Light.h"
 
 namespace hvk
 {
+	struct VertexInfo 
+	{
+		VkVertexInputBindingDescription bindingDescription;
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+	};
+
+	struct RenderPipelineInfo 
+	{
+		VkPrimitiveTopology topology;
+		const char* vertShaderFile;
+		const char* fragShaderFile;
+		VertexInfo vertexInfo;
+		VkPipelineLayout pipelineLayout;
+		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+		VkFrontFace frontFace;
+	};
 
     class DrawlistGenerator
     {
-    private:
+	protected:
         bool mInitialized;
 
-        VkRenderPass mRenderPass;
         VulkanDevice mDevice;
-        VkQueue mGraphicsQueue;
         VmaAllocator mAllocator;
+        VkQueue mGraphicsQueue;
 
-        VkViewport mViewport;
-        VkRect2D mScissor;
-
+        VkRenderPass mRenderPass;
         VkFence mRenderFence;
         VkSemaphore mRenderFinished;
         VkCommandPool mCommandPool;
         VkCommandBuffer mCommandBuffer;
-        VkDescriptorPool mDescriptorPool;
-        VkDescriptorSetLayout mDescriptorSetLayout;
 
         DrawlistGenerator(
 			VulkanDevice device, 
@@ -42,9 +56,9 @@ namespace hvk
 
     public:
         virtual ~DrawlistGenerator();
+		virtual void invalidate() = 0;
 
         bool getInitialized() const { return mInitialized; }
-        virtual VkSemaphore drawFrame(const VkFramebuffer& framebuffer, const VkSemaphore* waitSemaphores = nullptr, uint32_t waitSemaphoreCount = 0) = 0;
     };
 
 	class StaticMeshGenerator : public DrawlistGenerator
@@ -93,6 +107,7 @@ namespace hvk
 		void addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object);
 		void addLight(std::shared_ptr<Light> light);
 		VkCommandBuffer& drawFrame(
+            const VkCommandBufferInheritanceInfo& inheritance,
 			const VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
 			const VkRect2D& scissor,
@@ -126,6 +141,7 @@ namespace hvk
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass, VkExtent2D windowExtent);
 		VkCommandBuffer& drawFrame(
+            const VkCommandBufferInheritanceInfo& inheritance,
 			VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
 			const VkRect2D& scissor,

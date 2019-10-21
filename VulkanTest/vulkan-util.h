@@ -359,14 +359,13 @@ namespace hvk {
 
 	VkPipeline createCustomizedGraphicsPipeline(
 		VkDevice device,
-		VkExtent2D swapchainExtent,
 		VkRenderPass renderPass,
 		VkPipelineLayout pipelineLayout,
 		VkFrontFace frontFace,
-		std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
-		VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
-		VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
-		std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
+		const std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
+		const VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
+		const VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
+		const std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
 
 		VkPipeline graphicsPipeline;
 

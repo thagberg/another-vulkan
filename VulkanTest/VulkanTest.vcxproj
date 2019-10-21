@@ -165,6 +165,7 @@
     <ClInclude Include="CameraController.h" />
     <ClInclude Include="Clock.h" />
     <ClInclude Include="ContextManager.h" />
+    <ClInclude Include="DrawlistGenerator.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
     <ClInclude Include="include\imgui\imgui.h" />
     <ClInclude Include="include\imgui\imgui_internal.h" />
@@ -175,7 +176,6 @@
     <ClInclude Include="Inputs.h" />
     <ClInclude Include="Light.h" />
     <ClInclude Include="Node.h" />
-    <ClInclude Include="Renderer.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="StaticMesh.h" />
@@ -192,6 +192,7 @@
     <ClCompile Include="CameraController.cpp" />
     <ClCompile Include="Clock.cpp" />
     <ClCompile Include="ContextManager.cpp" />
+    <ClCompile Include="DrawlistGenerator.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
     <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
@@ -199,7 +200,6 @@
     <ClCompile Include="InputManager.cpp" />
     <ClCompile Include="Light.cpp" />
     <ClCompile Include="Node.cpp" />
-    <ClCompile Include="Renderer.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="StaticMesh.cpp" />
