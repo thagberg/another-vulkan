@@ -28,7 +28,7 @@ namespace hvk {
 		VkRenderPass renderPass,
 		VkExtent2D extent,
 		hvk::FrameBuffers& oFramebuffers);
-	VkCommandPool createCommandPool(VkDevice device, int queueFamilyIndex);
+	VkCommandPool createCommandPool(VkDevice device, int queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
 	void transitionImageLayout(
 		VkDevice device,
 		VkCommandPool commandPool,
@@ -612,13 +612,17 @@ namespace hvk {
         }
     }
 
-    VkCommandPool createCommandPool(VkDevice device, int queueFamilyIndex) {
+    VkCommandPool createCommandPool(
+        VkDevice device, 
+        int queueFamilyIndex, 
+        VkCommandPoolCreateFlags flags) {
+
         VkCommandPool commandPool;
 
         VkCommandPoolCreateInfo poolInfo = {};
         poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
         poolInfo.queueFamilyIndex = queueFamilyIndex;
-        poolInfo.flags = 0;
+        poolInfo.flags = flags;
 
         if (vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Command Pool");
