@@ -52,6 +52,7 @@ namespace hvk {
 
 		//Renderer mRenderer;
 		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
+		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 
 		Clock mClock;
 

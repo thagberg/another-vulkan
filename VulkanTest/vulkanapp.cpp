@@ -175,6 +175,7 @@ namespace hvk {
         mWindow(hvk::initializeWindow(width, height, windowTitle), glfwDestroyWindow),
 		//mRenderer(),
 		mMeshRenderer(nullptr),
+		mUiRenderer(nullptr),
 		mLastX(0.f),
 		mLastY(0.f),
 		mMouseLeftDown(false),
@@ -346,6 +347,7 @@ namespace hvk {
 		};
 		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass);
+		mUiRenderer = std::make_shared<UiDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mSwapchain.swapchainExtent);
 
 		glm::mat4 modelTransform = glm::mat4(1.0f);
 		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
@@ -407,6 +409,7 @@ namespace hvk {
 		vkDeviceWaitIdle(mDevice);
 		//mRenderer.invalidateRenderer();
 		mMeshRenderer->invalidate();
+		mUiRenderer->invalidate();
 		cleanupSwapchain();
 		glfwGetFramebufferSize(mWindow.get(), &mWindowWidth, &mWindowHeight);
 
@@ -422,6 +425,7 @@ namespace hvk {
 			1000.0f);
 		//mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
 		mMeshRenderer->updateRenderPass(mRenderPass);
+		mUiRenderer->updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
 	}
 
 	void VulkanApp::initializeApp() {
@@ -542,7 +546,8 @@ namespace hvk {
 			glm::vec3(1.f, 1.f, 1.f),
 			0.3f
 		};
-		mRenderFinished = mMeshRenderer->drawFrame(
+		std::array<VkSemaphore, 2> waitSemaphores;
+		waitSemaphores[0] = mMeshRenderer->drawFrame(
 			mFramebuffers[imageIndex], 
 			viewport, 
 			scissor, 
@@ -551,11 +556,36 @@ namespace hvk {
 			&mImageAvailable, 
 			1);
 
+		waitSemaphores[1] = mUiRenderer->drawFrame(
+			mFramebuffers[imageIndex],
+			viewport,
+			scissor,
+			&mImageAvailable,
+			1
+		);
+
+		/**************
+		 submit to graphics queue
+		 *************/
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = &mImageAvailable;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &mCommandBuffer;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = &mRenderFinished;
+
+		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
+
+		return mRenderFinished;
+
         VkSwapchainKHR swapchains[] = { mSwapchain.swapchain };
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-        presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &mRenderFinished;
+        presentInfo.waitSemaphoreCount = waitSemaphores.size();
+        presentInfo.pWaitSemaphores = waitSemaphores.data();
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapchains;
         presentInfo.pImageIndices = &imageIndex;
