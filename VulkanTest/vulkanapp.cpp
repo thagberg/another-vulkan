@@ -173,7 +173,8 @@ namespace hvk {
         //mPipelineLayout(VK_NULL_HANDLE),
         //mGraphicsPipeline(VK_NULL_HANDLE),
         mWindow(hvk::initializeWindow(width, height, windowTitle), glfwDestroyWindow),
-		mRenderer(),
+		//mRenderer(),
+		mMeshRenderer(nullptr),
 		mLastX(0.f),
 		mLastY(0.f),
 		mMouseLeftDown(false),
@@ -343,21 +344,24 @@ namespace hvk {
 			mDevice,
 			families
 		};
-		mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
+		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
+		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass);
 
 		glm::mat4 modelTransform = glm::mat4(1.0f);
 		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
 		std::shared_ptr<StaticMesh> duckMesh(std::move(createMeshFromGltf("resources/duck/Duck.gltf")));
 		std::shared_ptr<StaticMeshRenderObject> duckObj = std::make_shared<StaticMeshRenderObject>(nullptr, modelTransform, duckMesh);
 		//RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
-		mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
+		//mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
+		mMeshRenderer->addStaticMeshObject(duckObj);
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
 		mLightNode = std::make_shared<Light>(
 			nullptr, 
 			glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.f, 0.f)), 
 			glm::vec3(1.0f, 1.0f, 1.0f));
-		mRenderer.addLight(mLightNode);
+		//mRenderer.addLight(mLightNode);
+		mMeshRenderer->addLight(mLightNode);
 
 		mLightBox = std::make_shared<Node>(mLightNode, glm::mat4(1.0f));
 
@@ -401,7 +405,8 @@ namespace hvk {
 
 	void VulkanApp::recreateSwapchain() {
 		vkDeviceWaitIdle(mDevice);
-		mRenderer.invalidateRenderer();
+		//mRenderer.invalidateRenderer();
+		mMeshRenderer->invalidate();
 		cleanupSwapchain();
 		glfwGetFramebufferSize(mWindow.get(), &mWindowWidth, &mWindowHeight);
 
@@ -415,7 +420,8 @@ namespace hvk {
 			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
 			0.1f,
 			1000.0f);
-		mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+		//mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+		mMeshRenderer->updateRenderPass(mRenderPass);
 	}
 
 	void VulkanApp::initializeApp() {
@@ -520,7 +526,30 @@ namespace hvk {
             VK_NULL_HANDLE,
             &imageIndex);
 
-		mRenderFinished = mRenderer.drawFrame(mFramebuffers[imageIndex], &mImageAvailable, 1);
+		//mRenderFinished = mRenderer.drawFrame(mFramebuffers[imageIndex], &mImageAvailable, 1);
+		//mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+		VkViewport viewport = {};
+		viewport.x = 0.f;
+		viewport.y = 0.f;
+		viewport.width = (float)mSwapchain.swapchainExtent.width;
+		viewport.height = (float)mSwapchain.swapchainExtent.height;
+		viewport.minDepth = 0.f;
+		viewport.maxDepth = 1.f;
+		VkRect2D scissor = {};
+		scissor.offset = { 0, 0 };
+		scissor.extent = mSwapchain.swapchainExtent;
+		AmbientLight ambient = {
+			glm::vec3(1.f, 1.f, 1.f),
+			0.3f
+		};
+		mRenderFinished = mMeshRenderer->drawFrame(
+			mFramebuffers[imageIndex], 
+			viewport, 
+			scissor, 
+			*mCameraNode.get(), 
+			ambient, 
+			&mImageAvailable, 
+			1);
 
         VkSwapchainKHR swapchains[] = { mSwapchain.swapchain };
         VkPresentInfoKHR presentInfo = {};
@@ -560,7 +589,8 @@ namespace hvk {
 				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
 			}
 			if (InputManager::currentKeysPressed[GLFW_KEY_Y] && !InputManager::previousKeysPressed[GLFW_KEY_Y]) {
-				Renderer::setDrawNormals(!Renderer::getDrawNormals());
+				// TODO: add normals renderer
+				//Renderer::setDrawNormals(!Renderer::getDrawNormals());
 			}
 
 			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;

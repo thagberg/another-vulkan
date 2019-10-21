@@ -46,15 +46,17 @@ namespace hvk
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
 	};
 
+	//template<size_t N>
 	struct RenderPipelineInfo 
 	{
 		VkPrimitiveTopology topology;
 		const char* vertShaderFile;
 		const char* fragShaderFile;
-		VkExtent2D extent;
+		//VkExtent2D extent;
 		VertexInfo vertexInfo;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
+		//std::array<VkPipelineColorBlendAttachmentState, N> blendAttachments;
 		VkFrontFace frontFace;
 	};
 
@@ -140,7 +142,14 @@ namespace hvk
 		Renderer();
 		~Renderer();
 
-		void init(VulkanDevice device, VmaAllocator allocator, VkQueue graphicsQueue, VkRenderPass renderPass, CameraRef camera, VkFormat colorAttachmentFormat, VkExtent2D extent);
+		void init(
+			VulkanDevice device,			// move to constructor
+			VmaAllocator allocator,			// ... 
+			VkQueue graphicsQueue,			// ...
+			VkRenderPass renderPass,		// ... 
+			CameraRef camera,				// only needed for rendering 
+			VkFormat colorAttachmentFormat, // not needed
+			VkExtent2D extent);				// only needed for rendering along with render area and ImGui stuff
 		void addRenderable(RenderObjRef renderObject);
 		void addLight(LightRef lightObject);
 		VkSemaphore drawFrame(VkFramebuffer& framebuffer, VkSemaphore* waitSemaphores=nullptr, uint32_t waitSemaphoreCount=0);

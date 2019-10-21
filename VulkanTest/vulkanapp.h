@@ -12,7 +12,8 @@
 #include "Node.h"
 #include "Camera.h"
 #include "Light.h"
-#include "Renderer.h"
+//#include "Renderer.h"
+#include "DrawlistGenerator.h"
 #include "Clock.h"
 #include "CameraController.h"
 
@@ -49,7 +50,8 @@ namespace hvk {
 		LightRef mLightNode;
 		NodeRef mLightBox;
 
-		Renderer mRenderer;
+		//Renderer mRenderer;
+		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
 
 		Clock mClock;
 
