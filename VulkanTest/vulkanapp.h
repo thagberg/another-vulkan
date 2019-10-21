@@ -49,7 +49,9 @@ namespace hvk {
 		LightRef mLightNode;
 		NodeRef mLightBox;
 
-		Renderer mRenderer;
+		//Renderer mRenderer;
+		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
+		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 
 		Clock mClock;
 
