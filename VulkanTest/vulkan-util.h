@@ -7,6 +7,8 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#include "types.h"
+
 namespace hvk {
 	GLFWwindow* initializeWindow(int width, int height, const char* windowTitle);
 	std::vector<const char*> getRequiredExtensions();
@@ -37,6 +39,16 @@ namespace hvk {
 		VkFormat format,
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout);
+	hvk::Resource<VkImage> createTextureImage(
+		VkDevice device,
+		VmaAllocator allocator,
+		VkCommandPool commandPool,
+		VkQueue graphicsQueue,
+		const unsigned char* imageData,
+		int imageWidth,
+		int imageHeight,
+		int bitDepth);
+	VkSampler createTextureSampler(VkDevice device);
 }
 
 #ifdef HVK_UTIL_IMPLEMENTATION
@@ -63,8 +75,6 @@ namespace hvk {
 #define TINYGLTF_NO_INCLUDE_STB_IMAGE_WRITE
 #include "tiny_gltf.h"
 #endif
-
-#include "types.h"
 
 #define BYTES_PER_PIXEL 4
 

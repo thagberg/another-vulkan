@@ -14,6 +14,8 @@
 #include "Light.h"
 //#include "Renderer.h"
 #include "DrawlistGenerator.h"
+#include "StaticMeshGenerator.h"
+#include "UiDrawGenerator.h"
 #include "Clock.h"
 #include "CameraController.h"
 

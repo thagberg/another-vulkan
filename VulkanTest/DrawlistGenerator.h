@@ -1,18 +1,22 @@
 #pragma once
 
+#include <vector>
+
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include "vk_mem_alloc.h"
 
 #include "types.h"
-#include "Node.h"
-#include "Camera.h"
-#include "ResourceManager.h"
-#include "RenderObject.h"
-#include "Light.h"
 
 namespace hvk
 {
+	const uint32_t MAX_DESCRIPTORS = 20;
+	const uint32_t MAX_UBOS = 40;
+	const uint32_t MAX_SAMPLERS = 20;
+	const uint32_t NUM_INITIAL_RENDEROBJECTS = 10;
+	const uint32_t NUM_INITIAL_LIGHTS = 10;
+	const uint32_t NUM_INITIAL_STATICMESHES = 10;
+
 	struct VertexInfo 
 	{
 		VkVertexInputBindingDescription bindingDescription;
@@ -30,6 +34,12 @@ namespace hvk
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
 		VkFrontFace frontFace;
 	};
+
+	VkPipeline generatePipeline(
+		const VulkanDevice& device, 
+		VkRenderPass renderPass, 
+		const RenderPipelineInfo& pipelineInfo);
+
 
     class DrawlistGenerator
     {
@@ -61,90 +71,4 @@ namespace hvk
         bool getInitialized() const { return mInitialized; }
     };
 
-	class StaticMeshGenerator : public DrawlistGenerator
-	{
-	private:
-
-		struct StaticMeshRenderable 
-		{
-			std::shared_ptr<StaticMeshRenderObject> renderObject;
-
-			Resource<VkBuffer> vbo;
-			Resource<VkBuffer> ibo;
-			size_t numVertices;
-			uint16_t numIndices;
-
-			Resource<VkImage> texture;
-			VkImageView textureView;
-			VkSampler textureSampler;
-			Resource<VkBuffer> ubo;
-			VkDescriptorSet descriptorSet;
-		};
-
-		VkDescriptorSetLayout mDescriptorSetLayout;
-		VkDescriptorSetLayout mLightsDescriptorSetLayout;
-		VkDescriptorPool mDescriptorPool;
-		VkDescriptorSet mLightsDescriptorSet;
-		VkPipeline mPipeline;
-		RenderPipelineInfo mPipelineInfo;
-		Resource<VkBuffer> mLightsUbo;						// should this be a ptr?
-
-		std::vector<StaticMeshRenderable, Hallocator<StaticMeshRenderable>> mRenderables;
-		std::vector<std::shared_ptr<Light>> mLights;
-
-		void preparePipelineInfo();
-
-	public:
-        StaticMeshGenerator(
-			VulkanDevice device, 
-			VmaAllocator allocator, 
-			VkQueue graphicsQueue,
-			VkRenderPass renderPass,
-			VkCommandPool commandPool);
-		virtual ~StaticMeshGenerator();
-		virtual void invalidate() override;
-		void updateRenderPass(VkRenderPass renderPass);
-		void addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object);
-		void addLight(std::shared_ptr<Light> light);
-		VkCommandBuffer& drawFrame(
-            const VkCommandBufferInheritanceInfo& inheritance,
-			const VkFramebuffer& framebuffer,
-			const VkViewport& viewport,
-			const VkRect2D& scissor,
-			const Camera& camera,
-			const AmbientLight& ambientLight,
-			VkFence waitFence);
-	};
-
-	class UiDrawGenerator : public DrawlistGenerator
-	{
-	private:
-		VkDescriptorSetLayout mDescriptorSetLayout;
-		VkDescriptorPool mDescriptorPool;
-		VkDescriptorSet mDescriptorSet;
-		VkImageView mFontView;
-		VkSampler mFontSampler;
-		Resource<VkBuffer> mVbo;
-		Resource<VkBuffer> mIbo;
-		VkPipeline mPipeline;
-		RenderPipelineInfo mPipelineInfo;
-		VkExtent2D mWindowExtent;
-	public:
-		UiDrawGenerator(
-			VulkanDevice device,
-			VmaAllocator  allocator,
-			VkQueue graphicsQueue,
-			VkRenderPass renderPass,
-			VkCommandPool commandPool,
-			VkExtent2D windowExtent);
-		virtual ~UiDrawGenerator();
-		virtual void invalidate() override;
-		void updateRenderPass(VkRenderPass renderPass, VkExtent2D windowExtent);
-		VkCommandBuffer& drawFrame(
-            const VkCommandBufferInheritanceInfo& inheritance,
-			VkFramebuffer& framebuffer,
-			const VkViewport& viewport,
-			const VkRect2D& scissor,
-			VkFence waitFence);
-	};
 }
