@@ -15,7 +15,7 @@ namespace hvk {
 	}
 
 	StaticMeshRenderObject::StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh) :
-		RenderObject(parent, transform),
+		Node(parent, transform),
 		mMesh(mesh)
 	{
 
@@ -26,18 +26,40 @@ namespace hvk {
 
 	}
 
-	const std::vector<Vertex>& StaticMeshRenderObject::getVertices() const
+	const StaticMesh::Vertices StaticMeshRenderObject::getVertices() const
 	{
 		return mMesh->getVertices();
 	}
 
-	const std::vector<VertIndex>& StaticMeshRenderObject::getIndices() const
+	const StaticMesh::Indices StaticMeshRenderObject::getIndices() const
 	{
 		return mMesh->getIndices();
 	}
 
-	Material& StaticMeshRenderObject::getMaterial() const
+	const std::shared_ptr<Material> StaticMeshRenderObject::getMaterial() const
 	{
 		return mMesh->getMaterial();
+	}
+
+	DebugMeshRenderObject::DebugMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh) :
+		Node(parent, transform),
+		mMesh(mesh)
+	{
+
+	}
+
+	DebugMeshRenderObject::~DebugMeshRenderObject()
+	{
+
+	}
+
+	const DebugMesh::ColorVertices DebugMeshRenderObject::getVertices() const
+	{
+		return mMesh->getVertices();
+	}
+
+	const DebugMesh::Indices DebugMeshRenderObject::getIndices() const
+	{
+		return mMesh->getIndices();
 	}
 }

@@ -16,6 +16,7 @@
 #include "DrawlistGenerator.h"
 #include "StaticMeshGenerator.h"
 #include "UiDrawGenerator.h"
+#include "DebugDrawGenerator.h"
 #include "Clock.h"
 #include "CameraController.h"
 
@@ -51,11 +52,12 @@ namespace hvk {
 		CameraRef mCameraNode;
 		CameraController mCameraController;
 		LightRef mLightNode;
-		NodeRef mLightBox;
+		//NodeRef mLightBox;
 
 		//Renderer mRenderer;
 		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
+		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
 
 		Clock mClock;
 

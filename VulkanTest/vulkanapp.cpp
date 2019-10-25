@@ -52,7 +52,7 @@ namespace hvk {
 	void processGltfNode(
 		tinygltf::Node& node, 
 		tinygltf::Model& model, 
-		std::vector<Vertex>& vertices, 
+		std::vector<Vertex, Hallocator<Vertex>>& vertices, 
 		std::vector<VertIndex>& indices, 
 		Material& mat)
 	{
@@ -135,9 +135,11 @@ namespace hvk {
 	auto createMeshFromGltf(const std::string& filename) 
 	{
 		// TODO: use a real allocation system instead of "new"
-		std::vector<Vertex>* vertices = new std::vector<Vertex>();
-		std::vector<VertIndex>* indices = new std::vector<VertIndex>();
-		Material* mat = new Material();
+		//std::vector<Vertex>* vertices = new std::vector<Vertex>();
+		std::shared_ptr<std::vector<Vertex, Hallocator<Vertex>>> vertices = std::make_shared<std::vector<Vertex, Hallocator<Vertex>>>();
+		//std::vector<VertIndex>* indices = new std::vector<VertIndex>();
+		std::shared_ptr<std::vector<VertIndex>> indices = std::make_shared<std::vector<VertIndex>>();
+		std::shared_ptr<Material> mat = std::make_shared<Material>();
 		//Material* mat = Pool<Material>::alloc();
 
 		tinygltf::Model model;
@@ -155,12 +157,12 @@ namespace hvk {
 		const tinygltf::Scene modelScene = model.scenes[model.defaultScene];
 		for (const int& nodeId : modelScene.nodes) {
 			tinygltf::Node& sceneNode = model.nodes[nodeId];
-			processGltfNode(sceneNode, model, *vertices, *indices, *mat);
+			processGltfNode(sceneNode, model, *vertices.get(), *indices.get(), *mat.get());
 		}
 
 		// TODO: this is going to result in a memory leak!!!  See above comment
 		//return StaticMesh(*vertices, *indices, *mat);
-		return Pool<StaticMesh>::alloc(*vertices, *indices, *mat);
+		return Pool<StaticMesh>::alloc(vertices, indices, mat);
 	}
 
 
@@ -176,6 +178,7 @@ namespace hvk {
 		//mRenderer(),
 		mMeshRenderer(nullptr),
 		mUiRenderer(nullptr),
+		mDebugRenderer(nullptr),
 		mLastX(0.f),
 		mLastY(0.f),
 		mMouseLeftDown(false),
@@ -183,8 +186,7 @@ namespace hvk {
 		mCameraController(nullptr),
 		mObjectNode(nullptr),
 		mCameraNode(nullptr),
-		mLightNode(nullptr),
-		mLightBox(nullptr)
+		mLightNode(nullptr)
     {
         // TODO: this is super bad, but IDGAF right now
         currentApp = this;
@@ -365,6 +367,7 @@ namespace hvk {
 		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
 		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool);
 
+		/*
         VkAttachmentDescription colorAttachment = {};
         colorAttachment.format = mSwapchain.swapchainImageFormat;
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -387,7 +390,10 @@ namespace hvk {
 		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		VkRenderPass uiRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorAttachment, depthAttachment);
+		*/
 		mUiRenderer = std::make_shared<UiDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool, mSwapchain.swapchainExtent);
+
+		mDebugRenderer = std::make_shared<DebugDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool);
 
 		glm::mat4 modelTransform = glm::mat4(1.0f);
 		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
@@ -406,44 +412,69 @@ namespace hvk {
 		//mRenderer.addLight(mLightNode);
 		mMeshRenderer->addLight(mLightNode);
 
-		mLightBox = std::make_shared<Node>(mLightNode, glm::mat4(1.0f));
+		DebugMesh::ColorVertices lightVertices = std::make_shared<std::vector<ColorVertex>>();
+		lightVertices->reserve(8);
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 0.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 0.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 1.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 1.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 0.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 0.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 1.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 1.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		std::shared_ptr<std::vector<VertIndex>> lightIndices = std::make_shared<std::vector<VertIndex>>();
+		lightIndices->reserve(24);
+		lightIndices->push_back(0);
+		lightIndices->push_back(1);
+		lightIndices->push_back(2);
+
+		lightIndices->push_back(2);
+		lightIndices->push_back(1);
+		lightIndices->push_back(3);
+
+		lightIndices->push_back(3);
+		lightIndices->push_back(7);
+		lightIndices->push_back(2);
+
+		lightIndices->push_back(2);
+		lightIndices->push_back(6);
+		lightIndices->push_back(7);
+
+		lightIndices->push_back(7);
+		lightIndices->push_back(4);
+		lightIndices->push_back(5);
+
+		lightIndices->push_back(7);
+		lightIndices->push_back(6);
+		lightIndices->push_back(4);
+
+		lightIndices->push_back(5);
+		lightIndices->push_back(0);
+		lightIndices->push_back(1);
+		std::shared_ptr<DebugMesh> debugMesh = std::make_shared<DebugMesh>(lightVertices, lightIndices);
+		auto lightBox = std::make_shared<DebugMeshRenderObject>(
+			mLightNode, 
+			glm::translate(glm::mat4(1.0f), glm::vec3(5.f, 0.f, 0.f)), 
+			debugMesh);
+		mDebugRenderer->addDebugMeshObject(lightBox);
 
         mImageAvailable = createSemaphore(mDevice);
-
-		/*
-		uint32_t* t1 = Pool<uint32_t>::alloc(15);
-		uint32_t* t2 = Pool<uint32_t>::alloc(6);
-		std::cout << "t1: " << t1 << "-> " << *t1 << std::endl;
-		std::cout << "t2: " << t2 << "-> " << *t2 << std::endl;
-		Pool<uint32_t>::free(t1);
-		uint32_t* t3 = Pool<uint32_t>::alloc(73);
-		uint32_t* t4 = Pool<uint32_t>::alloc(27);
-		uint32_t* t5 = Pool<uint32_t>::alloc(05);
-		std::cout << "t3: " << t3 << "-> " << *t3 << std::endl;
-		std::cout << "t4: " << t4 << "-> " << *t4 << std::endl;
-		std::cout << "t5: " << t5 << "-> " << *t5 << std::endl;
-		*/
-
-		//auto t1 = Pool<uint32_t>::alloc(15);
-		//std::cout << "t1: " << *t1 << std::endl;
-
-		//Pool<tinygltf::Image>::free(duckMesh->getMaterial().diffuseProp.texture);
-		//Pool<Material>::free(&duckMesh->getMaterial());
-		//Pool<tinygltf::Model>::free
-
-		std::vector<uint32_t, Hallocator<uint32_t>> testInts;
-		testInts.reserve(3000);
-		testInts.push_back(37);
-		std::cout << testInts[0] << std::endl;
-		std::vector<float, Hallocator<float>> testFloats;
-		testFloats.reserve(3);
-		testFloats.push_back(1.f);
-		testFloats.push_back(2.f);
-		testFloats.push_back(3.f);
-		testFloats.push_back(4.f);
-		testFloats.push_back(5.f);
-		testFloats.push_back(6.f);
-		testFloats.push_back(7.f);
     }
 
 	void VulkanApp::recreateSwapchain() {
@@ -451,6 +482,7 @@ namespace hvk {
 		//mRenderer.invalidateRenderer();
 		mMeshRenderer->invalidate();
 		mUiRenderer->invalidate();
+		mDebugRenderer->invalidate();
 		cleanupSwapchain();
 		glfwGetFramebufferSize(mWindow.get(), &mWindowWidth, &mWindowHeight);
 
@@ -467,6 +499,7 @@ namespace hvk {
 		//mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
 		mMeshRenderer->updateRenderPass(mRenderPass);
 		mUiRenderer->updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+		mDebugRenderer->updateRenderPass(mRenderPass);
 	}
 
 	void VulkanApp::initializeApp() {
@@ -589,7 +622,7 @@ namespace hvk {
 		};
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
-		std::array<VkCommandBuffer, 2> commandBuffers;
+		std::array<VkCommandBuffer, 3> commandBuffers;
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -622,15 +655,20 @@ namespace hvk {
 			viewport,
 			scissor,
 			*mCameraNode.get(),
-			ambient,
-			mRenderFence);
+			ambient);
 
-		commandBuffers[1] = mUiRenderer->drawFrame(
+		commandBuffers[1] = mDebugRenderer->drawFrame(
+			inheritanceInfo, 
+			mFramebuffers[imageIndex], 
+			viewport, 
+			scissor,
+			*mCameraNode.get());
+
+		commandBuffers[2] = mUiRenderer->drawFrame(
             inheritanceInfo,
 			mFramebuffers[imageIndex],
 			viewport,
-			scissor,
-			mRenderFence);
+			scissor);
 
 		vkCmdExecuteCommands(mPrimaryCommandBuffer, commandBuffers.size(), commandBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
@@ -646,8 +684,6 @@ namespace hvk {
 		submitInfo.pWaitDstStageMask = waitStages;
         submitInfo.commandBufferCount = 1;
         submitInfo.pCommandBuffers = &mPrimaryCommandBuffer;
-		//submitInfo.commandBufferCount = 1;
-		//submitInfo.pCommandBuffers = commandBuffers.data();
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = &mRenderFinished;
 

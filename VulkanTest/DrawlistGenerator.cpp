@@ -80,15 +80,6 @@ namespace hvk
 		// create semaphore for rendering finished
 		mRenderFinished = createSemaphore(mDevice.device);
 
-		// Create command pool
-		/*
-		VkCommandPoolCreateInfo poolCreate = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-		poolCreate.queueFamilyIndex = device.queueFamilies.graphics;
-		poolCreate.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-		assert(vkCreateCommandPool(mDevice.device, &poolCreate, nullptr, &mCommandPool) == VK_SUCCESS);
-		*/
-
 		// Allocate command buffer
 		VkCommandBufferAllocateInfo bufferAlloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
 		bufferAlloc.commandBufferCount = 1;
