@@ -3,7 +3,7 @@
 
 namespace hvk {
 
-	StaticMesh::StaticMesh(std::vector<Vertex>& vertices, std::vector<VertIndex>& indices, Material& material) :
+	StaticMesh::StaticMesh(Vertices vertices, Indices indices, std::shared_ptr<Material> material) :
 		mVertices(vertices),
 		mIndices(indices),
 		mMaterial(material)

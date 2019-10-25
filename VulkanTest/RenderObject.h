@@ -9,12 +9,13 @@
 #include "types.h"
 #include "Node.h"
 #include "StaticMesh.h"
+#include "DebugMesh.h"
 
 namespace hvk {
 
-    typedef std::shared_ptr<std::vector<Vertex>> VerticesRef;
-    typedef std::shared_ptr<std::vector<VertIndex>> IndicesRef;
-	typedef std::shared_ptr<tinygltf::Image> TextureRef;
+    //typedef std::shared_ptr<std::vector<Vertex>> VerticesRef;
+    //typedef std::shared_ptr<std::vector<VertIndex>> IndicesRef;
+	//typedef std::shared_ptr<tinygltf::Image> TextureRef;
 
 	class RenderObject;
 	typedef std::shared_ptr<RenderObject> RenderObjRef;
@@ -30,7 +31,7 @@ namespace hvk {
 		virtual Material& getMaterial() const = 0;
 	};
 
-	class StaticMeshRenderObject : public RenderObject
+	class StaticMeshRenderObject : public Node
 	{
 	private:
 		std::shared_ptr<StaticMesh> mMesh;
@@ -38,9 +39,21 @@ namespace hvk {
 		StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh);
 		~StaticMeshRenderObject();
 
-		const std::vector<Vertex>& getVertices() const override;
-		const std::vector<VertIndex>& getIndices() const override;
-		Material& getMaterial() const override;
+		const StaticMesh::Vertices getVertices() const;
+		const StaticMesh::Indices getIndices() const;
+		const std::shared_ptr<Material> getMaterial() const;
+	};
+
+	class DebugMeshRenderObject : public Node 
+	{
+	private:
+		std::shared_ptr<DebugMesh> mMesh;
+	public:
+		DebugMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh);
+		~DebugMeshRenderObject();
+
+		const DebugMesh::ColorVertices getVertices() const;
+		const DebugMesh::Indices getIndices() const;
 	};
 
 }

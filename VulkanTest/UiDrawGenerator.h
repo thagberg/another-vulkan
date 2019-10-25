@@ -33,7 +33,6 @@ namespace hvk
             const VkCommandBufferInheritanceInfo& inheritance,
 			VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
-			const VkRect2D& scissor,
-			VkFence waitFence);
+			const VkRect2D& scissor);
 	};
 }

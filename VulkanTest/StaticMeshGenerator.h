@@ -39,7 +39,8 @@ namespace hvk
 		RenderPipelineInfo mPipelineInfo;
 		Resource<VkBuffer> mLightsUbo;						// should this be a ptr?
 
-		std::vector<StaticMeshRenderable, Hallocator<StaticMeshRenderable>> mRenderables;
+		//std::vector<StaticMeshRenderable, Hallocator<StaticMeshRenderable>> mRenderables;
+		std::vector<StaticMeshRenderable> mRenderables;
 		std::vector<std::shared_ptr<Light>> mLights;
 
 		void preparePipelineInfo();
@@ -62,7 +63,6 @@ namespace hvk
 			const VkViewport& viewport,
 			const VkRect2D& scissor,
 			const Camera& camera,
-			const AmbientLight& ambientLight,
-			VkFence waitFence);
+			const AmbientLight& ambientLight);
 	};
 }

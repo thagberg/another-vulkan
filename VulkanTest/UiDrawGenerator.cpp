@@ -198,17 +198,13 @@ namespace hvk
         const VkCommandBufferInheritanceInfo& inheritance,
 		VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
-		const VkRect2D& scissor,
-		VkFence waitFence)
+		const VkRect2D& scissor)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::NewFrame();
 		ImGui::ShowDemoWindow();
 		ImGui::EndFrame();
 		ImGui::Render();
-
-		//assert(vkWaitForFences(mDevice.device, 1, &waitFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
-		//assert(vkResetFences(mDevice.device, 1, &waitFence) == VK_SUCCESS);
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -218,15 +214,7 @@ namespace hvk
         commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
 		commandBegin.pInheritanceInfo = &inheritance;
 
-		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		renderBegin.renderPass = mRenderPass;
-		renderBegin.framebuffer = framebuffer;
-		renderBegin.renderArea = scissor;
-		renderBegin.clearValueCount = clearValues.size();
-		renderBegin.pClearValues = clearValues.data();
-
 		assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
-		//vkCmdBeginRenderPass(mCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 
 		// bind viewport and scissor
@@ -326,7 +314,6 @@ namespace hvk
 			}
 		}
 
-		//vkCmdEndRenderPass(mCommandBuffer);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 
 		return mCommandBuffer;
