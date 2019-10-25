@@ -62,11 +62,12 @@ namespace hvk {
 		mYaw += radYaw;
 
 		mPitch = std::clamp(mPitch, -89.0f, 89.0f);
+
+        glm::mat4 local = getLocalTransform();
+
+		glm::mat4 pitchRot = glm::rotate(local, radPitch, glm::vec3(1.f, 0.f, 0.f));
+        glm::mat4 yawRot = glm::rotate(pitchRot, radYaw, glm::vec3(pitchRot[1]));
+        setLocalTransform(yawRot);
 	}
 
-	glm::mat4 Camera::getLocalTransform() const {
-		glm::mat4 xRot = glm::rotate(glm::mat4(1.0f), mPitch, glm::vec3(1.f, 0.f, 0.f));
-		glm::mat4 yRot = glm::rotate(glm::mat4(1.0f), mYaw, glm::vec3(0.f, 1.f, 0.f));
-		return Node::getLocalTransform() * yRot * xRot;
-	}
 }
