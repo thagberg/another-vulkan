@@ -24,8 +24,6 @@ namespace hvk {
 		void rotate(float radPitch, float radYaw);
 		void updateProjection(float fov, float aspectRatio, float near, float far);
 
-        virtual glm::mat4 getLocalTransform() const override;
-
     private:
         float mFov;
         float mAspectRatio;
