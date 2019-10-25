@@ -20,7 +20,6 @@ namespace hvk {
 		glm::vec3 getForwardVector() const;
 		glm::vec3 getRightVector() const;
 		glm::mat4 getViewTransform() const;
-		void setLookAt(glm::vec3 center);
 		void rotate(float radPitch, float radYaw);
 		void updateProjection(float fov, float aspectRatio, float near, float far);
 
@@ -29,8 +28,6 @@ namespace hvk {
         float mAspectRatio;
         float mNearPlane;
         float mFarPlane;
-		float mPitch, mYaw;
-		glm::vec3 mLookVec;
         glm::mat4 mProjection;
     };
 }
