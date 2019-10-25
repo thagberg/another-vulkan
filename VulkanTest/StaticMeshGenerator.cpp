@@ -44,7 +44,7 @@ namespace hvk
 
 		std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBiding };
 		VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
 		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
@@ -56,7 +56,7 @@ namespace hvk
 		poolSizes[1].descriptorCount = MAX_SAMPLERS;
 
 		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = MAX_DESCRIPTORS;
 
@@ -137,7 +137,7 @@ namespace hvk
 
 		std::array<VkDescriptorSetLayout, 2> dsLayouts = { mLightsDescriptorSetLayout, mDescriptorSetLayout };
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		layoutCreate.setLayoutCount = dsLayouts.size();
+		layoutCreate.setLayoutCount = static_cast<uint32_t>(dsLayouts.size());
 		layoutCreate.pSetLayouts = dsLayouts.data();
 		layoutCreate.pushConstantRangeCount = 1;
 		layoutCreate.pPushConstantRanges = &pushRange;
@@ -190,11 +190,11 @@ namespace hvk
 
 		const StaticMesh::Vertices vertices = object->getVertices();
 		const StaticMesh::Indices indices = object->getIndices();
-		newRenderable.numVertices = vertices->size();
-		newRenderable.numIndices = indices->size();
+		newRenderable.numVertices = static_cast<uint32_t>(vertices->size());
+		newRenderable.numIndices = static_cast<uint32_t>(indices->size());
 
 		// Create vertex buffer
-        uint32_t vertexMemorySize = sizeof(Vertex) * newRenderable.numVertices;
+        size_t vertexMemorySize = sizeof(Vertex) * newRenderable.numVertices;
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size = vertexMemorySize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -210,10 +210,10 @@ namespace hvk
             &newRenderable.vbo.allocation,
             &newRenderable.vbo.allocationInfo);
 
-        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), (size_t)vertexMemorySize);
+        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), vertexMemorySize);
 
 		// Create index buffer
-        uint32_t indexMemorySize = sizeof(uint16_t) * newRenderable.numIndices;
+        size_t indexMemorySize = sizeof(uint16_t) * newRenderable.numIndices;
         VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         iboInfo.size = indexMemorySize;
         iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -229,7 +229,7 @@ namespace hvk
             &newRenderable.ibo.allocation,
             &newRenderable.ibo.allocationInfo);
 
-        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices->data(), (size_t)indexMemorySize);
+        memcpy(newRenderable.ibo.allocationInfo.pMappedData, indices->data(), indexMemorySize);
 
         // create UBOs
         uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
@@ -306,7 +306,7 @@ namespace hvk
 
 			std::array<VkWriteDescriptorSet, 2> descriptorWrites = { descriptorWrite, imageDescriptorWrite };
 
-			vkUpdateDescriptorSets(mDevice.device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 		}
 
 		mRenderables.push_back(newRenderable);
@@ -344,7 +344,7 @@ namespace hvk
 		int memOffset = 0;
 		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
 		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
-		uboLights.numLights = mLights.size();
+		uboLights.numLights = static_cast<uint32_t>(mLights.size());
         uboLights.ambient = ambientLight;
 		for (size_t i = 0; i < mLights.size(); ++i) {
 			LightRef light = mLights[i];
@@ -401,7 +401,7 @@ namespace hvk
 			PushConstant push = {};
 			const Material& mat = *renderable.renderObject->getMaterial();
 			push.specular = mat.specularProp.scale;
-			push.shininess = 1.f - mat.roughnessProp.scale;
+			push.shininess = static_cast<uint32_t>(1.f - mat.roughnessProp.scale);
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}

@@ -88,5 +88,6 @@ namespace hvk {
 		if (input <= GLFW_KEY_LAST) {
 			return currentKeysPressed[input];
 		}
+        return false;
 	}
 }

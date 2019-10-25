@@ -71,7 +71,7 @@ namespace hvk {
 				// process position data
 				const tinygltf::Accessor positionAccess = model.accessors[positionAttr->second];
 				assert(positionAccess.type == TINYGLTF_TYPE_VEC3);
-				const int numPositions = positionAccess.count;
+				const size_t numPositions = positionAccess.count;
 				const tinygltf::BufferView positionView = model.bufferViews[positionAccess.bufferView];
 				const float* positionData = reinterpret_cast<const float*>(
 					&(model.buffers[positionView.buffer].data[positionView.byteOffset + positionAccess.byteOffset]));
@@ -106,7 +106,7 @@ namespace hvk {
 				// process indices
 				const tinygltf::Accessor indexAccess = model.accessors[prim.indices];
 				assert(indexAccess.type == TINYGLTF_TYPE_SCALAR);
-				const int numIndices = indexAccess.count;
+				const size_t numIndices = indexAccess.count;
 				const tinygltf::BufferView indexView = model.bufferViews[indexAccess.bufferView];
 				// TODO: need to handle more than just uint16_t indices (unsigned short)
 				const uint16_t* indexData = reinterpret_cast<const uint16_t*>(
@@ -636,7 +636,7 @@ namespace hvk {
 		renderBegin.renderPass = mRenderPass;
 		renderBegin.framebuffer = mFramebuffers[imageIndex];
 		renderBegin.renderArea = scissor;
-		renderBegin.clearValueCount = clearValues.size();
+		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
 		renderBegin.pClearValues = clearValues.data();
 
 		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
@@ -670,7 +670,7 @@ namespace hvk {
 			viewport,
 			scissor);
 
-		vkCmdExecuteCommands(mPrimaryCommandBuffer, commandBuffers.size(), commandBuffers.data());
+		vkCmdExecuteCommands(mPrimaryCommandBuffer, static_cast<float>(commandBuffers.size()), commandBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
 		vkEndCommandBuffer(mPrimaryCommandBuffer);
 
@@ -719,8 +719,8 @@ namespace hvk {
 			InputManager::update();
 			MouseState mouse = InputManager::currentMouseState;
 			MouseState prevMouse = InputManager::previousMouseState;
-			io.DeltaTime = frameTime;
-			io.MousePos = ImVec2(mouse.x, mouse.y);
+			io.DeltaTime = static_cast<float>(frameTime);
+			io.MousePos = ImVec2(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
 			io.MouseDown[0] = mouse.leftDown;
 
 			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
@@ -751,8 +751,8 @@ namespace hvk {
 			*/
 
 			float sensitivity = 0.1f;
-			float mouseDeltY = mouse.y - prevMouse.y;
-			float mouseDeltX = prevMouse.x - mouse.x;
+			float mouseDeltY = static_cast<float>(mouse.y - prevMouse.y);
+			float mouseDeltX = static_cast<float>(prevMouse.x - mouse.x);
 
 			// camera updates
 			//updateCamera(frameTime);

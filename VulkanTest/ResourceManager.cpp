@@ -48,14 +48,6 @@ namespace hvk {
 				void* m = std::align(alignment, size, it->data, it->size);
 				if (m != nullptr) {
 					size_t alignmentOffset = static_cast<char*>(m) - it->data;
-					/*
-					if (it != sFreeNodes.begin()) {
-						if (m > it->data) {
-							auto prev = std::prev(it);
-							std::prev(it)->size += alignmentOffset;
-						}
-					}
-					*/
 					if (m > it->data) {
 						sFreeNodes.insert(std::prev(it), { it->data, alignmentOffset });
 					}
@@ -68,5 +60,6 @@ namespace hvk {
 				}
 			}
 		}
+        return nullptr;
 	}
 }

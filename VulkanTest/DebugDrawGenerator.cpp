@@ -30,7 +30,7 @@ namespace hvk
 
 		std::array<VkDescriptorSetLayoutBinding, 1> bindings = { uboLayoutBinding };
 		VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
 		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
@@ -40,7 +40,7 @@ namespace hvk
 		poolSizes[0].descriptorCount = MAX_UBOS;
 
 		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = MAX_DESCRIPTORS;
 
@@ -51,7 +51,7 @@ namespace hvk
 		**************/
 		std::array<VkDescriptorSetLayout, 1> dsLayouts = { mDescriptorSetLayout };
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
-		layoutCreate.setLayoutCount = dsLayouts.size();
+		layoutCreate.setLayoutCount = static_cast<uint32_t>(dsLayouts.size());
 		layoutCreate.pSetLayouts = dsLayouts.data();
 		layoutCreate.pushConstantRangeCount = 0;
 
@@ -110,11 +110,11 @@ namespace hvk
 
 		const DebugMesh::ColorVertices vertices = object->getVertices();
 		const DebugMesh::Indices indices = object->getIndices();
-		newRenderable.numVertices = vertices->size();
-		newRenderable.numIndices = indices->size();
+		newRenderable.numVertices = static_cast<uint32_t>(vertices->size());
+		newRenderable.numIndices = static_cast<uint32_t>(indices->size());
 
 		// Create vertex buffer
-        uint32_t vertexMemorySize = sizeof(ColorVertex) * newRenderable.numVertices;
+        size_t vertexMemorySize = sizeof(ColorVertex) * newRenderable.numVertices;
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size = vertexMemorySize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -130,7 +130,7 @@ namespace hvk
             &newRenderable.vbo.allocation,
             &newRenderable.vbo.allocationInfo);
 
-        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), (size_t)vertexMemorySize);
+        memcpy(newRenderable.vbo.allocationInfo.pMappedData, vertices->data(), vertexMemorySize);
 
 		// Create index buffer
         uint32_t indexMemorySize = sizeof(uint16_t) * newRenderable.numIndices;
@@ -196,7 +196,12 @@ namespace hvk
 
 			std::array<VkWriteDescriptorSet, 1> descriptorWrites = { descriptorWrite };
 
-			vkUpdateDescriptorSets(mDevice.device, descriptorWrites.size(), descriptorWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(
+                mDevice.device, 
+                static_cast<uint32_t>(descriptorWrites.size()), 
+                descriptorWrites.data(), 
+                0, 
+                nullptr);
 		}
 
 		mRenderables.push_back(newRenderable);

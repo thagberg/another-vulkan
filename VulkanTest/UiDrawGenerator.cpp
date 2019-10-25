@@ -6,6 +6,14 @@
 
 namespace hvk
 {
+    void setIOSizes(ImGuiIO& io, const VkExtent2D& displaySize, const ImVec2& fbScale)
+    {
+        io.DisplaySize = ImVec2(
+            static_cast<float>(displaySize.width), 
+            static_cast<float>(displaySize.height));
+        io.DisplayFramebufferScale = fbScale;
+    }
+
 	UiDrawGenerator::UiDrawGenerator(
 		VulkanDevice device,
 		VmaAllocator allocator,
@@ -32,8 +40,7 @@ namespace hvk
 		ImGuiIO& io = ImGui::GetIO();
 		io.Fonts->AddFontDefault();
 		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight, &bytesPerPixel);
-		io.DisplaySize = ImVec2(mWindowExtent.width, mWindowExtent.height);
-		io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
+        setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));
 
         Resource<VkImage> uiFont = createTextureImage(
 			mDevice.device, 
@@ -53,7 +60,7 @@ namespace hvk
 		poolSizes[0].descriptorCount = MAX_SAMPLERS;
 
 		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = MAX_DESCRIPTORS;
 
@@ -188,8 +195,7 @@ namespace hvk
 		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
 
 		ImGuiIO& io = ImGui::GetIO();
-		io.DisplaySize = ImVec2(mWindowExtent.width, mWindowExtent.height);
-		io.DisplayFramebufferScale = ImVec2(1.f, 1.f);
+        setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));
 
 		setInitialized(true);
 	}

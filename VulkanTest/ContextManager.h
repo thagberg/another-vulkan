@@ -6,22 +6,22 @@
 
 namespace hvk {
 	struct Context {
-		uint16_t id;
+		size_t id;
 		std::string name;
 	};
 
 	class ContextManager
 	{
 	private:
-		uint16_t mActiveContextId;
+		size_t mActiveContextId;
 		std::vector<Context> mContexts;
-		std::map<const char*, uint16_t> mContextLookup;
+		std::map<const char*, size_t> mContextLookup;
 	public:
 		ContextManager();
 		~ContextManager();
 
-		uint16_t registerContext(const char* contextName);
-		bool activateContextById(uint16_t contextId);
+		size_t registerContext(const char* contextName);
+		bool activateContextById(size_t contextId);
 		bool activateContextByName(const char* contextName);
 		const Context& getActiveContext() const;
 	};
