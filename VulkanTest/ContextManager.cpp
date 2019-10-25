@@ -16,15 +16,15 @@ namespace hvk {
 	{
 	}
 
-	uint16_t ContextManager::registerContext(const char* contextName) {
-		uint16_t newId = mContexts.size();
+	size_t ContextManager::registerContext(const char* contextName) {
+		size_t newId = mContexts.size();
 		// TODO: add ctor for struct so that we can emplace instead of push
 		mContexts.push_back({ newId, contextName });
 		mContextLookup.insert(CONTEXT_PAIR(contextName, newId));
 		return newId;
 	}
 
-	bool ContextManager::activateContextById(uint16_t contextId) {
+	bool ContextManager::activateContextById(size_t contextId) {
 		mActiveContextId = contextId;
 		return true;
 	}

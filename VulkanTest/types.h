@@ -43,8 +43,8 @@ namespace hvk {
 	typedef std::vector<Resource<VkBuffer>> UniformBufferResources;
 
 	struct QueueFamilies {
-		int graphics;
-		int submit;
+		uint32_t graphics;
+		uint32_t submit;
 	};
 
 	struct VulkanDevice {

@@ -22,7 +22,7 @@ namespace hvk
 			Resource<VkBuffer> vbo;
 			Resource<VkBuffer> ibo;
 			size_t numVertices;
-			uint16_t numIndices;
+			uint32_t numIndices;
 
 			Resource<VkImage> texture;
 			VkImageView textureView;
