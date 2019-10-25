@@ -12,8 +12,8 @@ namespace hvk {
 	class StaticMesh
 	{
 	public:
-		using Vertices = std::shared_ptr<std::vector<Vertex>>;
-		//using Vertices = std::shared_ptr<std::vector<Vertex, Hallocator<Vertex>>>;
+		//using Vertices = std::shared_ptr<std::vector<Vertex>>;
+		using Vertices = std::shared_ptr<std::vector<Vertex, Hallocator<Vertex>>>;
 		using Indices = std::shared_ptr<std::vector<VertIndex>>;
 
 	private:

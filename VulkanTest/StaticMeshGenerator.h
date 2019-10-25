@@ -39,8 +39,8 @@ namespace hvk
 		RenderPipelineInfo mPipelineInfo;
 		Resource<VkBuffer> mLightsUbo;						// should this be a ptr?
 
-		//std::vector<StaticMeshRenderable, Hallocator<StaticMeshRenderable>> mRenderables;
-		std::vector<StaticMeshRenderable> mRenderables;
+		std::vector<StaticMeshRenderable, Hallocator<StaticMeshRenderable>> mRenderables;
+		//std::vector<StaticMeshRenderable> mRenderables;
 		std::vector<std::shared_ptr<Light>> mLights;
 
 		void preparePipelineInfo();

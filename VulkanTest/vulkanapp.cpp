@@ -52,7 +52,7 @@ namespace hvk {
 	void processGltfNode(
 		tinygltf::Node& node, 
 		tinygltf::Model& model, 
-		std::vector<Vertex>& vertices, 
+		std::vector<Vertex, Hallocator<Vertex>>& vertices, 
 		std::vector<VertIndex>& indices, 
 		Material& mat)
 	{
@@ -136,7 +136,7 @@ namespace hvk {
 	{
 		// TODO: use a real allocation system instead of "new"
 		//std::vector<Vertex>* vertices = new std::vector<Vertex>();
-		std::shared_ptr<std::vector<Vertex>> vertices = std::make_shared<std::vector<Vertex>>();
+		std::shared_ptr<std::vector<Vertex, Hallocator<Vertex>>> vertices = std::make_shared<std::vector<Vertex, Hallocator<Vertex>>>();
 		//std::vector<VertIndex>* indices = new std::vector<VertIndex>();
 		std::shared_ptr<std::vector<VertIndex>> indices = std::make_shared<std::vector<VertIndex>>();
 		std::shared_ptr<Material> mat = std::make_shared<Material>();
