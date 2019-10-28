@@ -11,6 +11,15 @@ namespace hvk {
 
     class Camera : public Node
     {
+    private:
+        float mFov;
+        float mAspectRatio;
+        float mNearPlane;
+        float mFarPlane;
+        float mPitch;
+        float mYaw;
+        glm::mat4 mProjection;
+
     public:
         Camera(float fov, float aspectRatio, float near, float far, NodeRef parent, glm::mat4 transform);
         ~Camera();
@@ -21,15 +30,6 @@ namespace hvk {
 		glm::vec3 getRightVector() const;
 		glm::mat4 getViewTransform() const;
 		void rotate(float radPitch, float radYaw);
-		void updateProjection(float fov, float aspectRatio, float near, float far);
-
-    private:
-        float mFov;
-        float mAspectRatio;
-        float mNearPlane;
-        float mFarPlane;
-        float mPitch;
-        float mYaw;
-        glm::mat4 mProjection;
+		void updateProjection(float fov, float aspectRatio, float nearPlane, float farPlane);
     };
 }
