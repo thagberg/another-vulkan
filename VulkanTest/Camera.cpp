@@ -16,6 +16,8 @@ namespace hvk {
         mAspectRatio(aspectRatio),
         mNearPlane(near),
         mFarPlane(far),
+        mPitch(0.f),
+        mYaw(0.f),
         mProjection(glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane)) 
     {
 
@@ -51,21 +53,17 @@ namespace hvk {
 	}
 
 	void Camera::rotate(float radPitch, float radYaw) {
-        glm::mat4 local = getLocalTransform();
-		glm::vec3 invLocalPos = -getLocalPosition();
-		glm::vec3 rightVec = getRightVector();
-		glm::vec3 upVec = getUpVector();
+        mPitch += radPitch;
+        mYaw += radYaw;
+        std::clamp(mPitch, -1.57f, 1.57f);
+        if (mYaw > 6.28139) {
+            mYaw -= 6.28139;
+        }
 
-		//local = glm::translate(local, invLocalPos);
+        glm::mat4 trans = glm::translate(glm::mat4(1.f), getLocalPosition());
+		glm::mat4 pitchRot = glm::rotate(glm::mat4(1.f), mPitch, glm::vec3(1.f, 0.f, 0.f));
+        glm::mat4 yawRot = glm::rotate(glm::mat4(1.f), mYaw, glm::vec3(0.f, 1.f, 0.f));
 
-		glm::mat4 pitchRot = glm::rotate(glm::mat4(1.f), radPitch, rightVec);
-        glm::mat4 yawRot = glm::rotate(glm::mat4(1.f), radYaw, glm::vec3(0.f, 1.f, 0.f));
-		//glm::mat4 rollRot = glm::rotate(glm::mat4(1.f), radPitch, glm::vec3(0.f, 0.f, 1.f));
-		//glm::mat4 yawRot = local;
-		//local = local * yawRot;
-		//local = local * pitchRot;
-		//local = glm::translate(pitchRot, getLocalPosition());
-        setLocalTransform( local * yawRot * pitchRot );
+        setLocalTransform( trans * yawRot * pitchRot );
 	}
-
 }

@@ -778,21 +778,21 @@ namespace hvk {
 			}
 			if (InputManager::isPressed(GLFW_KEY_UP))
 			{
-				cameraCommands.push_back({ 3, "camera_pitch", 0.5f });
+				cameraCommands.push_back({ 3, "camera_pitch", 0.15f });
 			}
 			if (InputManager::isPressed(GLFW_KEY_DOWN))
 			{
 				
-				cameraCommands.push_back({ 3, "camera_pitch", -0.5f });
+				cameraCommands.push_back({ 3, "camera_pitch", -0.15f });
 			}
 			if (InputManager::isPressed(GLFW_KEY_LEFT))
 			{
 				
-				cameraCommands.push_back({ 4, "camera_yaw", -0.5f });
+				cameraCommands.push_back({ 4, "camera_yaw", -0.15f });
 			}
 			if (InputManager::isPressed(GLFW_KEY_RIGHT))
 			{
-				cameraCommands.push_back({ 4, "camera_yaw", 0.5f });
+				cameraCommands.push_back({ 4, "camera_yaw", 0.15f });
 			}
 			if (cameraDrag) {
 				if (mouseDeltY) {
