@@ -15,6 +15,8 @@ namespace hvk {
     private:
         NodeRef mParent;
         std::vector<NodeRef> mChildren;
+
+    protected:
         glm::mat4 mTransform;
 
     public:
@@ -27,6 +29,7 @@ namespace hvk {
         virtual glm::mat4 getLocalTransform() const { return mTransform; }
         glm::mat4 getWorldTransform() const;
 		glm::vec3 getWorldPosition() const;
+		glm::vec3 getLocalPosition() const;
 
         Node(NodeRef parent, glm::mat4 transform);
         ~Node();

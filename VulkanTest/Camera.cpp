@@ -52,10 +52,20 @@ namespace hvk {
 
 	void Camera::rotate(float radPitch, float radYaw) {
         glm::mat4 local = getLocalTransform();
+		glm::vec3 invLocalPos = -getLocalPosition();
+		glm::vec3 rightVec = getRightVector();
+		glm::vec3 upVec = getUpVector();
 
-		glm::mat4 pitchRot = glm::rotate(local, radPitch, glm::vec3(1.f, 0.f, 0.f));
-        glm::mat4 yawRot = glm::rotate(pitchRot, radYaw, glm::vec3(pitchRot[1]));
-        setLocalTransform(yawRot);
+		//local = glm::translate(local, invLocalPos);
+
+		glm::mat4 pitchRot = glm::rotate(glm::mat4(1.f), radPitch, rightVec);
+        glm::mat4 yawRot = glm::rotate(glm::mat4(1.f), radYaw, glm::vec3(0.f, 1.f, 0.f));
+		//glm::mat4 rollRot = glm::rotate(glm::mat4(1.f), radPitch, glm::vec3(0.f, 0.f, 1.f));
+		//glm::mat4 yawRot = local;
+		//local = local * yawRot;
+		//local = local * pitchRot;
+		//local = glm::translate(pitchRot, getLocalPosition());
+        setLocalTransform( local * yawRot * pitchRot );
 	}
 
 }

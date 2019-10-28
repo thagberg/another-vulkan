@@ -23,7 +23,7 @@ namespace hvk {
 	
 	void Node::translateLocal(const glm::vec3& trans) 
 	{
-		setLocalTransform(glm::translate(mTransform, trans));
+		mTransform = glm::translate(glm::mat4(1.f), trans) * mTransform;
 	}
 
     glm::mat4 Node::getWorldTransform() const 
@@ -44,4 +44,9 @@ namespace hvk {
 	{
 		mChildren.push_back(child);
 	}
+
+	glm::vec3 Node::getLocalPosition() const
+    {
+		return mTransform[3];
+    }
 }

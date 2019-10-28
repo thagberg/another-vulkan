@@ -38,9 +38,9 @@ namespace hvk {
 		MouseState mouse = InputManager::currentMouseState;
 		MouseState prevMouse = InputManager::previousMouseState;
 
-		glm::vec3 forwardMovement = (float)d *  mCamera->getForwardVector();
-		glm::vec3 lateralMovement = (float)d * mCamera->getRightVector();
-		glm::vec3 verticalMovement = (float)d * mCamera->getUpVector();
+		const glm::vec3 forwardMovement = (float)d *  mCamera->getForwardVector();
+		const glm::vec3 lateralMovement = (float)d * mCamera->getRightVector();
+		const glm::vec3 verticalMovement = (float)d * mCamera->getUpVector();
 
 		bool rotated = false;
 		float pitch = 0.f, yaw = 0.f;
