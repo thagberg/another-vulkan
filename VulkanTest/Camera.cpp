@@ -10,12 +10,12 @@
 
 namespace hvk {
 
-    Camera::Camera(float fov, float aspectRatio, float near, float far, NodeRef parent, glm::mat4 transform) :
+    Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane, NodeRef parent, glm::mat4 transform) :
         Node(parent, transform),
         mFov(fov),
         mAspectRatio(aspectRatio),
-        mNearPlane(near),
-        mFarPlane(far),
+        mNearPlane(nearPlane),
+        mFarPlane(farPlane),
         mPitch(0.f),
         mYaw(0.f),
         mProjection(glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane)) 

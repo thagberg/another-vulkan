@@ -21,7 +21,7 @@ namespace hvk {
         glm::mat4 mProjection;
 
     public:
-        Camera(float fov, float aspectRatio, float near, float far, NodeRef parent, glm::mat4 transform);
+        Camera(float fov, float aspectRatio, float nearPlane, float farPlane, NodeRef parent, glm::mat4 transform);
         ~Camera();
 
 		glm::mat4 getProjection() const { return mProjection; }
