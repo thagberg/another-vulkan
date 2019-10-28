@@ -27,11 +27,11 @@ namespace hvk {
     Camera::~Camera() {
     }
 
-	void Camera::updateProjection(float fov, float aspectRatio, float near, float far) {
+	void Camera::updateProjection(float fov, float aspectRatio, float nearPlane, float farPlane) {
 		mFov = fov;
 		mAspectRatio = aspectRatio;
-		mNearPlane = near;
-		mFarPlane = far;
+		mNearPlane = nearPlane;
+		mFarPlane = farPlane;
 
         mProjection = glm::perspective(glm::radians(mFov), mAspectRatio, mNearPlane, mFarPlane);
 	}

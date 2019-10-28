@@ -4,11 +4,17 @@
 
 
 namespace hvk {
-    Node::Node(NodeRef parent, glm::mat4 transform) :
+    Node::Node(HVK_shared<Node> parent, HVK_shared<Transform> transform) :
         mParent(parent),
-        mTransform(transform) 
+        mTransform(transform)
 	{
 
+    }
+
+    Node::Node(HVK_shared<Node> parent, glm::mat4 transform) :
+        mParent(parent)
+    {
+        mTransform = HVK_make_shared<Transform>(Transform{ transform });
     }
 
     Node::~Node() 
@@ -18,12 +24,12 @@ namespace hvk {
 
     void Node::setLocalTransform(glm::mat4 transform) 
 	{
-        mTransform = transform;
+        mTransform->transform = transform;
     }
 	
 	void Node::translateLocal(const glm::vec3& trans) 
 	{
-		mTransform = glm::translate(glm::mat4(1.f), trans) * mTransform;
+		mTransform->transform = glm::translate(glm::mat4(1.f), trans) * mTransform->transform;
 	}
 
     glm::mat4 Node::getWorldTransform() const 
@@ -40,13 +46,13 @@ namespace hvk {
 		return glm::vec3(getWorldTransform()[3]);
 	}
 
-	void Node::addChild(NodeRef child)
+	void Node::addChild(HVK_shared<Node> child)
 	{
 		mChildren.push_back(child);
 	}
 
 	glm::vec3 Node::getLocalPosition() const
     {
-		return mTransform[3];
+		return mTransform->transform[3];
     }
 }

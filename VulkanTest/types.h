@@ -11,6 +11,8 @@
 #include "vk_mem_alloc.h"
 #include "tiny_gltf.h"
 
+#include "ResourceManager.h"
+
 #define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
 #define VertexUVFormat VK_FORMAT_R32G32_SFLOAT
@@ -33,6 +35,18 @@ namespace hvk {
 	//typedef std::shared_ptr<GLFWwindow, void(*)(GLFWwindow*)> window_ptr;
 	typedef std::shared_ptr<GLFWwindow> window_ptr;
 	typedef uint16_t VertIndex;
+
+    template <typename T>
+    using HVK_shared = std::shared_ptr<T>;
+
+    template <typename T, typename... Args>
+    auto HVK_make_shared(Args&&... args) {
+        Hallocator<T> alloc;
+        return std::allocate_shared<T>(alloc, args...);
+    }
+
+    template <typename T>
+    using HVK_vector = std::vector<T, Hallocator<T>>;
 
 	template <class T>
 	struct Resource {
