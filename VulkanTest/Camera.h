@@ -28,6 +28,8 @@ namespace hvk {
         float mAspectRatio;
         float mNearPlane;
         float mFarPlane;
+        float mPitch;
+        float mYaw;
         glm::mat4 mProjection;
     };
 }
