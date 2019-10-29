@@ -207,9 +207,9 @@ namespace hvk
 		const VkRect2D& scissor)
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		ImGui::NewFrame();
-		ImGui::ShowDemoWindow();
-		ImGui::EndFrame();
+		//ImGui::NewFrame();
+		//ImGui::ShowDemoWindow();
+		//ImGui::EndFrame();
 		ImGui::Render();
 
 		std::array<VkClearValue, 2> clearValues = {};

@@ -22,12 +22,13 @@ namespace hvk {
         HVK_shared<Transform> mTransform;
 
     public:
-		const HVK_shared<Node> getParent() { return mParent; }
+		HVK_shared<Node> getParent() { return mParent; }
 		const std::vector<HVK_shared<Node>>& getChildren() { return mChildren; }
 		void addChild(HVK_shared<Node> child);
 
         virtual void setLocalTransform(glm::mat4 transform);
 		virtual void translateLocal(const glm::vec3& trans);
+		HVK_shared<Transform> getTransform() { return mTransform; }
         glm::mat4 getLocalTransform() const { return mTransform->transform; }
         glm::mat4 getWorldTransform() const;
 		glm::vec3 getWorldPosition() const;
@@ -35,7 +36,7 @@ namespace hvk {
 
         Node(HVK_shared<Node> parent, HVK_shared<Transform> transform);
         Node(HVK_shared<Node> parent, glm::mat4 transform);
-        ~Node();
+        virtual ~Node();
     };
 
 }

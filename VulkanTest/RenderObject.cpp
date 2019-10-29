@@ -48,6 +48,13 @@ namespace hvk {
 
 	}
 
+	DebugMeshRenderObject::DebugMeshRenderObject(NodeRef parent, HVK_shared<Transform> transform, std::shared_ptr<DebugMesh> mesh) :
+		Node(parent, transform),
+		mMesh(mesh)
+	{
+		
+	}
+
 	DebugMeshRenderObject::~DebugMeshRenderObject()
 	{
 

@@ -5,6 +5,7 @@
 #include <iostream>
 #include <fstream>
 #include <unordered_map>
+#include <limits>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
@@ -404,10 +405,13 @@ namespace hvk {
 		mMeshRenderer->addStaticMeshObject(duckObj);
 
         mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
+		glm::mat4 lightTransform = glm::mat4(1.0f);
+		lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
+		lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
 		mLightNode = std::make_shared<Light>(
 			nullptr, 
-			glm::translate(glm::mat4(1.0f), glm::vec3(1.0f, 0.f, 0.f)), 
-			glm::vec3(1.0f, 1.0f, 1.0f),
+			lightTransform,
+			glm::vec3(1.f, 1.f, 1.f),
             0.3f);
 		//mRenderer.addLight(mLightNode);
 		mMeshRenderer->addLight(mLightNode);
@@ -469,8 +473,9 @@ namespace hvk {
 		lightIndices->push_back(1);
 		std::shared_ptr<DebugMesh> debugMesh = std::make_shared<DebugMesh>(lightVertices, lightIndices);
 		auto lightBox = std::make_shared<DebugMeshRenderObject>(
-			mLightNode, 
-			glm::translate(glm::mat4(1.0f), glm::vec3(5.f, 0.f, 0.f)), 
+			nullptr,
+			//glm::translate(glm::mat4(1.0f), glm::vec3(5.f, 0.f, 0.f)), 
+			mLightNode->getTransform(), 
 			debugMesh);
 		mDebugRenderer->addDebugMeshObject(lightBox);
 
@@ -778,21 +783,21 @@ namespace hvk {
 			}
 			if (InputManager::isPressed(GLFW_KEY_UP))
 			{
-				cameraCommands.push_back({ 3, "camera_pitch", 0.15f });
+				cameraCommands.push_back({ 3, "camera_pitch", 0.25f });
 			}
 			if (InputManager::isPressed(GLFW_KEY_DOWN))
 			{
 				
-				cameraCommands.push_back({ 3, "camera_pitch", -0.15f });
+				cameraCommands.push_back({ 3, "camera_pitch", -0.25f });
 			}
 			if (InputManager::isPressed(GLFW_KEY_LEFT))
 			{
 				
-				cameraCommands.push_back({ 4, "camera_yaw", -0.15f });
+				cameraCommands.push_back({ 4, "camera_yaw", -0.25f });
 			}
 			if (InputManager::isPressed(GLFW_KEY_RIGHT))
 			{
-				cameraCommands.push_back({ 4, "camera_yaw", 0.15f });
+				cameraCommands.push_back({ 4, "camera_yaw", 0.25f });
 			}
 			if (cameraDrag) {
 				if (mouseDeltY) {
@@ -803,6 +808,25 @@ namespace hvk {
 				}
 			}
 			mCameraController.update(frameTime, cameraCommands);
+
+        	/**************
+			Do UI Stuff Here
+        	***************/
+			ImGui::NewFrame();
+			ImGui::Begin("Lights");
+			ImGui::Text("Dynamic Lights");
+			glm::vec3 col = mLightNode->getColor();
+			float intensity = mLightNode->getIntensity();
+			ImGui::ColorEdit3("Light Color", &col.x);
+			mLightNode->setColor(col);
+			ImGui::SliderFloat("Light Intensity", &intensity, 0.f, 1.f);
+			mLightNode->setIntensity(intensity);
+			glm::vec3 lightPos = mLightNode->getLocalPosition();
+			ImGui::SliderFloat3("Light Position", &lightPos.x, std::numeric_limits<float>::min()/2.0f, std::numeric_limits<float>::max()/2.0f);
+			//ImGui::SliderFloat3("Light Position", &lightPos.x, 0.f, 1.f);
+			ImGui::End();
+			ImGui::ShowDemoWindow();
+			ImGui::EndFrame();
 
             drawFrame();
 			mClock.end();

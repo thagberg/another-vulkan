@@ -50,6 +50,7 @@ namespace hvk {
 		std::shared_ptr<DebugMesh> mMesh;
 	public:
 		DebugMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh);
+		DebugMeshRenderObject(NodeRef parent, HVK_shared<Transform> transform, std::shared_ptr<DebugMesh> mesh);
 		~DebugMeshRenderObject();
 
 		const DebugMesh::ColorVertices getVertices() const;

@@ -14,6 +14,7 @@ namespace hvk {
 		float mIntensity;
 	public:
 		Light(NodeRef parent, glm::mat4 transform, glm::vec3 color, float intensity);
+		Light(NodeRef parent, HVK_shared<Transform> transform, glm::vec3 color, float intensity);
 		~Light();
 
 		glm::vec3 getColor() const { return mColor; }
