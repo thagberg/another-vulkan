@@ -727,6 +727,7 @@ namespace hvk {
 			io.DeltaTime = static_cast<float>(frameTime);
 			io.MousePos = ImVec2(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
 			io.MouseDown[0] = mouse.leftDown;
+            io.KeyCtrl = InputManager::isPressed(GLFW_KEY_LEFT_CONTROL);
 
 			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
 				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
@@ -822,8 +823,10 @@ namespace hvk {
 			ImGui::SliderFloat("Light Intensity", &intensity, 0.f, 1.f);
 			mLightNode->setIntensity(intensity);
 			glm::vec3 lightPos = mLightNode->getLocalPosition();
-			ImGui::SliderFloat3("Light Position", &lightPos.x, std::numeric_limits<float>::min()/2.0f, std::numeric_limits<float>::max()/2.0f);
-			//ImGui::SliderFloat3("Light Position", &lightPos.x, 0.f, 1.f);
+            float posMagnitude = glm::length(lightPos);
+            ImGui::DragFloat3("Light Position", &lightPos.x, 0.01f);
+            glm::vec3 posDiff = lightPos - mLightNode->getLocalPosition();
+            mLightNode->translateLocal(posDiff);
 			ImGui::End();
 			ImGui::ShowDemoWindow();
 			ImGui::EndFrame();
