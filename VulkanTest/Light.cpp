@@ -10,6 +10,13 @@ namespace hvk {
 	{
 	}
 
+	Light::Light(NodeRef parent, HVK_shared<Transform> transform, glm::vec3 color, float intensity) :
+		Node(parent, transform),
+		mColor(color),
+		mIntensity(intensity)
+	{
+		
+	}
 
 	Light::~Light()
 	{
