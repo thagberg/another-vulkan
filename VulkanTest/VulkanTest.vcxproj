@@ -224,7 +224,6 @@
     <ClCompile Include="UiDrawGenerator.cpp" />
     <ClCompile Include="UserApp.cpp" />
     <ClCompile Include="vulkanapp.cpp" />
-    <ClCompile Include="VulkanTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\normal.frag" />

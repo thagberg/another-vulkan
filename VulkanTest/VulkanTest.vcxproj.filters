@@ -134,9 +134,6 @@
     <ClCompile Include="RenderObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VulkanTest.cpp">
-      <Filter>Source Files\app</Filter>
-    </ClCompile>
     <ClCompile Include="vulkanapp.cpp">
       <Filter>Source Files\app</Filter>
     </ClCompile>
