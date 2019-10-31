@@ -6,6 +6,11 @@
 
 namespace hvk
 {
+
+	const VkFormat UiVertexPositionFormat = VK_FORMAT_R32G32_SFLOAT;
+	const VkFormat UiVertexUVFormat = VK_FORMAT_R32G32_SFLOAT;
+	const VkFormat UiVertexColorFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
     void setIOSizes(ImGuiIO& io, const VkExtent2D& displaySize, const ImVec2& fbScale)
     {
         io.DisplaySize = ImVec2(

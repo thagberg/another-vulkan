@@ -11,19 +11,9 @@
 #include "vk_mem_alloc.h"
 #include "tiny_gltf.h"
 
-#include "ResourceManager.h"
+//#include "ResourceManager.h"
+#include "HvkUtil.h"
 
-#define VertexPositionFormat VK_FORMAT_R32G32B32_SFLOAT
-#define VertexColorFormat VK_FORMAT_R32G32B32_SFLOAT
-#define VertexUVFormat VK_FORMAT_R32G32_SFLOAT
-#define VertexNormalFormat VK_FORMAT_R32G32B32_SFLOAT
-#define UiVertexPositionFormat VK_FORMAT_R32G32_SFLOAT
-#define UiVertexUVFormat VK_FORMAT_R32G32_SFLOAT
-#define UiVertexColorFormat VK_FORMAT_R8G8B8A8_UNORM
-
-#define COMP3_4_ALIGN(t) alignas(4*sizeof(t))
-#define COMP2_ALIGN(t) alignas(2*sizeof(t))
-#define COMP1_ALIGN(t) alignas(sizeof(t))
 
 namespace hvk {
 
@@ -36,17 +26,6 @@ namespace hvk {
 	typedef std::shared_ptr<GLFWwindow> window_ptr;
 	typedef uint16_t VertIndex;
 
-    template <typename T>
-    using HVK_shared = std::shared_ptr<T>;
-
-    template <typename T, typename... Args>
-    auto HVK_make_shared(Args&&... args) {
-        Hallocator<T> alloc;
-        return std::allocate_shared<T>(alloc, args...);
-    }
-
-    template <typename T>
-    using HVK_vector = std::vector<T, Hallocator<T>>;
 
 	template <class T>
 	struct Resource {
@@ -81,73 +60,6 @@ namespace hvk {
 		SwapchainImageViews swapImageViews;
 	};
 
-	struct Vertex {
-		glm::vec3 pos;
-		glm::vec3 normal;
-		glm::vec2 texCoord;
-
-		static VkVertexInputBindingDescription getBindingDescription() {
-			VkVertexInputBindingDescription bindingDescription = {};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(Vertex);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			return bindingDescription;
-		}
-
-		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
-			std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
-			attributeDescriptions.resize(3);
-
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VertexPositionFormat;
-			attributeDescriptions[0].offset = offsetof(Vertex, pos);
-
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VertexNormalFormat;
-			attributeDescriptions[1].offset = offsetof(Vertex, normal);
-
-			attributeDescriptions[2].binding = 0;
-			attributeDescriptions[2].location = 2;
-			attributeDescriptions[2].format = VertexUVFormat;
-			attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
-
-			return attributeDescriptions;
-		}
-	};
-
-	struct ColorVertex {
-		glm::vec3 pos;
-		glm::vec3 color;
-
-		static VkVertexInputBindingDescription getBindingDescription() {
-			VkVertexInputBindingDescription bindingDescription = {};
-			bindingDescription.binding = 0;
-			bindingDescription.stride = sizeof(ColorVertex);
-			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			return bindingDescription;
-		}
-
-		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
-			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-			attributeDescriptions.resize(2);
-
-			attributeDescriptions[0].binding = 0;
-			attributeDescriptions[0].location = 0;
-			attributeDescriptions[0].format = VertexPositionFormat;
-			attributeDescriptions[0].offset = offsetof(ColorVertex, pos);
-
-			attributeDescriptions[1].binding = 0;
-			attributeDescriptions[1].location = 1;
-			attributeDescriptions[1].format = VertexColorFormat;
-			attributeDescriptions[1].offset = offsetof(ColorVertex, color);
-
-			return attributeDescriptions;
-		}
-	};
 
 	struct UniformBufferObject {
 		COMP3_4_ALIGN(float) glm::mat4 model;
@@ -190,15 +102,4 @@ namespace hvk {
 		std::variant<uint32_t, float, bool> payload;
 	};
 
-	struct MaterialProperty {
-		tinygltf::Image* texture;
-		float scale;
-	};
-
-	struct Material {
-		MaterialProperty diffuseProp;
-		MaterialProperty metalProp;
-		MaterialProperty roughnessProp;
-		MaterialProperty specularProp;
-	};
 }
