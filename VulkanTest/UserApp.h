@@ -2,6 +2,11 @@
 
 #include <memory>
 
+#include "Clock.h"
+#include "HvkUtil.h"
+#include "RenderObject.h"
+#include "Light.h"
+
 namespace hvk
 {
 	class VulkanApp;
@@ -11,9 +16,10 @@ class UserApp
 {
 private:
 	std::unique_ptr<hvk::VulkanApp> mApp;
+    hvk::Clock mClock;
 
 protected:
-	virtual void run() = 0;
+	virtual bool run(double frameTime) = 0;
 	virtual void close() = 0;
 	
 public:
@@ -22,4 +28,8 @@ public:
 
 	void runApp();
 	void doClose();
+    void toggleCursor(bool enabled);
+    void addStaticMeshInstance(hvk::HVK_shared<hvk::StaticMeshRenderObject> node);
+    void addDynamicLight(hvk::HVK_shared<hvk::Light> light);
+    void addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node);
 };

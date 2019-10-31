@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <vector>
+#include <variant>
 
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
@@ -26,8 +27,11 @@ namespace hvk
 	template <typename T>
 	using HVK_shared = std::shared_ptr<T>;
 
+    template <typename T>
+    using HVK_unique = std::unique_ptr<T, void(*)(T*)>;
+
 	template <typename T, typename... Args>
-	auto HVK_make_shared(Args&& ... args) {
+	HVK_shared<T> HVK_make_shared(Args&& ... args) {
 		Hallocator<T> alloc;
 		return std::allocate_shared<T>(alloc, args...);
 	}
@@ -116,4 +120,9 @@ namespace hvk
 		}
 	};
 
+	struct Command {
+		uint16_t id;
+		std::string name;
+		std::variant<uint32_t, float, bool> payload;
+	};
 }

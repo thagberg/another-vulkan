@@ -96,10 +96,5 @@ namespace hvk {
 		COMP1_ALIGN(uint32_t) uint32_t shininess;
 	};
 
-	struct Command {
-		uint16_t id;
-		std::string name;
-		std::variant<uint32_t, float, bool> payload;
-	};
 
 }

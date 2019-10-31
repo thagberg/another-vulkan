@@ -21,6 +21,13 @@ namespace hvk {
 
 	}
 
+    StaticMeshRenderObject::StaticMeshRenderObject(NodeRef parent, HVK_shared<Transform> transform, std::shared_ptr<StaticMesh> mesh) :
+        Node(parent, transform),
+        mMesh(mesh)
+    {
+
+    }
+
 	StaticMeshRenderObject::~StaticMeshRenderObject() 
 	{
 

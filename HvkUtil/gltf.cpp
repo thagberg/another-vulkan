@@ -94,7 +94,7 @@ namespace hvk
 		}
 	}
 
-	std::unique_ptr<StaticMesh, void(*)(StaticMesh*)> createMeshFromGltf(const std::string& filename)
+	HVK_unique<StaticMesh> createMeshFromGltf(const std::string& filename)
 	{
 		// TODO: use a real allocation system instead of "new"
 		//std::vector<Vertex>* vertices = new std::vector<Vertex>();

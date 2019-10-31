@@ -59,15 +59,14 @@ namespace hvk {
 		mLastX(0.f),
 		mLastY(0.f),
 		mMouseLeftDown(false),
-		mClock(),
 		mCameraController(nullptr),
-		mObjectNode(nullptr),
 		mCameraNode(nullptr),
 		mLightNode(nullptr)
     {
     }
 
     VulkanApp::~VulkanApp() {
+        vkDeviceWaitIdle(mDevice);
         glfwTerminate();
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
         vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
@@ -239,56 +238,27 @@ namespace hvk {
 
 		assert(vkAllocateCommandBuffers(mDevice, &bufferAlloc, &mPrimaryCommandBuffer) == VK_SUCCESS);
 
-		//mRenderer.init(device, mAllocator, mGraphicsQueue, mRenderPass, mCameraNode, mSwapchain.swapchainImageFormat, mSwapchain.swapchainExtent);
-		mMeshRenderer = std::make_shared<StaticMeshGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool);
+		mMeshRenderer = std::make_shared<StaticMeshGenerator>(
+            device, 
+            mAllocator, 
+            mGraphicsQueue, 
+            mRenderPass, 
+            mCommandPool);
 
-		/*
-        VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format = mSwapchain.swapchainImageFormat;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        //colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		mUiRenderer = std::make_shared<UiDrawGenerator>(
+            device, 
+            mAllocator, 
+            mGraphicsQueue, 
+            mRenderPass, 
+            mCommandPool, 
+            mSwapchain.swapchainExtent);
 
-		VkAttachmentDescription depthAttachment = {};
-		depthAttachment.format = VK_FORMAT_D32_SFLOAT;  // TODO: make this dynamic
-		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		//depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		VkRenderPass uiRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorAttachment, depthAttachment);
-		*/
-		mUiRenderer = std::make_shared<UiDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool, mSwapchain.swapchainExtent);
-
-		mDebugRenderer = std::make_shared<DebugDrawGenerator>(device, mAllocator, mGraphicsQueue, mRenderPass, mCommandPool);
-
-		glm::mat4 modelTransform = glm::mat4(1.0f);
-		modelTransform = glm::scale(modelTransform, glm::vec3(0.01f, 0.01f, 0.01f));
-		std::shared_ptr<StaticMesh> duckMesh(std::move(createMeshFromGltf("resources/duck/Duck.gltf")));
-		std::shared_ptr<StaticMeshRenderObject> duckObj = std::make_shared<StaticMeshRenderObject>(nullptr, modelTransform, duckMesh);
-		//RenderObjRef modelObj = RenderObject::createFromGltf("resources/duck/Duck.gltf", nullptr, modelTransform);
-		//mRenderer.addRenderable(std::static_pointer_cast<RenderObject>(duckObj));
-		mMeshRenderer->addStaticMeshObject(duckObj);
-
-        mObjectNode = std::make_shared<Node>(nullptr, glm::mat4(1.0f));
-		glm::mat4 lightTransform = glm::mat4(1.0f);
-		lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
-		lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
-		mLightNode = std::make_shared<Light>(
-			nullptr, 
-			lightTransform,
-			glm::vec3(1.f, 1.f, 1.f),
-            0.3f);
-		//mRenderer.addLight(mLightNode);
-		mMeshRenderer->addLight(mLightNode);
+		mDebugRenderer = std::make_shared<DebugDrawGenerator>(
+            device, 
+            mAllocator, 
+            mGraphicsQueue, 
+            mRenderPass, 
+            mCommandPool);
 
 		DebugMesh::ColorVertices lightVertices = std::make_shared<std::vector<ColorVertex>>();
 		lightVertices->reserve(8);
@@ -356,6 +326,21 @@ namespace hvk {
         mImageAvailable = createSemaphore(mDevice);
     }
 
+    void VulkanApp::addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node)
+    {
+        mMeshRenderer->addStaticMeshObject(node);
+    }
+
+    void VulkanApp::addDynamicLight(HVK_shared<Light> light)
+    {
+        mMeshRenderer->addLight(light);
+    }
+
+    void VulkanApp::addDebugMeshInstance(HVK_shared<DebugMeshRenderObject> node)
+    {
+        mDebugRenderer->addDebugMeshObject(node);
+    }
+
 	void VulkanApp::recreateSwapchain() {
 		vkDeviceWaitIdle(mDevice);
 		//mRenderer.invalidateRenderer();
@@ -384,6 +369,7 @@ namespace hvk {
 	void VulkanApp::initializeApp() {
 		glfwSetWindowUserPointer(mWindow.get(), this);
 		glfwSetFramebufferSizeCallback(mWindow.get(), VulkanApp::handleWindowResize);
+        InputManager::init(mWindow);
 	}
 
     void VulkanApp::init() {
@@ -581,135 +567,22 @@ namespace hvk {
         vkQueuePresentKHR(mGraphicsQueue, &presentInfo);
     }
 
-    void VulkanApp::run() {
-		InputManager::init(mWindow);
-		ImGuiIO& io = ImGui::GetIO();
+    bool VulkanApp::update(double frameTime)
+    {
+        bool shouldClose = glfwWindowShouldClose(mWindow.get());
 
-		double frameTime = mClock.getDelta();
-		bool cameraDrag = false;
-        while (!glfwWindowShouldClose(mWindow.get())) {
-			mClock.start();
-			frameTime = mClock.getDelta();
-
-			//ImGui::Che
-
-			// TODO: figure out how to poll GLFW events outside of InputManager
-			//	while still capturing current vs previous mouse state correctly
-			InputManager::update();
-			MouseState mouse = InputManager::currentMouseState;
-			MouseState prevMouse = InputManager::previousMouseState;
-			io.DeltaTime = static_cast<float>(frameTime);
-			io.MousePos = ImVec2(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
-			io.MouseDown[0] = mouse.leftDown;
-            io.KeyCtrl = InputManager::isPressed(GLFW_KEY_LEFT_CONTROL);
-
-			if (InputManager::currentKeysPressed[GLFW_KEY_ESCAPE]) {
-				glfwSetWindowShouldClose(mWindow.get(), GLFW_TRUE);
-			}
-			if (InputManager::currentKeysPressed[GLFW_KEY_Y] && !InputManager::previousKeysPressed[GLFW_KEY_Y]) {
-				// TODO: add normals renderer
-				//Renderer::setDrawNormals(!Renderer::getDrawNormals());
-			}
-
-			bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
-			bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
-			if (mouseClicked && !io.WantCaptureMouse) {
-				cameraDrag = true;
-				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			}
-			if (mouseReleased) {
-				cameraDrag = false;
-				glfwSetInputMode(mWindow.get(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-			}
-
-			/*
-			if (cameraDrag) {
-				float sensitivity = 0.1f;
-				cameraRotation.pitch = (mouse.y - prevMouse.y) * sensitivity;
-				cameraRotation.yaw = (prevMouse.x - mouse.x) * sensitivity;
-			}
-			*/
-
-			float sensitivity = 0.1f;
-			float mouseDeltY = static_cast<float>(mouse.y - prevMouse.y);
-			float mouseDeltX = static_cast<float>(prevMouse.x - mouse.x);
-
-			// camera updates
-			//updateCamera(frameTime);
-			std::vector<Command> cameraCommands;
-			cameraCommands.reserve(6);
-			if (InputManager::isPressed(GLFW_KEY_W)) {
-				cameraCommands.push_back({ 0, "move_forward", -1.0f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_S)) {
-				cameraCommands.push_back({ 0, "move_forward", 1.0f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_A)) {
-				cameraCommands.push_back({ 1, "move_right", -1.0f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_D)) {
-				cameraCommands.push_back({ 1, "move_right", 1.0f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_Q)) {
-				cameraCommands.push_back({ 2, "move_up", -1.0f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_E)) {
-				cameraCommands.push_back({ 2, "move_up", 1.0f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_UP))
-			{
-				cameraCommands.push_back({ 3, "camera_pitch", 0.25f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_DOWN))
-			{
-				
-				cameraCommands.push_back({ 3, "camera_pitch", -0.25f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_LEFT))
-			{
-				
-				cameraCommands.push_back({ 4, "camera_yaw", -0.25f });
-			}
-			if (InputManager::isPressed(GLFW_KEY_RIGHT))
-			{
-				cameraCommands.push_back({ 4, "camera_yaw", 0.25f });
-			}
-			if (cameraDrag) {
-				if (mouseDeltY) {
-					cameraCommands.push_back({ 3, "camera_pitch", mouseDeltY * sensitivity });
-				}
-				if (mouseDeltX) {
-					cameraCommands.push_back({ 4, "camera_yaw", mouseDeltX * sensitivity });
-				}
-			}
-			mCameraController.update(frameTime, cameraCommands);
-
-        	/**************
-			Do UI Stuff Here
-        	***************/
-			ImGui::NewFrame();
-			ImGui::Begin("Lights");
-			ImGui::Text("Dynamic Lights");
-			glm::vec3 col = mLightNode->getColor();
-			float intensity = mLightNode->getIntensity();
-			ImGui::ColorEdit3("Light Color", &col.x);
-			mLightNode->setColor(col);
-			ImGui::SliderFloat("Light Intensity", &intensity, 0.f, 1.f);
-			mLightNode->setIntensity(intensity);
-			glm::vec3 lightPos = mLightNode->getLocalPosition();
-            float posMagnitude = glm::length(lightPos);
-            ImGui::DragFloat3("Light Position", &lightPos.x, 0.01f);
-            glm::vec3 posDiff = lightPos - mLightNode->getLocalPosition();
-            mLightNode->translateLocal(posDiff);
-			ImGui::End();
-			ImGui::ShowDemoWindow();
-			ImGui::EndFrame();
-
+        if (!shouldClose)
+        {
             drawFrame();
-			mClock.end();
         }
 
-        vkDeviceWaitIdle(mDevice);
+        return shouldClose;
+    }
+
+    void VulkanApp::toggleCursor(bool enabled)
+    {
+        int toggle = enabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
+        glfwSetInputMode(mWindow.get(), GLFW_CURSOR, toggle);
     }
 
 	void VulkanApp::handleWindowResize(GLFWwindow* window, int width, int height) {

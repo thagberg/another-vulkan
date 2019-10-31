@@ -37,6 +37,7 @@ namespace hvk {
 		std::shared_ptr<StaticMesh> mMesh;
 	public:
 		StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh);
+		StaticMeshRenderObject(NodeRef parent, HVK_shared<Transform> transform, std::shared_ptr<StaticMesh> mesh);
 		~StaticMeshRenderObject();
 
 		const StaticMesh::Vertices getVertices() const;

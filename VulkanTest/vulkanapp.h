@@ -17,7 +17,6 @@
 #include "StaticMeshGenerator.h"
 #include "UiDrawGenerator.h"
 #include "DebugDrawGenerator.h"
-#include "Clock.h"
 #include "CameraController.h"
 
 namespace hvk {
@@ -59,8 +58,6 @@ namespace hvk {
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
 
-		Clock mClock;
-
 		VkFence mRenderFence;
 
 		double mLastX, mLastY;
@@ -88,7 +85,12 @@ namespace hvk {
 		~VulkanApp();
 
 		void init();
-		void run();
+        bool update(double frameTime);
+
+        void toggleCursor(bool enabled);
+        void addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node);
+        void addDynamicLight(HVK_shared<Light> light);
+        void addDebugMeshInstance(HVK_shared<DebugMeshRenderObject> node);
 
 		window_ptr getWindow() { 
 			return mWindow; 
