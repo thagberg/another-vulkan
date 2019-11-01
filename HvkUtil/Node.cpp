@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "Node.h"
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -6,13 +6,15 @@
 namespace hvk {
     Node::Node(HVK_shared<Node> parent, HVK_shared<Transform> transform) :
         mParent(parent),
-        mTransform(transform)
+        mTransform(transform),
+		mChildren()
 	{
 
     }
 
     Node::Node(HVK_shared<Node> parent, glm::mat4 transform) :
-        mParent(parent)
+        mParent(parent),
+		mChildren()
     {
         mTransform = HVK_make_shared<Transform>(Transform{ transform });
     }

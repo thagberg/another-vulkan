@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "Camera.h"
 
 #include <math.h>
@@ -10,7 +10,7 @@
 
 namespace hvk {
 
-    Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane, NodeRef parent, glm::mat4 transform) :
+    Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane, HVK_shared<Node> parent, glm::mat4 transform) :
         Node(parent, transform),
         mFov(fov),
         mAspectRatio(aspectRatio),

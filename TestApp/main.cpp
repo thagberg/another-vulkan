@@ -9,8 +9,11 @@
 #include "HvkUtil.h"
 #include "InputManager.h"
 #include "Transform.h"
+#include "DebugMesh.h"
 #include "RenderObject.h"
 #include "gltf.h"
+
+using namespace hvk;
 
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
@@ -46,6 +49,68 @@ public:
             lightTransform, 
             glm::vec3(1.f, 1.f, 1.f), 0.3f);
         addDynamicLight(mDynamicLight);
+
+		DebugMesh::ColorVertices lightVertices = std::make_shared<std::vector<ColorVertex>>();
+		lightVertices->reserve(8);
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 0.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 0.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 1.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 1.f, 0.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 0.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 0.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(0.f, 1.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 1.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		std::shared_ptr<std::vector<VertIndex>> lightIndices = std::make_shared<std::vector<VertIndex>>();
+		lightIndices->reserve(24);
+		lightIndices->push_back(0);
+		lightIndices->push_back(1);
+		lightIndices->push_back(2);
+
+		lightIndices->push_back(2);
+		lightIndices->push_back(1);
+		lightIndices->push_back(3);
+
+		lightIndices->push_back(3);
+		lightIndices->push_back(7);
+		lightIndices->push_back(2);
+
+		lightIndices->push_back(2);
+		lightIndices->push_back(6);
+		lightIndices->push_back(7);
+
+		lightIndices->push_back(7);
+		lightIndices->push_back(4);
+		lightIndices->push_back(5);
+
+		lightIndices->push_back(7);
+		lightIndices->push_back(6);
+		lightIndices->push_back(4);
+
+		lightIndices->push_back(5);
+		lightIndices->push_back(0);
+		lightIndices->push_back(1);
+		HVK_shared<DebugMesh> debugMesh = HVK_make_shared<DebugMesh>(lightVertices, lightIndices);
+		mLightBox = HVK_make_shared<DebugMeshRenderObject>(
+			nullptr,
+			mDynamicLight->getTransform(), 
+			debugMesh);
+		addDebugMeshInstance(mLightBox);
 	}
 
 	virtual ~TestApp() = default;

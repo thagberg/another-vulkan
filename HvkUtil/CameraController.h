@@ -1,7 +1,7 @@
 #pragma once
 #include "Camera.h"
 
-#include "types.h"
+#include "HvkUtil.h"
 
 namespace hvk {
 
@@ -14,10 +14,10 @@ namespace hvk {
 	class CameraController
 	{
 	private:
-		CameraRef mCamera;
+		HVK_shared<Camera> mCamera;
 		CameraRotation mRotation;
 	public:
-		CameraController(CameraRef camera);
+		CameraController(HVK_shared<Camera> camera);
 		~CameraController();
 		void update(double d, std::vector<Command>& commands);
 	};

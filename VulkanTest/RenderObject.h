@@ -13,17 +13,13 @@
 
 namespace hvk {
 
-    //typedef std::shared_ptr<std::vector<Vertex>> VerticesRef;
-    //typedef std::shared_ptr<std::vector<VertIndex>> IndicesRef;
-	//typedef std::shared_ptr<tinygltf::Image> TextureRef;
-
 	class RenderObject;
 	typedef std::shared_ptr<RenderObject> RenderObjRef;
 
 	class RenderObject : public Node
 	{
 	public:
-		RenderObject(NodeRef parent, glm::mat4 transform);
+		RenderObject(HVK_shared<Node> parent, glm::mat4 transform);
 		~RenderObject();
 
 		virtual const std::vector<Vertex>& getVertices() const = 0;
@@ -36,8 +32,8 @@ namespace hvk {
 	private:
 		std::shared_ptr<StaticMesh> mMesh;
 	public:
-		StaticMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh);
-		StaticMeshRenderObject(NodeRef parent, HVK_shared<Transform> transform, std::shared_ptr<StaticMesh> mesh);
+		StaticMeshRenderObject(HVK_shared<Node> parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh);
+		StaticMeshRenderObject(HVK_shared<Node> parent, HVK_shared<Transform> transform, std::shared_ptr<StaticMesh> mesh);
 		~StaticMeshRenderObject();
 
 		const StaticMesh::Vertices getVertices() const;
@@ -50,8 +46,8 @@ namespace hvk {
 	private:
 		std::shared_ptr<DebugMesh> mMesh;
 	public:
-		DebugMeshRenderObject(NodeRef parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh);
-		DebugMeshRenderObject(NodeRef parent, HVK_shared<Transform> transform, std::shared_ptr<DebugMesh> mesh);
+		DebugMeshRenderObject(HVK_shared<Node> parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh);
+		DebugMeshRenderObject(HVK_shared<Node> parent, HVK_shared<Transform> transform, std::shared_ptr<DebugMesh> mesh);
 		~DebugMeshRenderObject();
 
 		const DebugMesh::ColorVertices getVertices() const;

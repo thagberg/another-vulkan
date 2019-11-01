@@ -3,8 +3,6 @@
 #include <glm/glm.hpp>
 
 namespace hvk {
-	class Light;
-	typedef std::shared_ptr<Light> LightRef;
 
 	class Light :
 		public Node
@@ -13,8 +11,8 @@ namespace hvk {
 		glm::vec3 mColor;
 		float mIntensity;
 	public:
-		Light(NodeRef parent, glm::mat4 transform, glm::vec3 color, float intensity);
-		Light(NodeRef parent, HVK_shared<Transform> transform, glm::vec3 color, float intensity);
+		Light(HVK_shared<Node> parent, glm::mat4 transform, glm::vec3 color, float intensity);
+		Light(HVK_shared<Node> parent, HVK_shared<Transform> transform, glm::vec3 color, float intensity);
 		~Light();
 
 		glm::vec3 getColor() const { return mColor; }

@@ -47,10 +47,8 @@ namespace hvk {
 
 		VmaAllocator mAllocator;
 
-        NodeRef mObjectNode;
 		CameraRef mCameraNode;
 		CameraController mCameraController;
-		LightRef mLightNode;
 		//NodeRef mLightBox;
 
 		//Renderer mRenderer;

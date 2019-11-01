@@ -1,29 +1,25 @@
 #pragma once
 
-#include <memory>
-#include <vector>
-
 #define GLM_SWIZZLE_XYZW
 #include <glm/glm.hpp>
 
-#include "types.h"
+#include "HvkUtil.h"
 #include "Transform.h"
 
 namespace hvk {
     class Node;
-    typedef std::shared_ptr<hvk::Node> NodeRef;
 
     class Node {
     private:
         HVK_shared<Node> mParent;
-        std::vector<HVK_shared<Node>> mChildren;
+        HVK_vector<HVK_shared<Node>> mChildren;
 
     protected:
         HVK_shared<Transform> mTransform;
 
     public:
 		HVK_shared<Node> getParent() { return mParent; }
-		const std::vector<HVK_shared<Node>>& getChildren() { return mChildren; }
+		const HVK_vector<HVK_shared<Node>>& getChildren() { return mChildren; }
 		void addChild(HVK_shared<Node> child);
 
         void setLocalTransform(glm::mat4 transform);

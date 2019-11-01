@@ -347,7 +347,7 @@ namespace hvk
 		uboLights.numLights = static_cast<uint32_t>(mLights.size());
         uboLights.ambient = ambientLight;
 		for (size_t i = 0; i < mLights.size(); ++i) {
-			LightRef light = mLights[i];
+			HVK_shared<Light> light = mLights[i];
 			UniformLight ubo = {};
 			ubo.lightPos = light->getWorldPosition();
 			ubo.lightColor = light->getColor();

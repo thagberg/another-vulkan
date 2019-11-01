@@ -60,8 +60,7 @@ namespace hvk {
 		mLastY(0.f),
 		mMouseLeftDown(false),
 		mCameraController(nullptr),
-		mCameraNode(nullptr),
-		mLightNode(nullptr)
+		mCameraNode(nullptr)
     {
     }
 
@@ -259,69 +258,6 @@ namespace hvk {
             mGraphicsQueue, 
             mRenderPass, 
             mCommandPool);
-
-		DebugMesh::ColorVertices lightVertices = std::make_shared<std::vector<ColorVertex>>();
-		lightVertices->reserve(8);
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 0.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 0.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 1.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 1.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 0.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 0.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 1.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 1.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		std::shared_ptr<std::vector<VertIndex>> lightIndices = std::make_shared<std::vector<VertIndex>>();
-		lightIndices->reserve(24);
-		lightIndices->push_back(0);
-		lightIndices->push_back(1);
-		lightIndices->push_back(2);
-
-		lightIndices->push_back(2);
-		lightIndices->push_back(1);
-		lightIndices->push_back(3);
-
-		lightIndices->push_back(3);
-		lightIndices->push_back(7);
-		lightIndices->push_back(2);
-
-		lightIndices->push_back(2);
-		lightIndices->push_back(6);
-		lightIndices->push_back(7);
-
-		lightIndices->push_back(7);
-		lightIndices->push_back(4);
-		lightIndices->push_back(5);
-
-		lightIndices->push_back(7);
-		lightIndices->push_back(6);
-		lightIndices->push_back(4);
-
-		lightIndices->push_back(5);
-		lightIndices->push_back(0);
-		lightIndices->push_back(1);
-		std::shared_ptr<DebugMesh> debugMesh = std::make_shared<DebugMesh>(lightVertices, lightIndices);
-		auto lightBox = std::make_shared<DebugMeshRenderObject>(
-			nullptr,
-			//glm::translate(glm::mat4(1.0f), glm::vec3(5.f, 0.f, 0.f)), 
-			mLightNode->getTransform(), 
-			debugMesh);
-		mDebugRenderer->addDebugMeshObject(lightBox);
 
         mImageAvailable = createSemaphore(mDevice);
     }
