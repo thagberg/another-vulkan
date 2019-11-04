@@ -53,8 +53,6 @@ namespace hvk {
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
         vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
-        //vkDestroyPipeline(mDevice, mGraphicsPipeline, nullptr);
-        //vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
 
 		cleanupSwapchain();
 
@@ -62,7 +60,12 @@ namespace hvk {
         mUiRenderer.reset();
         mDebugRenderer.reset();
 
-        //vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
+        vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
+        vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
+        vkDestroyFence(mDevice, mRenderFence, nullptr);
+
+        vmaDestroyAllocator(mAllocator);
+
         vkDestroyDevice(mDevice, nullptr);
     }
 

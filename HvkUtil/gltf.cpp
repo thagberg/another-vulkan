@@ -84,7 +84,18 @@ namespace hvk
 
 				// process material
 				//mat.diffuseProp.texture = Pool<tinygltf::Image>::alloc(model.images[model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index]);
-				mat.diffuseProp.texture = new tinygltf::Image(model.images[model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index]);
+                int diffuseIndex = model.materials[prim.material].pbrMetallicRoughness.baseColorTexture.index;
+                int metalicRoughnessIndex = model.materials[prim.material].pbrMetallicRoughness.metallicRoughnessTexture.index;
+                int normalIndex = model.materials[prim.material].normalTexture.index;
+                if (diffuseIndex > -1) {
+                    mat.diffuseProp.texture = HVK_shared<tinygltf::Image>(new tinygltf::Image(model.images[diffuseIndex]));
+                }
+                if (metalicRoughnessIndex > -1) {
+                    mat.metalicRoughnessProp.texture = HVK_shared<tinygltf::Image>(new tinygltf::Image(model.images[metalicRoughnessIndex]));
+                }
+                if (normalIndex > -1) {
+                    mat.normalProp.texture = HVK_shared<tinygltf::Image>(new tinygltf::Image(model.images[normalIndex]));
+                }
 			}
 		}
 
@@ -118,8 +129,6 @@ namespace hvk
 			processGltfNode(sceneNode, model, *vertices.get(), *indices.get(), *mat.get());
 		}
 
-		// TODO: this is going to result in a memory leak!!!  See above comment
-		//return StaticMesh(*vertices, *indices, *mat);
 		return Pool<StaticMesh>::alloc(vertices, indices, mat);
 	}
 }

@@ -35,14 +35,33 @@ namespace hvk
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
 		uboLayoutBinding.pImmutableSamplers = nullptr;
 
-		VkDescriptorSetLayoutBinding samplerLayoutBiding = {};
-		samplerLayoutBiding.binding = 1;
-		samplerLayoutBiding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		samplerLayoutBiding.descriptorCount = 1;
-		samplerLayoutBiding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		samplerLayoutBiding.pImmutableSamplers = nullptr;
+		VkDescriptorSetLayoutBinding diffuseSamplerBinding = {};
+		diffuseSamplerBinding.binding = 1;
+		diffuseSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		diffuseSamplerBinding.descriptorCount = 1;
+		diffuseSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		diffuseSamplerBinding.pImmutableSamplers = nullptr;
 
-		std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBiding };
+		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = {};
+		metalRoughSamplerBinding.binding = 2;
+		metalRoughSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		metalRoughSamplerBinding.descriptorCount = 1;
+		metalRoughSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		metalRoughSamplerBinding.pImmutableSamplers = nullptr;
+
+		VkDescriptorSetLayoutBinding normalSamplerBinding = {};
+		normalSamplerBinding.binding = 2;
+		normalSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		normalSamplerBinding.descriptorCount = 1;
+		normalSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		normalSamplerBinding.pImmutableSamplers = nullptr;
+
+		std::array<VkDescriptorSetLayoutBinding, 4> bindings = { 
+            uboLayoutBinding, 
+            diffuseSamplerBinding,
+            metalRoughSamplerBinding,
+            normalSamplerBinding
+        };
 		VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
@@ -277,7 +296,7 @@ namespace hvk
 		std::shared_ptr<Material> mat = object->getMaterial();
 		if (mat->diffuseProp.texture != nullptr) {
 			const tinygltf::Image& diffuseTex = *mat->diffuseProp.texture;
-			newRenderable.texture = createTextureImage(
+			newRenderable.diffuseMap.texture = createTextureImage(
 				mDevice.device,
 				mAllocator,
 				mCommandPool,
@@ -286,9 +305,50 @@ namespace hvk
 				diffuseTex.width,
 				diffuseTex.height,
 				diffuseTex.component * (diffuseTex.bits / 8));
-			newRenderable.textureView = createImageView(mDevice.device, newRenderable.texture.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.textureSampler = createTextureSampler(mDevice.device);
+			newRenderable.diffuseMap.view = createImageView(
+                mDevice.device, 
+                newRenderable.diffuseMap.texture.memoryResource, 
+                VK_FORMAT_R8G8B8A8_UNORM);
+			newRenderable.diffuseMap.sampler = createTextureSampler(mDevice.device);
 		}
+
+        if (mat->metalicRoughnessProp.texture != nullptr)
+        {
+			const tinygltf::Image& metRoughTex = *mat->metalicRoughnessProp.texture;
+			newRenderable.metallicRoughnessMap.texture = createTextureImage(
+				mDevice.device,
+				mAllocator,
+				mCommandPool,
+				mGraphicsQueue,
+				metRoughTex.image.data(),
+				metRoughTex.width,
+				metRoughTex.height,
+				metRoughTex.component * (metRoughTex.bits / 8));
+			newRenderable.metallicRoughnessMap.view = createImageView(
+                mDevice.device, 
+                newRenderable.metallicRoughnessMap.texture.memoryResource, 
+                VK_FORMAT_R8G8B8A8_UNORM);
+			newRenderable.metallicRoughnessMap.sampler = createTextureSampler(mDevice.device);
+        }
+
+        if (mat->normalProp.texture != nullptr)
+        {
+			const tinygltf::Image& normalTex = *mat->normalProp.texture;
+			newRenderable.normalMap.texture = createTextureImage(
+				mDevice.device,
+				mAllocator,
+				mCommandPool,
+				mGraphicsQueue,
+				normalTex.image.data(),
+				normalTex.width,
+				normalTex.height,
+				normalTex.component * (normalTex.bits / 8));
+			newRenderable.normalMap.view = createImageView(
+                mDevice.device, 
+                newRenderable.normalMap.texture.memoryResource, 
+                VK_FORMAT_R8G8B8A8_UNORM);
+			newRenderable.normalMap.sampler = createTextureSampler(mDevice.device);
+        }
 
 		// TODO: pre-allocate a number of descriptor sets for renderables
 		// create descriptor set
@@ -425,8 +485,8 @@ namespace hvk
 
 			PushConstant push = {};
 			const Material& mat = *renderable.renderObject->getMaterial();
-			push.specular = mat.specularProp.scale;
-			push.shininess = static_cast<uint32_t>(1.f - mat.roughnessProp.scale);
+			push.specular = mat.metalicRoughnessProp.scale;
+			push.shininess = static_cast<uint32_t>(1.f - mat.metalicRoughnessProp.scale);
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}

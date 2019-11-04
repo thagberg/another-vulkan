@@ -41,15 +41,14 @@ namespace hvk
 
 
 	struct MaterialProperty {
-		tinygltf::Image* texture;
+		HVK_shared<tinygltf::Image> texture;
 		float scale;
 	};
 
 	struct Material {
 		MaterialProperty diffuseProp;
-		MaterialProperty metalProp;
-		MaterialProperty roughnessProp;
-		MaterialProperty specularProp;
+		MaterialProperty metalicRoughnessProp;
+        MaterialProperty normalProp;
 	};
 
 	struct Vertex {

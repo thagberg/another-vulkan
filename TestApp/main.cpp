@@ -38,9 +38,10 @@ public:
         mCamera(nullptr),
         mCameraController(nullptr)
 	{
-        hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
+        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
+        hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
         glm::mat4 duckTransform = glm::mat4(1.f);
-        duckTransform = glm::scale(duckTransform, glm::vec3(0.01, 0.01f, 0.01f));
+        duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
         mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
             nullptr, 
             duckTransform, 
@@ -155,7 +156,7 @@ protected:
         bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
         if (mouseClicked && !io.WantCaptureMouse) {
             cameraDrag = true;
-            //toggleCursor(false);
+            toggleCursor(false);
         }
         if (mouseReleased) {
             cameraDrag = false;
@@ -205,7 +206,6 @@ protected:
             cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
         }
         if (cameraDrag) {
-            std::cout << "Mouse Move: " << mouseDeltX << ", " << mouseDeltY << std::endl;
             if (mouseDeltY) {
                 cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", mouseDeltY * sensitivity });
             }
