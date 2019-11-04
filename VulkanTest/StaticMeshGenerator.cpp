@@ -128,6 +128,31 @@ namespace hvk
 		setInitialized(true);
 	}
 
+    StaticMeshGenerator::~StaticMeshGenerator()
+    {
+        for (auto& renderable : mRenderables)
+        {
+            // destroy buffers
+            vmaDestroyBuffer(mAllocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
+            vmaDestroyBuffer(mAllocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
+            vmaDestroyBuffer(mAllocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
+
+            // destroy textures
+            vkDestroySampler(mDevice.device, renderable.textureSampler, nullptr);
+            vkDestroyImageView(mDevice.device, renderable.textureView, nullptr);
+            vmaDestroyImage(mAllocator, renderable.texture.memoryResource, renderable.texture.allocation);
+        }
+
+        vmaDestroyBuffer(mAllocator, mLightsUbo.memoryResource, mLightsUbo.allocation);
+        vkDestroyDescriptorSetLayout(mDevice.device, mLightsDescriptorSetLayout, nullptr);
+
+        vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
+        vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+
+        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+        vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
+    }
+
 	void StaticMeshGenerator::preparePipelineInfo()
 	{
 		VkPushConstantRange pushRange = {};
@@ -409,10 +434,5 @@ namespace hvk
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 
 		return mCommandBuffer;
-	}
-
-	StaticMeshGenerator::~StaticMeshGenerator()
-	{
-
 	}
 }

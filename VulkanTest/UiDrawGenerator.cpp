@@ -184,7 +184,17 @@ namespace hvk
 
 	UiDrawGenerator::~UiDrawGenerator()
 	{
+        vkDestroySampler(mDevice.device, mFontSampler, nullptr);
+        vkDestroyImageView(mDevice.device, mFontView, nullptr);
 
+        vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
+        vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
+
+        vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
+        vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+
+        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+        vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
 	}
 
 	void UiDrawGenerator::invalidate()

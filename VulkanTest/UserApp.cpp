@@ -1,6 +1,7 @@
 #include "UserApp.h"
 #include "vulkanapp.h"
 #include "InputManager.h"
+#include "imgui\imgui.h"
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -70,12 +71,15 @@ UserApp::UserApp(uint32_t windowWidth, uint32_t windowHeight, const char* window
     glfwSetFramebufferSizeCallback(mWindow.get(), UserApp::handleWindowResize);
     hvk::InputManager::init(mWindow);
 
+    ImGui::CreateContext();
+
 	mApp->init(mWindowWidth, mWindowHeight, mVulkanInstance, mWindowSurface);
 }
 
 UserApp::~UserApp()
 {
     glfwTerminate();
+    mApp.reset();
     vkDestroySurfaceKHR(mVulkanInstance, mWindowSurface, nullptr);
     vkDestroyInstance(mVulkanInstance, nullptr);
 }
@@ -96,6 +100,7 @@ void UserApp::runApp()
         mClock.start();
 		frameTime = mClock.getDelta();
 
+        shouldClose |= glfwWindowShouldClose(mWindow.get());
 
         shouldClose |= run(frameTime);
         shouldClose |= mApp->update(frameTime);

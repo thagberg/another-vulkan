@@ -96,15 +96,9 @@ namespace hvk
 
 	HVK_unique<StaticMesh> createMeshFromGltf(const std::string& filename)
 	{
-		// TODO: use a real allocation system instead of "new"
-		//std::vector<Vertex>* vertices = new std::vector<Vertex>();
-		//std::shared_ptr<std::vector<Vertex, Hallocator<Vertex>>> vertices = std::make_shared<std::vector<Vertex, Hallocator<Vertex>>>();
 		HVK_shared<HVK_vector<Vertex>> vertices = HVK_make_shared<HVK_vector<Vertex>>();
 		HVK_shared<HVK_vector<VertIndex>> indices = HVK_make_shared<HVK_vector<VertIndex>>();
-		//std::vector<VertIndex>* indices = new std::vector<VertIndex>();
-		//std::shared_ptr<std::vector<VertIndex>> indices = std::make_shared<std::vector<VertIndex>>();
 		HVK_shared<Material> mat = HVK_make_shared<Material>();
-		//Material* mat = Pool<Material>::alloc();
 
 		tinygltf::Model model;
 		std::string err, warn;

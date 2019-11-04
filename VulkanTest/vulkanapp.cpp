@@ -1,22 +1,10 @@
-#include "stdafx.h"
-
 #include <vector>
-#include <algorithm>
 #include <iostream>
-#include <fstream>
-#include <unordered_map>
 #include <limits>
 
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#define GLM_SWIZZLE_XYZW
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/string_cast.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "tiny_gltf.h"
-#include "imgui/imgui.h"
 
 #include "vulkanapp.h"
 #include "vulkan-util.h"
@@ -24,7 +12,6 @@
 #include "InputManager.h"
 
 #include "HvkUtil.h"
-#include "gltf.h"
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -70,8 +57,10 @@ namespace hvk {
         //vkDestroyPipelineLayout(mDevice, mPipelineLayout, nullptr);
 
 		cleanupSwapchain();
-	
-		// TODO: destroy Renderer
+
+        mMeshRenderer.reset();
+        mUiRenderer.reset();
+        mDebugRenderer.reset();
 
         //vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
         vkDestroyDevice(mDevice, nullptr);
@@ -273,7 +262,6 @@ namespace hvk {
         mSurface = surface;
         try {
 			ResourceManager::initialize(200 * 1000 * 1000);
-			ImGui::CreateContext();
             enableVulkanValidationLayers();
             std::cout << "init device" << std::endl;
             initializeDevice();

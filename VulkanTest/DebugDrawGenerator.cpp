@@ -88,6 +88,19 @@ namespace hvk
 
 	DebugDrawGenerator::~DebugDrawGenerator()
 	{
+        for (auto& renderable : mRenderables)
+        {
+            // destroy buffers
+            vmaDestroyBuffer(mAllocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
+            vmaDestroyBuffer(mAllocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
+            vmaDestroyBuffer(mAllocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
+        }
+
+        vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
+        vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+
+        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+        vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
 	}
 
 	void DebugDrawGenerator::invalidate()
