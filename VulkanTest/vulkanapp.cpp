@@ -22,15 +22,9 @@
 #include "vulkan-util.h"
 #include "RenderObject.h"
 #include "InputManager.h"
-//#include "StaticMesh.h"
-//#include "ResourceManager.h"
 
 #include "HvkUtil.h"
 #include "gltf.h"
-
-const std::vector<const char*> validationLayers = {
-    "VK_LAYER_KHRONOS_validation"
-};
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -39,34 +33,36 @@ const std::vector<const char*> deviceExtensions = {
 
 namespace hvk {
 
-
-	//std::unique_ptr<StaticMesh> createMeshFromGltf(const std::string& filename) 
-
-
-    VulkanApp::VulkanApp(int width, int height, const char* windowTitle) :
-        mWindowWidth(width),
-        mWindowHeight(height),
+    VulkanApp::VulkanApp() :
+        mSurfaceWidth(),
+        mSurfaceHeight(),
         mInstance(VK_NULL_HANDLE),
-        mPhysicalDevice(VK_NULL_HANDLE),
+        mSurface(VK_NULL_HANDLE),
         mDevice(VK_NULL_HANDLE),
-        //mPipelineLayout(VK_NULL_HANDLE),
-        //mGraphicsPipeline(VK_NULL_HANDLE),
-        mWindow(hvk::initializeWindow(width, height, windowTitle), glfwDestroyWindow),
-		//mRenderer(),
-		mMeshRenderer(nullptr),
-		mUiRenderer(nullptr),
-		mDebugRenderer(nullptr),
-		mLastX(0.f),
-		mLastY(0.f),
-		mMouseLeftDown(false),
-		mCameraController(nullptr),
-		mCameraNode(nullptr)
+        mPhysicalDevice(VK_NULL_HANDLE),
+        mGraphicsIndex(),
+        mRenderPass(VK_NULL_HANDLE),
+        mCommandPool(VK_NULL_HANDLE),
+        mPrimaryCommandBuffer(VK_NULL_HANDLE),
+        mImageViews(),
+        mSwapchainImages(),
+        mDepthResource(),
+        mFramebuffers(),
+        mSwapchain(),
+        mImageAvailable(VK_NULL_HANDLE),
+        mRenderFinished(VK_NULL_HANDLE),
+        mAllocator(),
+        mActiveCamera(nullptr),
+        mMeshRenderer(nullptr),
+        mUiRenderer(nullptr),
+        mDebugRenderer(nullptr),
+        mRenderFence(VK_NULL_HANDLE)
     {
+
     }
 
     VulkanApp::~VulkanApp() {
         vkDeviceWaitIdle(mDevice);
-        glfwTerminate();
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
         vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
@@ -78,35 +74,7 @@ namespace hvk {
 		// TODO: destroy Renderer
 
         //vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
-        vkDestroySurfaceKHR(mInstance, mSurface, nullptr);
         vkDestroyDevice(mDevice, nullptr);
-        vkDestroyInstance(mInstance, nullptr);
-    }
-
-    void VulkanApp::initializeVulkan() {
-        VkApplicationInfo appInfo = {};
-        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-        appInfo.pApplicationName = "Vulkan Test";
-        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.pEngineName = "No Engine";
-        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-        appInfo.apiVersion = VK_API_VERSION_1_1;
-
-        std::vector<const char*> extensions = getRequiredExtensions();
-
-        VkInstanceCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-        createInfo.pApplicationInfo = &appInfo;
-        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-        createInfo.ppEnabledExtensionNames = extensions.data();
-        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-        createInfo.ppEnabledLayerNames = validationLayers.data();
-
-        VkResult instanceResult = vkCreateInstance(&createInfo, nullptr, &mInstance);
-
-        if (instanceResult != VK_SUCCESS) {
-            throw std::runtime_error("Failed to initialize Vulkan");
-        }
     }
 
     void VulkanApp::enableVulkanValidationLayers() {
@@ -186,31 +154,18 @@ namespace hvk {
         vkGetDeviceQueue(mDevice, mGraphicsIndex, 0, &mGraphicsQueue);
         mCommandPool = createCommandPool(mDevice, mGraphicsIndex, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-        if (glfwCreateWindowSurface(mInstance, mWindow.get(), nullptr, &mSurface) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Window Surface");
-        }
-
         VkBool32 surfaceSupported;
         vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, mSurface, &surfaceSupported);
         if (!surfaceSupported) {
             throw std::runtime_error("Surface not supported by Physical Device");
         }
 
-        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mWindowWidth, mWindowHeight, mSwapchain) != VK_SUCCESS) {
+        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Swapchain");
         }
 
 		initFramebuffers();
 
-		// create Camera object
-		mCameraNode = std::make_shared<Camera>(
-			45.0f,
-			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-			0.1f,
-			1000.0f,
-			nullptr,
-			glm::mat4(1.0f));
-		mCameraController = CameraController(mCameraNode);
 		QueueFamilies families = {
 			mGraphicsIndex,
 			mGraphicsIndex
@@ -277,50 +232,53 @@ namespace hvk {
         mDebugRenderer->addDebugMeshObject(node);
     }
 
-	void VulkanApp::recreateSwapchain() {
+	void VulkanApp::recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight) {
 		vkDeviceWaitIdle(mDevice);
-		//mRenderer.invalidateRenderer();
+
+        mSurfaceWidth = surfaceWidth;
+        mSurfaceHeight = surfaceHeight;
+
 		mMeshRenderer->invalidate();
 		mUiRenderer->invalidate();
 		mDebugRenderer->invalidate();
 		cleanupSwapchain();
-		glfwGetFramebufferSize(mWindow.get(), &mWindowWidth, &mWindowHeight);
 
-        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mWindowWidth, mWindowHeight, mSwapchain) != VK_SUCCESS) {
+        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Swapchain");
         }
 
 		initFramebuffers();
-		mCameraNode->updateProjection(
-			45.0f,
-			mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-			0.1f,
-			1000.0f);
-		//mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
+        if (mActiveCamera)
+        {
+            mActiveCamera->updateProjection(
+                45.0f,
+                mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+                0.1f,
+                1000.0f);
+        }
 		mMeshRenderer->updateRenderPass(mRenderPass);
 		mUiRenderer->updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
 		mDebugRenderer->updateRenderPass(mRenderPass);
 	}
 
-	void VulkanApp::initializeApp() {
-		glfwSetWindowUserPointer(mWindow.get(), this);
-		glfwSetFramebufferSizeCallback(mWindow.get(), VulkanApp::handleWindowResize);
-        InputManager::init(mWindow);
-	}
-
-    void VulkanApp::init() {
+    void VulkanApp::init(
+            uint32_t surfaceWidth, 
+            uint32_t surfaceHeight,
+            VkInstance vulkanInstance,
+            VkSurfaceKHR surface)
+    {
+        mSurfaceWidth = surfaceWidth;
+        mSurfaceHeight = surfaceHeight;
+        mInstance = vulkanInstance;
+        mSurface = surface;
         try {
 			ResourceManager::initialize(200 * 1000 * 1000);
 			ImGui::CreateContext();
-            std::cout << "init vulkan" << std::endl;
-            initializeVulkan();
             enableVulkanValidationLayers();
             std::cout << "init device" << std::endl;
             initializeDevice();
             std::cout << "init renderer" << std::endl;
             initializeRenderer();
-            std::cout << "init application" << std::endl;
-			initializeApp();
             std::cout << "done initializing" << std::endl;
         }
         catch (const std::runtime_error& error) {
@@ -455,7 +413,7 @@ namespace hvk {
 			mFramebuffers[imageIndex],
 			viewport,
 			scissor,
-			*mCameraNode.get(),
+			*mActiveCamera.get(),
 			ambient);
 
 		commandBuffers[1] = mDebugRenderer->drawFrame(
@@ -463,7 +421,7 @@ namespace hvk {
 			mFramebuffers[imageIndex], 
 			viewport, 
 			scissor,
-			*mCameraNode.get());
+			*mActiveCamera.get());
 
 		commandBuffers[2] = mUiRenderer->drawFrame(
             inheritanceInfo,
@@ -505,24 +463,12 @@ namespace hvk {
 
     bool VulkanApp::update(double frameTime)
     {
-        bool shouldClose = glfwWindowShouldClose(mWindow.get());
-
-        if (!shouldClose)
-        {
-            drawFrame();
-        }
-
-        return shouldClose;
+        drawFrame();
+        return false;
     }
 
-    void VulkanApp::toggleCursor(bool enabled)
+    void VulkanApp::setActiveCamera(HVK_shared<Camera> camera)
     {
-        int toggle = enabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
-        glfwSetInputMode(mWindow.get(), GLFW_CURSOR, toggle);
+        mActiveCamera = camera;
     }
-
-	void VulkanApp::handleWindowResize(GLFWwindow* window, int width, int height) {
-		VulkanApp* thisApp = reinterpret_cast<VulkanApp*>(glfwGetWindowUserPointer(window));
-		thisApp->recreateSwapchain();
-	}
 }

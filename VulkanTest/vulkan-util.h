@@ -116,26 +116,6 @@ namespace hvk {
         throw std::runtime_error("Failed to find suitable memory type on Physical Device");
     }
 
-    GLFWwindow* initializeWindow(int width, int height, const char* windowTitle) {
-        int glfwStatus = glfwInit();
-        if (glfwStatus != GLFW_TRUE) {
-            throw std::runtime_error("Failed to initialize GLFW");
-        }
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        GLFWwindow* window = glfwCreateWindow(width, height, windowTitle, nullptr, nullptr);
-        return window;
-    }
-
-    std::vector<const char*> getRequiredExtensions() {
-        uint32_t glfwExtensionCount = 0;
-        const char** glfwExtensions;
-        glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-        std::vector<const char*> extensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
-        extensions.push_back("VK_EXT_debug_utils");
-
-        return extensions;
-    }
 
     VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
         VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,

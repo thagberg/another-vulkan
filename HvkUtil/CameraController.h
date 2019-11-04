@@ -20,5 +20,9 @@ namespace hvk {
 		CameraController(HVK_shared<Camera> camera);
 		~CameraController();
 		void update(double d, std::vector<Command>& commands);
+        void setCamera(HVK_shared<Camera> camera)
+        {
+            mCamera = camera;
+        }
 	};
 }

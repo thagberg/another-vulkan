@@ -11,6 +11,8 @@
 #include "Transform.h"
 #include "DebugMesh.h"
 #include "RenderObject.h"
+#include "Camera.h"
+#include "CameraController.h"
 #include "gltf.h"
 
 using namespace hvk;
@@ -21,16 +23,20 @@ const uint32_t WIDTH = 1024;
 class TestApp : public UserApp
 {
 private:
-    hvk::HVK_shared<hvk::StaticMeshRenderObject> mDuck;
-    hvk::HVK_shared<hvk::Light> mDynamicLight;
-    hvk::HVK_shared<hvk::DebugMeshRenderObject> mLightBox;
+    HVK_shared<StaticMeshRenderObject> mDuck;
+    HVK_shared<Light> mDynamicLight;
+    HVK_shared<DebugMeshRenderObject> mLightBox;
+    HVK_shared<Camera> mCamera;
+    CameraController mCameraController;
 
 public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
 		UserApp(windowWidth, windowHeight, windowTitle),
         mDuck(nullptr),
         mDynamicLight(nullptr),
-        mLightBox(nullptr)
+        mLightBox(nullptr),
+        mCamera(nullptr),
+        mCameraController(nullptr)
 	{
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         glm::mat4 duckTransform = glm::mat4(1.f);
@@ -111,6 +117,17 @@ public:
 			mDynamicLight->getTransform(), 
 			debugMesh);
 		addDebugMeshInstance(mLightBox);
+
+        mCamera = HVK_make_shared<Camera>(
+            45.f,
+            WIDTH / static_cast<float>(HEIGHT),
+            0.1f,
+            1000.f,
+            nullptr,
+            glm::mat4(1.f));
+        mCameraController = CameraController(mCamera);
+
+        activateCamera(mCamera);
 	}
 
 	virtual ~TestApp() = default;
@@ -138,7 +155,7 @@ protected:
         bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
         if (mouseClicked && !io.WantCaptureMouse) {
             cameraDrag = true;
-            toggleCursor(false);
+            //toggleCursor(false);
         }
         if (mouseReleased) {
             cameraDrag = false;
@@ -188,6 +205,7 @@ protected:
             cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
         }
         if (cameraDrag) {
+            std::cout << "Mouse Move: " << mouseDeltX << ", " << mouseDeltY << std::endl;
             if (mouseDeltY) {
                 cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", mouseDeltY * sensitivity });
             }
@@ -196,7 +214,7 @@ protected:
             }
         }
 
-        // TODO: dispatch cameraCommands to a CameraController
+        mCameraController.update(frameTime, cameraCommands);
 
         // GUI
         ImGui::NewFrame();

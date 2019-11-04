@@ -23,14 +23,15 @@ namespace hvk {
 
 	class VulkanApp {
 	private:
-		window_ptr mWindow;
+		uint32_t mSurfaceWidth, mSurfaceHeight;
 		VkInstance mInstance;
+		VkSurfaceKHR mSurface;
+
 		VkDevice mDevice;
 		VkPhysicalDevice mPhysicalDevice;
 
 		uint32_t mGraphicsIndex;
 		VkQueue mGraphicsQueue;
-		VkSurfaceKHR mSurface;
 		VkRenderPass mRenderPass;
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mPrimaryCommandBuffer;
@@ -47,51 +48,36 @@ namespace hvk {
 
 		VmaAllocator mAllocator;
 
-		CameraRef mCameraNode;
-		CameraController mCameraController;
-		//NodeRef mLightBox;
+		CameraRef mActiveCamera;
 
-		//Renderer mRenderer;
 		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
 
 		VkFence mRenderFence;
 
-		double mLastX, mLastY;
-		bool mMouseLeftDown;
-
-		int mWindowWidth, mWindowHeight;
-
-		void initializeVulkan();
 		void enableVulkanValidationLayers();
 		void initializeDevice();
 		void initializeRenderer();
-		void initializeApp();
 		void initFramebuffers();
 		void drawFrame();
 		void cleanupSwapchain();
 
-		static void handleWindowResize(GLFWwindow* window, int width, int height);
-		void recreateSwapchain();
-
-		/*-- Things which should be handled elsewhere later --*/
-		//void updateCamera(double deltaT);
-
 	public:
-		VulkanApp(int width, int height, const char* windowTitle);
+        VulkanApp();
 		~VulkanApp();
 
-		void init();
+		void init(
+            uint32_t surfaceWidth, 
+            uint32_t surfaceHeight,
+            VkInstance vulkanInstance,
+            VkSurfaceKHR surface);
         bool update(double frameTime);
 
-        void toggleCursor(bool enabled);
         void addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node);
         void addDynamicLight(HVK_shared<Light> light);
         void addDebugMeshInstance(HVK_shared<DebugMeshRenderObject> node);
-
-		window_ptr getWindow() { 
-			return mWindow; 
-		}
+        void setActiveCamera(HVK_shared<Camera> camera);
+		void recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight);
 	};
 }
