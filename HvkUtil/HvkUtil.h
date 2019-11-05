@@ -23,6 +23,7 @@ namespace hvk
 	const VkFormat VertexColorFormat = VK_FORMAT_R32G32B32_SFLOAT;
 	const VkFormat VertexUVFormat = VK_FORMAT_R32G32_SFLOAT;
 	const VkFormat VertexNormalFormat = VK_FORMAT_R32G32B32_SFLOAT;
+    const VkFormat VertexTangentFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
 
 	template <typename T>
 	using HVK_shared = std::shared_ptr<T>;
@@ -55,6 +56,7 @@ namespace hvk
 		glm::vec3 pos;
 		glm::vec3 normal;
 		glm::vec2 texCoord;
+        glm::vec4 tangent;
 
 		static VkVertexInputBindingDescription getBindingDescription() {
 			VkVertexInputBindingDescription bindingDescription = {};
@@ -67,7 +69,7 @@ namespace hvk
 
 		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
-			attributeDescriptions.resize(3);
+			attributeDescriptions.resize(4);
 
 			attributeDescriptions[0].binding = 0;
 			attributeDescriptions[0].location = 0;
@@ -83,6 +85,11 @@ namespace hvk
 			attributeDescriptions[2].location = 2;
 			attributeDescriptions[2].format = VertexUVFormat;
 			attributeDescriptions[2].offset = offsetof(Vertex, texCoord);
+
+            attributeDescriptions[3].binding = 0;
+            attributeDescriptions[3].location = 3;
+            attributeDescriptions[3].format = VertexTangentFormat;
+            attributeDescriptions[3].offset = offsetof(Vertex, tangent);
 
 			return attributeDescriptions;
 		}

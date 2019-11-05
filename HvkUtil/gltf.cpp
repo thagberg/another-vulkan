@@ -26,6 +26,7 @@ namespace hvk
 				const auto positionAttr = prim.attributes.find("POSITION");
 				const auto uvAttr = prim.attributes.find("TEXCOORD_0");
 				const auto normalAttr = prim.attributes.find("NORMAL");
+                const auto tangentAttr = prim.attributes.find("TANGENT");
 
 				assert(positionAttr != prim.attributes.end());
 				assert(uvAttr != prim.attributes.end());
@@ -53,6 +54,16 @@ namespace hvk
 				const float* normalData = reinterpret_cast<const float*>(
 					&(model.buffers[normalView.buffer].data[normalView.byteOffset + normalAccess.byteOffset]));
 
+                // process tangent data
+                float* tangentData = nullptr;
+                if (tangentAttr != prim.attributes.end())
+                {
+                    const tinygltf::Accessor tangentAccess = model.accessors[tangentAttr->second];
+                    assert(tangentAccess.type == TINYGLTF_TYPE_VEC4);
+                    const tinygltf::BufferView tangentView = model.bufferViews[tangentAccess.bufferView];
+                    tangentData = reinterpret_cast<float*>(&(model.buffers[tangentView.buffer].data[tangentView.byteOffset + tangentAccess.byteOffset]));
+                }
+
 				assert(positionAccess.count == uvAccess.count);
 
 				//RenderObject::allocateVertices(numPositions, vertices);
@@ -63,6 +74,10 @@ namespace hvk
 					v.pos = glm::make_vec3(&positionData[k * 3]);
 					v.normal = glm::make_vec3(&normalData[k * 3]);
 					v.texCoord = glm::make_vec2(&uvData[k * 2]);
+                    if (tangentData != nullptr)
+                    {
+                        v.tangent = glm::make_vec4(&tangentData[k * 4]);
+                    }
 					vertices.push_back(v);
 				}
 
