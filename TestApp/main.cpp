@@ -41,7 +41,7 @@ public:
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
         glm::mat4 duckTransform = glm::mat4(1.f);
-        duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
+        //duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
         mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
             nullptr, 
             duckTransform, 
@@ -122,7 +122,7 @@ public:
         mCamera = HVK_make_shared<Camera>(
             45.f,
             WIDTH / static_cast<float>(HEIGHT),
-            0.1f,
+            0.01f,
             1000.f,
             nullptr,
             glm::mat4(1.f));
@@ -154,7 +154,7 @@ protected:
 
         bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
         bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
-        if (mouseClicked && !io.WantCaptureMouse) {
+        if (mouseClicked) {
             cameraDrag = true;
             toggleCursor(false);
         }

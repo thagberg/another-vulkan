@@ -47,7 +47,7 @@ namespace hvk
 
 	struct Material {
 		MaterialProperty diffuseProp;
-		MaterialProperty metalicRoughnessProp;
+		MaterialProperty metallicRoughnessProp;
         MaterialProperty normalProp;
 	};
 

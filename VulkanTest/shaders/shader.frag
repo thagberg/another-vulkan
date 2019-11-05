@@ -29,7 +29,9 @@ layout(set = 1, binding = 0) uniform UniformBufferObject {
 	vec3 cameraPos;
 } ubo;
 
-layout(set = 1, binding = 1) uniform sampler2D texSampler;
+layout(set = 1, binding = 1) uniform sampler2D diffuseSampler;
+layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessSampler;
+layout(set = 1, binding = 3) uniform sampler2D normalSampler;
 
 layout (push_constant) uniform PushConstant {
 	float specularStrength;
@@ -44,7 +46,9 @@ vec3 getSchlickFresnel(float dotP, vec3 F0) {
 
 void main() {
 	vec3 viewDir = normalize(ubo.cameraPos - fragPos);
-	vec4 baseColor = texture(texSampler, fragTexCoord);
+	vec4 baseColor = texture(diffuseSampler, fragTexCoord);
+	vec4 metallicRoughness = texture(metallicRoughnessSampler, fragTexCoord);
+	vec3 surfaceNormal = texture(normalSampler, fragTexCoord).rgb;
 	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
 	vec3 diffuseLight = vec3(0.f, 0.f, 0.f);
 	vec3 specularLight = vec3(0.f, 0.f, 0.f);

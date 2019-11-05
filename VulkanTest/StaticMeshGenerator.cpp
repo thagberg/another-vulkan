@@ -4,6 +4,13 @@
 
 namespace hvk
 {
+	void destroyMap(VkDevice device, VmaAllocator allocator, RenderMap& map)
+	{
+		vkDestroySampler(device, map.sampler, nullptr);
+		vkDestroyImageView(device, map.view, nullptr);
+		vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
+	}
+	
 	StaticMeshGenerator::StaticMeshGenerator(
 		VulkanDevice device, 
 		VmaAllocator allocator, 
@@ -50,7 +57,7 @@ namespace hvk
 		metalRoughSamplerBinding.pImmutableSamplers = nullptr;
 
 		VkDescriptorSetLayoutBinding normalSamplerBinding = {};
-		normalSamplerBinding.binding = 2;
+		normalSamplerBinding.binding = 3;
 		normalSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		normalSamplerBinding.descriptorCount = 1;
 		normalSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -157,9 +164,9 @@ namespace hvk
             vmaDestroyBuffer(mAllocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
 
             // destroy textures
-            vkDestroySampler(mDevice.device, renderable.textureSampler, nullptr);
-            vkDestroyImageView(mDevice.device, renderable.textureView, nullptr);
-            vmaDestroyImage(mAllocator, renderable.texture.memoryResource, renderable.texture.allocation);
+			destroyMap(mDevice.device, mAllocator, renderable.diffuseMap);
+			destroyMap(mDevice.device, mAllocator, renderable.metallicRoughnessMap);
+			destroyMap(mDevice.device, mAllocator, renderable.normalMap);
         }
 
         vmaDestroyBuffer(mAllocator, mLightsUbo.memoryResource, mLightsUbo.allocation);
@@ -312,9 +319,9 @@ namespace hvk
 			newRenderable.diffuseMap.sampler = createTextureSampler(mDevice.device);
 		}
 
-        if (mat->metalicRoughnessProp.texture != nullptr)
+        if (mat->metallicRoughnessProp.texture != nullptr)
         {
-			const tinygltf::Image& metRoughTex = *mat->metalicRoughnessProp.texture;
+			const tinygltf::Image& metRoughTex = *mat->metallicRoughnessProp.texture;
 			newRenderable.metallicRoughnessMap.texture = createTextureImage(
 				mDevice.device,
 				mAllocator,
@@ -368,8 +375,18 @@ namespace hvk
 
 			VkDescriptorImageInfo imageInfo = {};
 			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = newRenderable.textureView;
-			imageInfo.sampler = newRenderable.textureSampler;
+			imageInfo.imageView = newRenderable.diffuseMap.view;
+			imageInfo.sampler = newRenderable.diffuseMap.sampler;
+
+			VkDescriptorImageInfo metallicRoughnessInfo = {};
+			metallicRoughnessInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			metallicRoughnessInfo.imageView = newRenderable.metallicRoughnessMap.view;
+			metallicRoughnessInfo.sampler = newRenderable.metallicRoughnessMap.sampler;
+
+			VkDescriptorImageInfo normalInfo = {};
+			normalInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			normalInfo.imageView = newRenderable.normalMap.view;
+			normalInfo.sampler = newRenderable.normalMap.sampler;
 
 			VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 			descriptorWrite.dstSet = newRenderable.descriptorSet;
@@ -378,8 +395,6 @@ namespace hvk
 			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 			descriptorWrite.descriptorCount = 1;
 			descriptorWrite.pBufferInfo = &bufferInfo;
-			descriptorWrite.pImageInfo = nullptr;
-			descriptorWrite.pTexelBufferView = nullptr;
 
 			VkWriteDescriptorSet imageDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 			imageDescriptorWrite.dstSet = newRenderable.descriptorSet;
@@ -389,7 +404,28 @@ namespace hvk
 			imageDescriptorWrite.descriptorCount = 1;
 			imageDescriptorWrite.pImageInfo = &imageInfo;
 
-			std::array<VkWriteDescriptorSet, 2> descriptorWrites = { descriptorWrite, imageDescriptorWrite };
+			VkWriteDescriptorSet mtlRoughDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+			mtlRoughDescriptorWrite.dstSet = newRenderable.descriptorSet;
+			mtlRoughDescriptorWrite.dstBinding = 2;
+			mtlRoughDescriptorWrite.dstArrayElement = 0;
+			mtlRoughDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			mtlRoughDescriptorWrite.descriptorCount = 1;
+			mtlRoughDescriptorWrite.pImageInfo = &metallicRoughnessInfo;
+
+			VkWriteDescriptorSet normalDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+			normalDescriptorWrite.dstSet = newRenderable.descriptorSet;
+			normalDescriptorWrite.dstBinding = 3;
+			normalDescriptorWrite.dstArrayElement = 0;
+			normalDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			normalDescriptorWrite.descriptorCount = 1;
+			normalDescriptorWrite.pImageInfo = &normalInfo;
+
+			std::array<VkWriteDescriptorSet, 4> descriptorWrites = {
+				descriptorWrite,
+				imageDescriptorWrite,
+				mtlRoughDescriptorWrite,
+				normalDescriptorWrite
+			};
 
 			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 		}
@@ -485,8 +521,8 @@ namespace hvk
 
 			PushConstant push = {};
 			const Material& mat = *renderable.renderObject->getMaterial();
-			push.specular = mat.metalicRoughnessProp.scale;
-			push.shininess = static_cast<uint32_t>(1.f - mat.metalicRoughnessProp.scale);
+			push.specular = mat.metallicRoughnessProp.scale;
+			push.shininess = static_cast<uint32_t>(1.f - mat.metallicRoughnessProp.scale);
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
