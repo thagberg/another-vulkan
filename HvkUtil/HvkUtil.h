@@ -9,6 +9,7 @@
 #include "ResourceManager.h"
 //#include "StaticMesh.h"
 #include "tiny_gltf.h"
+#include "imgui/imgui.h"
 
 
 namespace hvk

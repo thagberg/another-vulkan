@@ -9,13 +9,19 @@
 
 #include "Clock.h"
 #include "HvkUtil.h"
+/*
 #include "RenderObject.h"
 #include "Light.h"
 #include "Camera.h"
+*/
 
 namespace hvk
 {
 	class VulkanApp;
+	class StaticMeshRenderObject;
+	class Light;
+	class DebugMeshRenderObject;
+	class Camera;
 }
 
 class UserApp

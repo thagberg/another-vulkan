@@ -74,6 +74,5 @@ void main() {
 		dynamicColor += vec4(specularLight, 1.f);
 	}
 	vec4 ambientColor = vec4(ambientLight, 1.f) * baseColor;
-	//outColor = ambientColor + dynamicColor;
-    outColor = vec4(surfaceNormal, 1.0);
+	outColor = ambientColor + dynamicColor;
 }

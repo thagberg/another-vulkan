@@ -1,17 +1,19 @@
 #include <iostream>
 #include <variant>
 
+#define HVK_TOOLS 1
+
 #include "imgui\imgui.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#include "Node.h"
 #include "UserApp.h"
 #include "HvkUtil.h"
 #include "InputManager.h"
-#include "Transform.h"
 #include "DebugMesh.h"
 #include "RenderObject.h"
-#include "Camera.h"
+#include "Light.h"
 #include "CameraController.h"
 #include "gltf.h"
 
@@ -43,6 +45,7 @@ public:
         glm::mat4 duckTransform = glm::mat4(1.f);
         //duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
         mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
+			"Bottle",
             nullptr, 
             duckTransform, 
             duckMesh);
@@ -52,6 +55,7 @@ public:
         lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
         lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
         mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
+			"Dynamic Light",
             nullptr, 
             lightTransform, 
             glm::vec3(1.f, 1.f, 1.f), 0.3f);
@@ -114,6 +118,7 @@ public:
 		lightIndices->push_back(1);
 		HVK_shared<DebugMesh> debugMesh = HVK_make_shared<DebugMesh>(lightVertices, lightIndices);
 		mLightBox = HVK_make_shared<DebugMeshRenderObject>(
+			"Dynamic Light Box",
 			nullptr,
 			mDynamicLight->getTransform(), 
 			debugMesh);
@@ -124,6 +129,7 @@ public:
             WIDTH / static_cast<float>(HEIGHT),
             0.01f,
             1000.f,
+			"Main Camera",
             nullptr,
             glm::mat4(1.f));
         mCameraController = CameraController(mCamera);
@@ -218,6 +224,10 @@ protected:
 
         // GUI
         ImGui::NewFrame();
+		ImGui::Begin("Objects");
+		mDuck->displayGui();
+		mDynamicLight->displayGui();
+		ImGui::End();
         ImGui::ShowDemoWindow();
         ImGui::EndFrame();
 

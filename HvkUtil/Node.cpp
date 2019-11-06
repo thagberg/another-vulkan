@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "Node.h"
-#include <glm/gtc/matrix_transform.hpp>
+#include "glm/gtc/matrix_transform.hpp"
 
 
 namespace hvk {
-    Node::Node(HVK_shared<Node> parent, HVK_shared<Transform> transform) :
+    Node::Node(std::string name, HVK_shared<Node> parent, HVK_shared<Transform> transform) :
+		mName(name),
         mParent(parent),
         mTransform(transform),
 		mChildren()
@@ -12,7 +13,8 @@ namespace hvk {
 
     }
 
-    Node::Node(HVK_shared<Node> parent, glm::mat4 transform) :
+    Node::Node(std::string name, HVK_shared<Node> parent, glm::mat4 transform) :
+		mName(name),
         mParent(parent),
 		mChildren()
     {
@@ -57,4 +59,28 @@ namespace hvk {
     {
 		return mTransform->transform[3];
     }
+
+#ifdef HVK_TOOLS
+	void Node::showGui()
+	{
+		glm::vec3 position = getLocalPosition();
+		ImGui::DragFloat3("Position", &position.x, 0.1f);
+		glm::vec3 delta = position - getLocalPosition();
+		translateLocal(delta);
+	}
+
+	void Node::displayGui()
+    {
+		if (ImGui::TreeNode(mName.c_str()))
+		{
+			showGui();
+			for (auto child : mChildren)
+			{
+				child->displayGui();
+			}
+			ImGui::TreePop();
+		}
+    }
+#endif
+
 }

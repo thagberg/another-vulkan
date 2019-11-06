@@ -10,8 +10,8 @@
 
 namespace hvk {
 
-    Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane, HVK_shared<Node> parent, glm::mat4 transform) :
-        Node(parent, transform),
+    Camera::Camera(float fov, float aspectRatio, float nearPlane, float farPlane, std::string name, HVK_shared<Node> parent, glm::mat4 transform) :
+        Node(name, parent, transform),
         mFov(fov),
         mAspectRatio(aspectRatio),
         mNearPlane(nearPlane),

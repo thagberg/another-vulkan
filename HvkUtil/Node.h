@@ -1,7 +1,6 @@
 #pragma once
 
-#define GLM_SWIZZLE_XYZW
-#include <glm/glm.hpp>
+#include <string>
 
 #include "HvkUtil.h"
 #include "Transform.h"
@@ -11,6 +10,7 @@ namespace hvk {
 
     class Node {
     private:
+		std::string mName;
         HVK_shared<Node> mParent;
         HVK_vector<HVK_shared<Node>> mChildren;
 
@@ -30,9 +30,17 @@ namespace hvk {
 		glm::vec3 getWorldPosition() const;
 		glm::vec3 getLocalPosition() const;
 
-        Node(HVK_shared<Node> parent, HVK_shared<Transform> transform);
-        Node(HVK_shared<Node> parent, glm::mat4 transform);
+        Node(std::string name, HVK_shared<Node> parent, HVK_shared<Transform> transform);
+        Node(std::string name, HVK_shared<Node> parent, glm::mat4 transform);
         virtual ~Node();
+
+#define HVK_TOOLS 1
+#ifdef HVK_TOOLS
+    protected:
+		virtual void showGui();
+    public:
+		void displayGui();
+#endif
     };
 
 }

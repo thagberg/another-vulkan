@@ -5,8 +5,8 @@
 
 namespace hvk {
 
-	RenderObject::RenderObject(HVK_shared<Node> parent, glm::mat4 transform) :
-        Node(parent, transform)
+	RenderObject::RenderObject(std::string name, HVK_shared<Node> parent, glm::mat4 transform) :
+        Node(name, parent, transform)
 	{
 	}
 
@@ -14,15 +14,15 @@ namespace hvk {
 	{
 	}
 
-	StaticMeshRenderObject::StaticMeshRenderObject(HVK_shared<Node> parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh) :
-		Node(parent, transform),
+	StaticMeshRenderObject::StaticMeshRenderObject(std::string name, HVK_shared<Node> parent, glm::mat4 transform, std::shared_ptr<StaticMesh> mesh) :
+		Node(name, parent, transform),
 		mMesh(mesh)
 	{
 
 	}
 
-    StaticMeshRenderObject::StaticMeshRenderObject(HVK_shared<Node> parent, HVK_shared<Transform> transform, std::shared_ptr<StaticMesh> mesh) :
-        Node(parent, transform),
+    StaticMeshRenderObject::StaticMeshRenderObject(std::string name, HVK_shared<Node> parent, HVK_shared<Transform> transform, std::shared_ptr<StaticMesh> mesh) :
+        Node(name, parent, transform),
         mMesh(mesh)
     {
 
@@ -48,15 +48,15 @@ namespace hvk {
 		return mMesh->getMaterial();
 	}
 
-	DebugMeshRenderObject::DebugMeshRenderObject(HVK_shared<Node> parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh) :
-		Node(parent, transform),
+	DebugMeshRenderObject::DebugMeshRenderObject(std::string name, HVK_shared<Node> parent, glm::mat4 transform, std::shared_ptr<DebugMesh> mesh) :
+		Node(name, parent, transform),
 		mMesh(mesh)
 	{
 
 	}
 
-	DebugMeshRenderObject::DebugMeshRenderObject(HVK_shared<Node> parent, HVK_shared<Transform> transform, std::shared_ptr<DebugMesh> mesh) :
-		Node(parent, transform),
+	DebugMeshRenderObject::DebugMeshRenderObject(std::string name, HVK_shared<Node> parent, HVK_shared<Transform> transform, std::shared_ptr<DebugMesh> mesh) :
+		Node(name, parent, transform),
 		mMesh(mesh)
 	{
 		
