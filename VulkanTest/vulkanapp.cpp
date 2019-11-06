@@ -368,7 +368,7 @@ namespace hvk {
 		scissor.extent = mSwapchain.swapchainExtent;
 		AmbientLight ambient = {
 			glm::vec3(1.f, 1.f, 1.f),
-			0.3f
+			0.05f
 		};
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);

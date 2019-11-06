@@ -46,9 +46,11 @@ vec3 getSchlickFresnel(float dotP, vec3 F0) {
 }
 
 void main() {
+    float gamma = 2.2;
 	vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 	vec4 baseColor = texture(diffuseSampler, fragTexCoord);
-	vec4 metallicRoughness = texture(metallicRoughnessSampler, fragTexCoord);
+    vec4 correctedColor = vec4(pow(baseColor.rgb, vec3(gamma)), baseColor.a);
+	vec3 metallicRoughness = texture(metallicRoughnessSampler, fragTexCoord).rgb;
 	vec3 surfaceNormal = texture(normalSampler, fragTexCoord).rgb;
     surfaceNormal = normalize(surfaceNormal * 2.0 - 1.0);
     surfaceNormal = normalize(inTBN * surfaceNormal);
@@ -68,11 +70,17 @@ void main() {
 		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
 
 
-		specularLight += push.specularStrength * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
+		//specularLight += push.specularStrength * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
+		specularLight += (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
 		diffuseLight = (1.0 - specularLight) * thisLight.color * d;
-		dynamicColor += vec4(diffuseLight, 1.f) * baseColor;
+		dynamicColor += vec4(diffuseLight, 1.f) * correctedColor;
 		dynamicColor += vec4(specularLight, 1.f);
 	}
-	vec4 ambientColor = vec4(ambientLight, 1.f) * baseColor;
-	outColor = ambientColor + dynamicColor;
+	vec4 ambientColor = vec4(ambientLight, 1.f) * correctedColor;
+
+    // gamma correction
+    vec4 fragColor = ambientColor + dynamicColor;
+    fragColor.rgb = pow(fragColor.rgb, vec3(1.0/gamma));
+
+	outColor = fragColor;
 }
