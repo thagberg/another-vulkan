@@ -92,8 +92,8 @@ namespace hvk {
 	};
 
 	struct PushConstant {
-		COMP1_ALIGN(float) float specular;
-		COMP1_ALIGN(uint32_t) uint32_t shininess;
+		COMP1_ALIGN(float) float gamma;
+		COMP1_ALIGN(bool) bool sRGBTextures;
 	};
 
 

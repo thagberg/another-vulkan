@@ -35,8 +35,8 @@ layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessSampler;
 layout(set = 1, binding = 3) uniform sampler2D normalSampler;
 
 layout (push_constant) uniform PushConstant {
-	float specularStrength;
-	uint shininess;
+	float gamma;
+	bool sRGBTextures;
 } push;
 
 layout(location = 0) out vec4 outColor;
@@ -46,10 +46,12 @@ vec3 getSchlickFresnel(float dotP, vec3 F0) {
 }
 
 void main() {
-    float gamma = 2.2;
 	vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 	vec4 baseColor = texture(diffuseSampler, fragTexCoord);
-    vec4 correctedColor = vec4(pow(baseColor.rgb, vec3(gamma)), baseColor.a);
+    vec4 correctedColor = baseColor;
+    if (push.sRGBTextures) {
+        correctedColor = vec4(pow(baseColor.rgb, vec3(push.gamma)), baseColor.a);
+    }
 	vec3 metallicRoughness = texture(metallicRoughnessSampler, fragTexCoord).rgb;
 	vec3 surfaceNormal = texture(normalSampler, fragTexCoord).rgb;
     surfaceNormal = normalize(surfaceNormal * 2.0 - 1.0);
@@ -80,7 +82,7 @@ void main() {
 
     // gamma correction
     vec4 fragColor = ambientColor + dynamicColor;
-    fragColor.rgb = pow(fragColor.rgb, vec3(1.0/gamma));
+    fragColor.rgb = pow(fragColor.rgb, vec3(1.0/push.gamma));
 
 	outColor = fragColor;
 }

@@ -462,4 +462,14 @@ namespace hvk {
     {
         mActiveCamera = camera;
     }
+
+    void VulkanApp::setGammaCorrection(float gamma)
+    {
+        mMeshRenderer->setGammaCorrection(gamma);
+    }
+
+    void VulkanApp::setUseSRGBTex(bool useSRGBTex)
+    {
+        mMeshRenderer->setUseSRGBTex(useSRGBTex);
+    }
 }

@@ -50,6 +50,9 @@ namespace hvk
 		HVK_vector<StaticMeshRenderable> mRenderables;
 		HVK_vector<HVK_shared<Light>> mLights;
 
+        float mGammaCorrection;
+        bool mUseSRGBTex;
+
 		void preparePipelineInfo();
 
 	public:
@@ -71,5 +74,9 @@ namespace hvk
 			const VkRect2D& scissor,
 			const Camera& camera,
 			const AmbientLight& ambientLight);
+        void setGammaCorrection(float gamma);
+        void setUseSRGBTex(bool useSRGBTex);
+        float getGammaCorrection() { return mGammaCorrection; }
+        bool isUseSRGBTex() { return mUseSRGBTex; }
 	};
 }

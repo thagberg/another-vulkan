@@ -228,6 +228,14 @@ protected:
 		mDuck->displayGui();
 		mDynamicLight->displayGui();
 		ImGui::End();
+        ImGui::Begin("Rendering");
+        float gamma = getGammaCorrection();
+        bool useSRGBTex = isUseSRGBTex();
+        ImGui::SliderFloat("Gamma", &gamma, 0.f, 10.f);
+        ImGui::Checkbox("Use sRGB Textures", &useSRGBTex);
+        setGammaCorrection(gamma);
+        setUseSRGBTex(useSRGBTex);
+        ImGui::End();
         ImGui::ShowDemoWindow();
         ImGui::EndFrame();
 

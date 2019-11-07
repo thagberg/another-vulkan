@@ -79,5 +79,10 @@ namespace hvk {
         void addDebugMeshInstance(HVK_shared<DebugMeshRenderObject> node);
         void setActiveCamera(HVK_shared<Camera> camera);
 		void recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight);
+
+        void setGammaCorrection(float gamma);
+        void setUseSRGBTex(bool useSRGBTex);
+        float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
+        bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }
 	};
 }

@@ -27,7 +27,9 @@ namespace hvk
 		mPipelineInfo(),
 		mLightsUbo(),
 		mRenderables(),
-		mLights()
+		mLights(),
+        mGammaCorrection(2.2f),
+        mUseSRGBTex(false)
 	{
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
 		mLights.reserve(NUM_INITIAL_LIGHTS);
@@ -521,8 +523,8 @@ namespace hvk
 
 			PushConstant push = {};
 			const Material& mat = *renderable.renderObject->getMaterial();
-			push.specular = mat.metallicRoughnessProp.scale;
-			push.shininess = static_cast<uint32_t>(1.f - mat.metallicRoughnessProp.scale);
+            push.gamma = mGammaCorrection;
+            push.sRGBTextures = mUseSRGBTex;
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}
@@ -531,4 +533,14 @@ namespace hvk
 
 		return mCommandBuffer;
 	}
+
+    void StaticMeshGenerator::setGammaCorrection(float gamma)
+    {
+        mGammaCorrection = gamma;
+    }
+
+    void StaticMeshGenerator::setUseSRGBTex(bool useSRGBTex)
+    {
+        mUseSRGBTex = useSRGBTex;
+    }
 }

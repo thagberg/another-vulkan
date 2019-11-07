@@ -139,3 +139,23 @@ void UserApp::activateCamera(hvk::HVK_shared<hvk::Camera> camera)
 {
     mApp->setActiveCamera(camera);
 }
+
+void UserApp::setGammaCorrection(float gamma)
+{
+    mApp->setGammaCorrection(gamma);
+}
+
+void UserApp::setUseSRGBTex(bool useSRGBTex)
+{
+    mApp->setUseSRGBTex(useSRGBTex);
+}
+
+float UserApp::getGammaCorrection() 
+{ 
+    return mApp->getGammaCorrection(); 
+}
+
+bool UserApp::isUseSRGBTex() 
+{ 
+    return mApp->isUseSRGBTex(); 
+}
