@@ -63,59 +63,144 @@ public:
 
 		DebugMesh::ColorVertices lightVertices = std::make_shared<std::vector<ColorVertex>>();
 		lightVertices->reserve(8);
+		/*
+		 *		6-------7
+		 *	   /|      /|
+		 *	  2-------3 |
+		 *	  | 4-----|-5
+		 *    |/      |/
+		 *    0-------1
+		 */
+		// 0
 		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 0.f, 0.f),
+			glm::vec3(-1.f, 1.f, 1.f),
 			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 0.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 1.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 1.f, 0.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 0.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(1.f, 0.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
-		lightVertices->push_back(ColorVertex{
-			glm::vec3(0.f, 1.f, 1.f),
-			glm::vec3(1.f, 1.f, 1.f)});
+		// 1
 		lightVertices->push_back(ColorVertex{
 			glm::vec3(1.f, 1.f, 1.f),
 			glm::vec3(1.f, 1.f, 1.f)});
+		// 2
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(-1.f, -1.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		// 3
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, -1.f, 1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		// 4
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(-1.f, 1.f, -1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		// 5
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, 1.f, -1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		// 6
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(-1.f, -1.f, -1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
+		// 7
+		lightVertices->push_back(ColorVertex{
+			glm::vec3(1.f, -1.f, -1.f),
+			glm::vec3(1.f, 1.f, 1.f)});
 		std::shared_ptr<std::vector<VertIndex>> lightIndices = std::make_shared<std::vector<VertIndex>>();
 		lightIndices->reserve(24);
+
+		/*
+		 *		*-------*
+		 *	   /|      /|
+		 *	  2-------* |
+		 *	  | *-----|-*
+		 *    |/      |/
+		 *    0-------1
+		 */
 		lightIndices->push_back(0);
 		lightIndices->push_back(1);
 		lightIndices->push_back(2);
 
+		/*
+		 *		*-------*
+		 *	   /|      /|
+		 *	  2-------3 |
+		 *	  | *-----|-*
+		 *    |/      |/
+		 *    *-------1
+		 */
 		lightIndices->push_back(2);
 		lightIndices->push_back(1);
 		lightIndices->push_back(3);
 
+		/*
+		 *		*-------7
+		 *	   /|      /|
+		 *	  2-------3 |
+		 *	  | *-----|-*
+		 *    |/      |/
+		 *    *-------*
+		 */
 		lightIndices->push_back(3);
 		lightIndices->push_back(7);
 		lightIndices->push_back(2);
 
+		/*
+		 *		6-------7
+		 *	   /|      /|
+		 *	  2-------* |
+		 *	  | *-----|-*
+		 *    |/      |/
+		 *    *-------*
+		 */
 		lightIndices->push_back(2);
-		lightIndices->push_back(6);
-		lightIndices->push_back(7);
-
-		lightIndices->push_back(7);
-		lightIndices->push_back(4);
-		lightIndices->push_back(5);
-
 		lightIndices->push_back(7);
 		lightIndices->push_back(6);
+
+		/*
+		 *		*-------7
+		 *	   /|      /|
+		 *	  *-------* |
+		 *	  | 4-----|-5
+		 *    |/      |/
+		 *    *-------*
+		 */
+		lightIndices->push_back(7);
+		lightIndices->push_back(5);
 		lightIndices->push_back(4);
 
+		/*
+		 *		6-------7
+		 *	   /|      /|
+		 *	  *-------* |
+		 *	  | 4-----|-*
+		 *    |/      |/
+		 *    *-------*
+		 */
+		lightIndices->push_back(7);
+		lightIndices->push_back(4);
+		lightIndices->push_back(6);
+
+		/*
+		 *		*-------*
+		 *	   /|      /|
+		 *	  *-------* |
+		 *	  | *-----|-5
+		 *    |/      |/
+		 *    0-------1
+		 */
 		lightIndices->push_back(5);
+		lightIndices->push_back(1);
 		lightIndices->push_back(0);
-		lightIndices->push_back(1);
+
+		/*
+		 *		*-------*
+		 *	   /|      /|
+		 *	  *-------* |
+		 *	  | 4-----|-5
+		 *    |/      |/
+		 *    0-------*
+		 */
+		lightIndices->push_back(5);
+		lightIndices->push_back(4);
+		lightIndices->push_back(0);
 		HVK_shared<DebugMesh> debugMesh = HVK_make_shared<DebugMesh>(lightVertices, lightIndices);
 		mLightBox = HVK_make_shared<DebugMeshRenderObject>(
 			"Dynamic Light Box",
