@@ -3,7 +3,8 @@
 
 #define HVK_TOOLS 1
 
-#include "imgui\imgui.h"
+#include "imgui/imgui.h"
+#include "imgui/imgui_internal.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -245,14 +246,17 @@ protected:
 
         bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
         bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
-        if (mouseClicked) {
-            cameraDrag = true;
+        if (mouseClicked && !io.WantCaptureMouse) {
             toggleCursor(false);
         }
         if (mouseReleased) {
-            cameraDrag = false;
             toggleCursor(true);
         }
+
+		if (mouse.leftDown && !io.WantCaptureMouse)
+		{
+			cameraDrag = true;
+		}
 
         float sensitivity = 0.1f;
         float mouseDeltY = static_cast<float>(mouse.y - prevMouse.y);
@@ -309,10 +313,12 @@ protected:
 
         // GUI
         ImGui::NewFrame();
+
 		ImGui::Begin("Objects");
 		mDuck->displayGui();
 		mDynamicLight->displayGui();
 		ImGui::End();
+
         ImGui::Begin("Rendering");
         float gamma = getGammaCorrection();
         bool useSRGBTex = isUseSRGBTex();
@@ -321,7 +327,27 @@ protected:
         setGammaCorrection(gamma);
         setUseSRGBTex(useSRGBTex);
         ImGui::End();
+		
+		ImGui::Begin("Status");
+		ImGui::Text("Mouse State");
+		ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+		ImGui::Checkbox("LB", &mouse.leftDown);
+		ImGui::SameLine();
+		ImGui::Checkbox("RB", &mouse.rightDown);
+		float mouseX = static_cast<float>(mouse.x);
+		float mouseY = static_cast<float>(mouse.y);
+		ImGui::InputFloat("X", &mouseX);
+		ImGui::SameLine();
+		ImGui::InputFloat("Y", &mouseY);
+		ImGui::Text("Prev Mouse State");
+		ImGui::Checkbox("LB##Prev", &mouse.leftDown);
+		ImGui::SameLine();
+		ImGui::Checkbox("RB##Prev", &mouse.rightDown);
+		ImGui::PopItemFlag();
+		ImGui::End();
+
         ImGui::ShowDemoWindow();
+
         ImGui::EndFrame();
 
         return shouldClose;
