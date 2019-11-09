@@ -166,7 +166,7 @@ public:
         mCamera = HVK_make_shared<Camera>(
             45.f,
             WIDTH / static_cast<float>(HEIGHT),
-            0.01f,
+            0.001f,
             1000.f,
 			"Main Camera",
             nullptr,
