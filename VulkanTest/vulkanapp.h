@@ -84,5 +84,6 @@ namespace hvk {
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }
+        VkDevice getDevice() { return mDevice; }
 	};
 }

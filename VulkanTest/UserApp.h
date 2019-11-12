@@ -57,4 +57,5 @@ public:
     void setUseSRGBTex(bool useSRGBTex);
     float getGammaCorrection();
     bool isUseSRGBTex();
+    VkDevice getDevice();
 };
