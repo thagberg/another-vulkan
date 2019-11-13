@@ -53,6 +53,7 @@ namespace hvk
 			mCommandPool, 
 			mGraphicsQueue,
 			fontTextureData,
+			1,
 			fontTextWidth,
 			fontTextHeight,
 			bytesPerPixel);

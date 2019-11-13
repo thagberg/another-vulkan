@@ -38,13 +38,15 @@ namespace hvk {
 		VkImage image,
 		VkFormat format,
 		VkImageLayout oldLayout,
-		VkImageLayout newLayout);
+		VkImageLayout newLayout,
+		uint32_t numLayers=1);
 	hvk::Resource<VkImage> createTextureImage(
 		VkDevice device,
 		VmaAllocator allocator,
 		VkCommandPool commandPool,
 		VkQueue graphicsQueue,
-		const unsigned char* imageData,
+		const unsigned char* imageDataLayers,
+		size_t numLayers,
 		int imageWidth,
 		int imageHeight,
 		int bitDepth);
@@ -773,7 +775,8 @@ namespace hvk {
         VkImage image,
         VkFormat format,
         VkImageLayout oldLayout,
-        VkImageLayout newLayout) {
+        VkImageLayout newLayout,
+		uint32_t numLayers) {
 
         VkCommandBuffer commandBuffer = beginSingleTimeCommand(device, commandPool);
 
@@ -794,7 +797,7 @@ namespace hvk {
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.layerCount = numLayers;
 
         VkPipelineStageFlags sourceStage;
         VkPipelineStageFlags destinationStage;
@@ -823,6 +826,7 @@ namespace hvk {
         endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
     }
 
+	// TODO: Add support for mipmaps
     void copyBufferToImage(
         VkDevice device,
         VkCommandPool commandPool,
@@ -830,38 +834,53 @@ namespace hvk {
         VkBuffer buffer,
         VkImage image,
         uint32_t width,
-        uint32_t height) {
+        uint32_t height,
+		size_t numFaces=1,
+		size_t faceSize=0) {
 
         VkCommandBuffer commandBuffer = beginSingleTimeCommand(device, commandPool);
 
-        VkBufferImageCopy region = {};
-        region.bufferOffset = 0;
-        region.bufferRowLength = 0;
-        region.bufferImageHeight = 0;
-        region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        region.imageSubresource.mipLevel = 0;
-        region.imageSubresource.baseArrayLayer = 0;
-        region.imageSubresource.layerCount = 1;
-        region.imageOffset = { 0, 0, 0 };
-        region.imageExtent = { width, height, 1 };
+
+		std::vector<VkBufferImageCopy> faceRegions;
+		faceRegions.reserve(numFaces);
+
+		uint32_t offset = 0;
+		for (size_t i = 0; i < numFaces; ++i)
+		{
+			VkBufferImageCopy region = {};
+			region.bufferOffset = offset;
+			region.bufferRowLength = 0;
+			region.bufferImageHeight = 0;
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.mipLevel = 0;
+			region.imageSubresource.baseArrayLayer = i;
+			region.imageSubresource.layerCount = 1;
+			region.imageOffset = { 0, 0, 0 };
+			region.imageExtent = { width, height, 1 };
+
+			offset += faceSize;
+			faceRegions.push_back(region);
+		}
 
         vkCmdCopyBufferToImage(
             commandBuffer, 
             buffer, 
             image, 
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            1, 
-            &region);
+            numFaces, 
+            faceRegions.data());
 
         endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
     }
 
+	// TODO: support for multiple image layers
     hvk::Resource<VkImage> createTextureImage(
         VkDevice device,
         VmaAllocator allocator,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-		const unsigned char* imageData,
+		const unsigned char* imageDataLayers,
+		size_t numLayers,
 		int imageWidth,
 		int imageHeight,
 		int bitDepth) {
@@ -869,7 +888,8 @@ namespace hvk {
         hvk::Resource<VkImage> textureResource;
 
 		//VkDeviceSize imageSize = imageWidth * imageHeight * components * bitDepth;
-		VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
+		VkDeviceSize singleImageSize = imageWidth * imageHeight * bitDepth;
+		VkDeviceSize imageSize = singleImageSize * numLayers;
 
         // copy image data into a staging buffer which will then be used
         // to transfer to a Vulkan image
@@ -892,8 +912,15 @@ namespace hvk {
             &stagingAllocationInfo);
 
         void* stagingData;
+		int offset = 0;
         vmaMapMemory(allocator, stagingAllocation, &stagingData);
-        memcpy(stagingData, imageData, imageSize);
+		for (uint32_t i = 0; i < numLayers; ++i)
+		{
+			void* copyAddress = static_cast<unsigned char*>(stagingData) + offset;
+			const unsigned char* srcAddress = imageDataLayers + offset;
+			memcpy(stagingData, srcAddress, imageSize);
+			offset += singleImageSize;
+		}
         vmaUnmapMemory(allocator, stagingAllocation);
 
         // free the pixel data
@@ -932,7 +959,8 @@ namespace hvk {
             textureResource.memoryResource,
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			numLayers);
 
         copyBufferToImage(
             device,
@@ -951,7 +979,8 @@ namespace hvk {
 			textureResource.memoryResource,
 			VK_FORMAT_R8G8B8A8_UNORM,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			numLayers);
 
 
         vmaDestroyBuffer(allocator, imageStagingBuffer, stagingAllocation);

@@ -7,6 +7,7 @@
 #include "imgui/imgui_internal.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "stb_image.h"
 
 #include "Node.h"
 #include "UserApp.h"
@@ -287,10 +288,10 @@ protected:
             cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
         }
         if (cameraDrag) {
-            if (mouseDeltY >= 0.f) {
+            if (mouseDeltY != 0.f) {
                 cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", mouseDeltY * sensitivity });
             }
-            if (mouseDeltX >= 0.f) {
+            if (mouseDeltX != 0.f) {
                 cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", mouseDeltX * sensitivity });
             }
         }

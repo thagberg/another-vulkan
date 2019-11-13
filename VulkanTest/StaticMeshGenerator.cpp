@@ -311,6 +311,7 @@ namespace hvk
 				mCommandPool,
 				mGraphicsQueue,
 				diffuseTex.image.data(),
+				1,
 				diffuseTex.width,
 				diffuseTex.height,
 				diffuseTex.component * (diffuseTex.bits / 8));
@@ -330,6 +331,7 @@ namespace hvk
 				mCommandPool,
 				mGraphicsQueue,
 				metRoughTex.image.data(),
+				1,
 				metRoughTex.width,
 				metRoughTex.height,
 				metRoughTex.component * (metRoughTex.bits / 8));
@@ -349,6 +351,7 @@ namespace hvk
 				mCommandPool,
 				mGraphicsQueue,
 				normalTex.image.data(),
+				1,
 				normalTex.width,
 				normalTex.height,
 				normalTex.component * (normalTex.bits / 8));
