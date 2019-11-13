@@ -159,3 +159,8 @@ bool UserApp::isUseSRGBTex()
 { 
     return mApp->isUseSRGBTex(); 
 }
+
+VkDevice UserApp::getDevice()
+{
+    return mApp->getDevice();
+}

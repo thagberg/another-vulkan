@@ -845,7 +845,13 @@ namespace hvk {
         region.imageOffset = { 0, 0, 0 };
         region.imageExtent = { width, height, 1 };
 
-        vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        vkCmdCopyBufferToImage(
+            commandBuffer, 
+            buffer, 
+            image, 
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
+            1, 
+            &region);
 
         endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
     }
@@ -861,15 +867,6 @@ namespace hvk {
 		int bitDepth) {
 
         hvk::Resource<VkImage> textureResource;
-
-		/*
-        int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("resources/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-
-        if (!pixels) {
-            throw std::runtime_error("Failed to load Texture Image");
-        }
-		*/
 
 		//VkDeviceSize imageSize = imageWidth * imageHeight * components * bitDepth;
 		VkDeviceSize imageSize = imageWidth * imageHeight * bitDepth;
@@ -896,7 +893,6 @@ namespace hvk {
 
         void* stagingData;
         vmaMapMemory(allocator, stagingAllocation, &stagingData);
-        //memcpy(stagingData, imageData.data(), imageSize);
         memcpy(stagingData, imageData, imageSize);
         vmaUnmapMemory(allocator, stagingAllocation);
 
