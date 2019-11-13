@@ -254,10 +254,10 @@ protected:
             cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
         }
         if (cameraDrag) {
-            if (mouseDeltY) {
+            if (mouseDeltY >= 0.f) {
                 cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", mouseDeltY * sensitivity });
             }
-            if (mouseDeltX) {
+            if (mouseDeltX >= 0.f) {
                 cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", mouseDeltX * sensitivity });
             }
         }
