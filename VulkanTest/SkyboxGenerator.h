@@ -2,6 +2,8 @@
 
 #include "DrawlistGenerator.h"
 #include "Camera.h"
+#include "RenderObject.h"
+#include "DebugMesh.h"
 #include "types.h"
 
 namespace hvk
@@ -9,6 +11,18 @@ namespace hvk
 	class SkyboxGenerator : public DrawlistGenerator
 	{
 	private:
+		struct SkyboxRenderable
+		{
+			HVK_shared<DebugMeshRenderObject> renderObject;
+
+			Resource<VkBuffer> vbo;
+			Resource<VkBuffer> ibo;
+			size_t numVertices;
+			uint32_t numIndices;
+
+			Resource<VkBuffer> ubo;
+		};
+
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorPool mDescriptorPool;
 		VkDescriptorSet descriptorSet;
@@ -16,6 +30,7 @@ namespace hvk
 		RenderPipelineInfo mPipelineInfo;
 
 		TextureMap mSkyboxMap;
+		SkyboxRenderable mSkyboxRenderable;
 		
 	public:
 		SkyboxGenerator(

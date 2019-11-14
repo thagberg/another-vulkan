@@ -19,7 +19,6 @@
 #include "CameraController.h"
 #include "gltf.h"
 #include "vulkan-util.h"
-#include "shapes.h"
 
 using namespace hvk;
 

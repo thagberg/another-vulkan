@@ -19,7 +19,12 @@ namespace hvk {
 		void* pUserData);
 	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, VkDebugUtilsMessengerEXT* pDebugMesenger);
 	VkResult createSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, int width, int height, hvk::Swapchain& swapchain);
-	VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags=VK_IMAGE_ASPECT_COLOR_BIT);
+	VkImageView createImageView(
+		VkDevice device, 
+		VkImage image, 
+		VkFormat format, 
+		VkImageAspectFlags aspectFlags=VK_IMAGE_ASPECT_COLOR_BIT,
+		uint32_t numLayers=1);
 	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat, const VkAttachmentDescription& colorAttachment, const VkAttachmentDescription& depthAttachment);
 	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat);
 	VkSemaphore createSemaphore(VkDevice device);
@@ -989,7 +994,13 @@ namespace hvk {
         return textureResource;
     }
 
-    VkImageView createImageView(VkDevice device, VkImage image, VkFormat format, VkImageAspectFlags aspectFlags) {
+    VkImageView createImageView(
+		VkDevice device, 
+		VkImage image, 
+		VkFormat format, 
+		VkImageAspectFlags aspectFlags,
+		uint32_t numLayers)
+	{
         VkImageView imageView;
 
         VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
@@ -1000,7 +1011,7 @@ namespace hvk {
         createInfo.subresourceRange.baseMipLevel = 0;
         createInfo.subresourceRange.levelCount = 1;
         createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = 1;
+        createInfo.subresourceRange.layerCount = numLayers;
 
 		assert(vkCreateImageView(device, &createInfo, nullptr, &imageView) == VK_SUCCESS);
 
