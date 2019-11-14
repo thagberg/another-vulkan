@@ -2,9 +2,13 @@
 
 #include <array>
 #include "HvkUtil.h"
+#include "DebugMesh.h"
 
 namespace hvk
 {
+	//using Vertices = HVK_shared<HVK_vector<Vertex>>;
+	//using Indices = HVK_shared<HVK_vector<VertIndex>>;
+
     std::array<glm::vec3, 8> cubePositions = {
         glm::vec3(-1.f, -1.f, 1.f),
         glm::vec3(1.f, -1.f, 1.f),
@@ -37,4 +41,36 @@ namespace hvk
         glm::vec2(0.f, 1.f),
         glm::vec2(1.f, 1.f)
     };
+
+	std::array<glm::vec3, 8> cubeUVs3D = {
+		glm::vec3(0.f, 0.f, 0.f),
+		glm::vec3(1.f, 0.f, 0.f),
+		glm::vec3(0.f, 1.f, 0.f),
+		glm::vec3(1.f, 1.f, 0.f),
+
+		glm::vec3(0.f, 0.f, 1.f),
+		glm::vec3(1.f, 0.f, 1.f),
+		glm::vec3(0.f, 1.f, 1.f),
+		glm::vec3(1.f, 1.f, 1.f)
+	};
+
+	HVK_shared<DebugMesh> createColoredCube(glm::vec3&& color)
+	{
+		auto vertices = HVK_make_shared<HVK_vector<ColorVertex>>();
+		vertices->reserve(8);
+
+		for (auto& pos : cubePositions)
+		{
+			vertices->push_back({ pos, color });
+		}
+
+		auto indices = HVK_make_shared<HVK_vector<VertIndex>>();
+		indices->reserve(cubeIndices.size());
+		for (auto& index : cubeIndices)
+		{
+			indices->push_back(index);
+		}
+
+		return HVK_make_shared<DebugMesh>(vertices, indices);
+	}
 }

@@ -87,9 +87,6 @@
     <ClInclude Include="DebugDrawGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DebugMesh.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="UserApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -135,9 +132,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DebugDrawGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DebugMesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="UserApp.cpp">

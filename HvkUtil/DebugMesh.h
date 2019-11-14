@@ -2,15 +2,15 @@
 
 #include <memory>
 #include <vector>
-#include "types.h"
+#include "HvkUtil.h"
 
 namespace hvk
 {
 	class DebugMesh
 	{
 	public:
-		using ColorVertices = std::shared_ptr<std::vector<ColorVertex>>;
-		using Indices = std::shared_ptr<std::vector<VertIndex>>;
+		using ColorVertices = HVK_shared<HVK_vector<ColorVertex>>;
+		using Indices = HVK_shared<HVK_vector<VertIndex>>;
 
 	private:
 		ColorVertices mVertices;

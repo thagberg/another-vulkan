@@ -252,9 +252,9 @@ namespace hvk {
         if (mActiveCamera)
         {
             mActiveCamera->updateProjection(
-                45.0f,
+                90.0f,
                 mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-                0.1f,
+                0.001f,
                 1000.0f);
         }
 		mMeshRenderer->updateRenderPass(mRenderPass);
