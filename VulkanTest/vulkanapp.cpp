@@ -44,6 +44,7 @@ namespace hvk {
         mUiRenderer(nullptr),
         mDebugRenderer(nullptr),
 		mSkyboxRenderer(nullptr),
+		mAmbientLight(nullptr),
         mRenderFence(VK_NULL_HANDLE)
     {
 
@@ -272,8 +273,13 @@ namespace hvk {
         mSurfaceHeight = surfaceHeight;
         mInstance = vulkanInstance;
         mSurface = surface;
+
         try {
 			ResourceManager::initialize(200 * 1000 * 1000);
+			mAmbientLight = HVK_make_shared<AmbientLight>(AmbientLight{
+				glm::vec3(1.f, 1.f, 1.f),
+				0.1f });
+    	
             enableVulkanValidationLayers();
             std::cout << "init device" << std::endl;
             initializeDevice();
@@ -375,10 +381,6 @@ namespace hvk {
 		VkRect2D scissor = {};
 		scissor.offset = { 0, 0 };
 		scissor.extent = mSwapchain.swapchainExtent;
-		AmbientLight ambient = {
-			glm::vec3(1.f, 1.f, 1.f),
-			0.05f
-		};
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
 		std::array<VkCommandBuffer, 3> commandBuffers;
@@ -414,7 +416,7 @@ namespace hvk {
 			viewport,
 			scissor,
 			*mActiveCamera.get(),
-			ambient);
+			*mAmbientLight);
 
 		commandBuffers[1] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 
@@ -480,5 +482,10 @@ namespace hvk {
     void VulkanApp::setUseSRGBTex(bool useSRGBTex)
     {
         mMeshRenderer->setUseSRGBTex(useSRGBTex);
+    }
+
+	void VulkanApp::setAmbientLight(HVK_shared<AmbientLight> ambientLight)
+    {
+		mAmbientLight = ambientLight;
     }
 }

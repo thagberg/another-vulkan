@@ -164,3 +164,8 @@ VkDevice UserApp::getDevice()
 {
     return mApp->getDevice();
 }
+
+hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
+{
+	return mApp->getAmbientLight();
+}

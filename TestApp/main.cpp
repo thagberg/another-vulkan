@@ -19,6 +19,7 @@
 #include "CameraController.h"
 #include "gltf.h"
 #include "vulkan-util.h"
+#include "shapes.h"
 
 using namespace hvk;
 
@@ -189,6 +190,11 @@ protected:
         ImGui::Checkbox("Use sRGB Textures", &useSRGBTex);
         setGammaCorrection(gamma);
         setUseSRGBTex(useSRGBTex);
+		ImGui::Text("Ambient Light");
+		auto ambientLight = getAmbientLight();
+		//ambientLight->lightColor.r
+		ImGui::ColorEdit3("Color##Ambient", &(ambientLight->lightColor.r));
+		ImGui::SliderFloat("IntensityF##Ambient", &(ambientLight->lightIntensity), 0.f, 1.f);
         ImGui::End();
 		
 		ImGui::Begin("Status");

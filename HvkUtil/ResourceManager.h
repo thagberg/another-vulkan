@@ -104,7 +104,7 @@ namespace hvk {
 	template <typename T>
 	union PoolItem
 	{
-		using Storage = char[sizeof(T)];
+		//using Storage = char[sizeof(T)];
 
 	private:
 		PoolItem<T>* next;

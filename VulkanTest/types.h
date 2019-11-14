@@ -82,8 +82,8 @@ namespace hvk {
 	};
 
 	struct AmbientLight {
-		COMP3_4_ALIGN(float) glm::vec3 lightColor;
-		COMP1_ALIGN(float) float lightIntensity;
+		glm::vec3 lightColor;
+		float lightIntensity;
 	};
 
 	template<size_t n>

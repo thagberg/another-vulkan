@@ -188,6 +188,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="ResourceManager.cpp" />
+    <ClCompile Include="shapes.cpp" />
     <ClCompile Include="StaticMesh.cpp" />
     <ClCompile Include="Transform.cpp" />
   </ItemGroup>

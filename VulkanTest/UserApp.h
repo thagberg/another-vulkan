@@ -22,6 +22,7 @@ namespace hvk
 	class Light;
 	class DebugMeshRenderObject;
 	class Camera;
+	struct AmbientLight;
 }
 
 class UserApp
@@ -55,6 +56,7 @@ public:
     void activateCamera(hvk::HVK_shared<hvk::Camera> camera);
     void setGammaCorrection(float gamma);
     void setUseSRGBTex(bool useSRGBTex);
+	hvk::HVK_shared<hvk::AmbientLight> getAmbientLight();
     float getGammaCorrection();
     bool isUseSRGBTex();
     VkDevice getDevice();
