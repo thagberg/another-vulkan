@@ -177,37 +177,6 @@ public:
 
         activateCamera(mCamera);
 
-        // load skybox textures
-        /*
-        
-                T
-            |L |F |R |BA
-                BO
-        
-        */
-        std::array<std::string, 6> skyboxFiles = {
-            "resources/sky/desertsky_lf.tga",
-            "resources/sky/desertsky_ft.tga",
-            "resources/sky/desertsky_up.tga",
-            "resources/sky/desertsky_dn.tga",
-            "resources/sky/desertsky_rt.tga",
-            "resources/sky/desertsky_bk.tga"
-        };
-
-        int width, height, numChannels;
-        for (size_t i = 0; i < skyboxFiles.size(); ++i)
-        {
-            unsigned char* data = stbi_load(
-                skyboxFiles[i].c_str(), 
-                &width, 
-                &height, 
-                &numChannels, 
-                0);
-            if (data)
-            {
-                // TODO: create Resource<VkImage> for sky face
-            }
-        }
 	}
 
 	virtual ~TestApp() = default;

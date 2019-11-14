@@ -4,13 +4,6 @@
 
 namespace hvk
 {
-	void destroyMap(VkDevice device, VmaAllocator allocator, RenderMap& map)
-	{
-		vkDestroySampler(device, map.sampler, nullptr);
-		vkDestroyImageView(device, map.view, nullptr);
-		vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
-	}
-	
 	StaticMeshGenerator::StaticMeshGenerator(
 		VulkanDevice device, 
 		VmaAllocator allocator, 

@@ -51,6 +51,7 @@ namespace hvk {
 		int imageHeight,
 		int bitDepth);
 	VkSampler createTextureSampler(VkDevice device);
+	void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map);
 }
 
 #ifdef HVK_UTIL_IMPLEMENTATION
@@ -1034,6 +1035,14 @@ namespace hvk {
 
         return textureSampler;
     }
+
+	void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map)
+	{
+		vkDestroySampler(device, map.sampler, nullptr);
+		vkDestroyImageView(device, map.view, nullptr);
+		vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
+	}
+	
 }
 
 #endif

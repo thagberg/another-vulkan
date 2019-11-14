@@ -11,13 +11,6 @@
 
 namespace hvk
 {
-    struct RenderMap
-    {
-        Resource<VkImage> texture;
-        VkImageView view;
-        VkSampler sampler;
-    };
-
 	class StaticMeshGenerator : public DrawlistGenerator
 	{
 	private:
@@ -31,9 +24,9 @@ namespace hvk
 			size_t numVertices;
 			uint32_t numIndices;
 
-            RenderMap diffuseMap;
-            RenderMap metallicRoughnessMap;
-            RenderMap normalMap;
+            TextureMap diffuseMap;
+            TextureMap metallicRoughnessMap;
+            TextureMap normalMap;
 
 			Resource<VkBuffer> ubo;
 			VkDescriptorSet descriptorSet;

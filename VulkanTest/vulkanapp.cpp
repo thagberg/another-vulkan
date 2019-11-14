@@ -43,6 +43,7 @@ namespace hvk {
         mMeshRenderer(nullptr),
         mUiRenderer(nullptr),
         mDebugRenderer(nullptr),
+		mSkyboxRenderer(nullptr),
         mRenderFence(VK_NULL_HANDLE)
     {
 
@@ -59,6 +60,7 @@ namespace hvk {
         mMeshRenderer.reset();
         mUiRenderer.reset();
         mDebugRenderer.reset();
+		mSkyboxRenderer.reset();
 
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
         vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
@@ -205,6 +207,13 @@ namespace hvk {
             mGraphicsQueue, 
             mRenderPass, 
             mCommandPool);
+
+		mSkyboxRenderer = HVK_make_shared<SkyboxGenerator>(
+			device,
+			mAllocator,
+			mGraphicsQueue,
+			mRenderPass,
+			mCommandPool);
 
         mImageAvailable = createSemaphore(mDevice);
     }

@@ -35,6 +35,13 @@ namespace hvk {
 	};
 	typedef std::vector<Resource<VkBuffer>> UniformBufferResources;
 
+	struct TextureMap
+	{
+		Resource<VkImage> texture;
+		VkImageView view;
+		VkSampler sampler;
+	};
+
 	struct QueueFamilies {
 		uint32_t graphics;
 		uint32_t submit;
