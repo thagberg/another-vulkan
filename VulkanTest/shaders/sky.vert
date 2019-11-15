@@ -15,5 +15,5 @@ layout(location = 0) out vec3 outColor;
 
 void main() {
 	outColor = inColor;
-	gl_Position = ubo.view * vec4(inPosition, 1.0);
+	gl_Position = ubo.modelViewProj * vec4(inPosition, 1.0);
 }

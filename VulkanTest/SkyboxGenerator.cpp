@@ -25,6 +25,13 @@ namespace hvk
 		mSkyboxMap(),
 		mSkyboxRenderable()
 	{
+		auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
+		mSkyboxRenderable.renderObject = HVK_make_shared<DebugMeshRenderObject>(
+			"Sky Box",
+			nullptr,
+			glm::mat4(1.f),
+			cube);
+
         // load skybox textures
         /*
         
@@ -241,7 +248,9 @@ namespace hvk
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		mPipelineInfo.vertShaderFile = "shaders/compiled/sky_vert.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
-		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		mPipelineInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
 
 		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
 		
@@ -265,5 +274,53 @@ namespace hvk
 	{
 		setInitialized(false);
 		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+	}
+
+	VkCommandBuffer& SkyboxGenerator::drawFrame(
+		const VkCommandBufferInheritanceInfo& inheritance,
+		const VkFramebuffer& framebuffer,
+		const VkViewport& viewport,
+		const VkRect2D& scissor,
+		const Camera& camera)
+	{
+		// Update UBO
+		UniformBufferObject ubo = {};
+		ubo.model = camera.getWorldTransform();
+		ubo.model[1][1] *= -1;
+		ubo.view = camera.getViewTransform();
+		ubo.modelViewProj = camera.getProjection() * ubo.view * ubo.model;
+		ubo.cameraPos = camera.getWorldPosition();
+		memcpy(mSkyboxRenderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
+
+		// begin command buffer
+		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+		commandBegin.pInheritanceInfo = &inheritance;
+
+		assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
+		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+
+		// bind viewport and scissor
+		vkCmdSetViewport(mCommandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(mCommandBuffer, 0, 1, &scissor);
+
+		VkDeviceSize offsets[] = { 0 };
+
+		vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mSkyboxRenderable.vbo.memoryResource, offsets);
+		vkCmdBindIndexBuffer(mCommandBuffer, mSkyboxRenderable.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindDescriptorSets(
+			mCommandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			mPipelineInfo.pipelineLayout,
+			0,
+			1,
+			&mDescriptorSet,
+			0,
+			nullptr);
+
+		vkCmdDrawIndexed(mCommandBuffer, mSkyboxRenderable.numIndices, 1, 0, 0, 0);
+		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
+
+		return mCommandBuffer;
 	}
 }

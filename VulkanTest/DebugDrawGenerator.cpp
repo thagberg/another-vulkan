@@ -76,6 +76,8 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = "shaders/compiled/normal_f.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
+		mPipelineInfo.depthStencilState = createDepthStencilState();
+
 		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
 
 		setInitialized(true);

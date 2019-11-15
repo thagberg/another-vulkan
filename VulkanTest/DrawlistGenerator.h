@@ -33,6 +33,7 @@ namespace hvk
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
 		VkFrontFace frontFace;
+		VkPipelineDepthStencilStateCreateInfo depthStencilState;
 	};
 
 	VkPipeline generatePipeline(

@@ -240,6 +240,7 @@ namespace hvk {
         mSurfaceWidth = surfaceWidth;
         mSurfaceHeight = surfaceHeight;
 
+		mSkyboxRenderer->invalidate();
 		mMeshRenderer->invalidate();
 		mUiRenderer->invalidate();
 		mDebugRenderer->invalidate();
@@ -258,6 +259,7 @@ namespace hvk {
                 0.001f,
                 1000.0f);
         }
+		mSkyboxRenderer->updateRenderPass(mRenderPass);
 		mMeshRenderer->updateRenderPass(mRenderPass);
 		mUiRenderer->updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
 		mDebugRenderer->updateRenderPass(mRenderPass);
@@ -383,7 +385,7 @@ namespace hvk {
 		scissor.extent = mSwapchain.swapchainExtent;
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
-		std::array<VkCommandBuffer, 3> commandBuffers;
+		std::array<VkCommandBuffer, 4> commandBuffers;
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -409,8 +411,15 @@ namespace hvk {
         inheritanceInfo.subpass = 0;
         inheritanceInfo.framebuffer = mFramebuffers[imageIndex];
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+
+		commandBuffers[0] = mSkyboxRenderer->drawFrame(
+			inheritanceInfo,
+			mFramebuffers[imageIndex],
+			viewport,
+			scissor,
+			*mActiveCamera);
 		
-		commandBuffers[0] = mMeshRenderer->drawFrame(
+		commandBuffers[1] = mMeshRenderer->drawFrame(
             inheritanceInfo,
 			mFramebuffers[imageIndex],
 			viewport,
@@ -418,14 +427,14 @@ namespace hvk {
 			*mActiveCamera.get(),
 			*mAmbientLight);
 
-		commandBuffers[1] = mDebugRenderer->drawFrame(
+		commandBuffers[2] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 
 			mFramebuffers[imageIndex], 
 			viewport, 
 			scissor,
 			*mActiveCamera.get());
 
-		commandBuffers[2] = mUiRenderer->drawFrame(
+		commandBuffers[3] = mUiRenderer->drawFrame(
             inheritanceInfo,
 			mFramebuffers[imageIndex],
 			viewport,

@@ -111,6 +111,14 @@ namespace hvk {
 		uint32_t binding,
 		uint32_t descriptorCount,
 		VkShaderStageFlags flags=VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	VkPipelineDepthStencilStateCreateInfo createDepthStencilState(
+		bool depthTest = VK_TRUE,
+		bool depthWrite = VK_TRUE,
+		bool stencilTest = VK_FALSE,
+		float minDepthBounds = 0.f,
+		float maxDepthBounds = 1.f,
+		VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL);
 }
 
 #ifdef HVK_UTIL_IMPLEMENTATION
@@ -409,6 +417,31 @@ namespace hvk {
         return pipelineLayout;
     }
 
+	VkPipelineDepthStencilStateCreateInfo createDepthStencilState (
+		bool depthTest,
+		bool depthWrite,
+		bool stencilTest,
+		float minDepthBounds,
+		float maxDepthBounds,
+		VkCompareOp depthCompareOp)
+	{
+		VkPipelineDepthStencilStateCreateInfo depthCreate = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+		depthCreate.depthTestEnable = depthTest;
+		depthCreate.depthWriteEnable = depthWrite;
+		depthCreate.stencilTestEnable = stencilTest;
+		depthCreate.depthCompareOp = depthCompareOp;
+		depthCreate.depthBoundsTestEnable = VK_FALSE;
+		depthCreate.minDepthBounds = minDepthBounds;
+		depthCreate.maxDepthBounds = maxDepthBounds;
+
+		return depthCreate;
+	}
+
+	//VkPipelineRasterizationStateCreateInfo createRasterizerState(
+	//	VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT,
+	//	VkFrontFace frontFace=
+	//)
+
 	VkPipeline createCustomizedGraphicsPipeline(
 		VkDevice device,
 		VkRenderPass renderPass,
@@ -417,6 +450,7 @@ namespace hvk {
 		const std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
 		const VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
 		const VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
+		const VkPipelineDepthStencilStateCreateInfo& depthStencilInfo,
 		const std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
 
 		VkPipeline graphicsPipeline;
@@ -457,16 +491,6 @@ namespace hvk {
 		colorBlending.attachmentCount = static_cast<uint32_t>(blendAttachments.size());
 		colorBlending.pAttachments = blendAttachments.data();
 
-		VkPipelineDepthStencilStateCreateInfo depthCreate = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
-		depthCreate.depthTestEnable = VK_TRUE;
-		depthCreate.depthWriteEnable = VK_TRUE;
-		//depthCreate.depthCompareOp = VK_COMPARE_OP_LESS;
-		depthCreate.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
-		depthCreate.depthBoundsTestEnable = VK_FALSE;
-		depthCreate.minDepthBounds = 0.0f;
-		depthCreate.maxDepthBounds = 1.0f;
-		depthCreate.stencilTestEnable = VK_FALSE;
-
 		std::array<VkDynamicState, 2> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
 
 		VkPipelineDynamicStateCreateInfo dynamicCreate = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
@@ -482,7 +506,7 @@ namespace hvk {
         pipelineInfo.pViewportState = &viewportState;
         pipelineInfo.pRasterizationState = &rasterizer;
         pipelineInfo.pMultisampleState = &multisampling;
-        pipelineInfo.pDepthStencilState = &depthCreate;
+        pipelineInfo.pDepthStencilState = &depthStencilInfo;
         pipelineInfo.pColorBlendState = &colorBlending;
         pipelineInfo.pDynamicState = &dynamicCreate;
         pipelineInfo.layout = pipelineLayout;

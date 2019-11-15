@@ -46,6 +46,7 @@ namespace hvk
 			modelShaderStages,
 			pipelineInfo.vertexInfo.vertexInputInfo,
 			modelInputAssembly,
+			pipelineInfo.depthStencilState,
 			pipelineInfo.blendAttachments);
 
 		vkDestroyShaderModule(device.device, modelVertShaderModule, nullptr);

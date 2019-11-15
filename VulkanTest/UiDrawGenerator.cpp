@@ -61,7 +61,7 @@ namespace hvk
 		/***************
 		 Create descriptor set layout and descriptor pool
 		***************/
-		std::vector<VkDescriptorPoolSize> poolSizes(2, VkDescriptorPoolSize{});
+		std::vector<VkDescriptorPoolSize> poolSizes(1, VkDescriptorPoolSize{});
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		poolSizes[0].descriptorCount = MAX_SAMPLERS;
 
@@ -172,6 +172,8 @@ namespace hvk
 		mPipelineInfo.vertShaderFile = "shaders/compiled/ui_v.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/ui_f.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+
+		mPipelineInfo.depthStencilState = createDepthStencilState();
 
 		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
 
