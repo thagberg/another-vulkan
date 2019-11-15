@@ -30,58 +30,26 @@ namespace hvk
 		/***************
 		 Create descriptor set layout and descriptor pool
 		***************/
-		VkDescriptorSetLayoutBinding uboLayoutBinding = {};
-		uboLayoutBinding.binding = 0;
-		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-		uboLayoutBinding.pImmutableSamplers = nullptr;
+		VkDescriptorSetLayoutBinding uboLayoutBinding = generateUboLayoutBinding(0, 1);
+		VkDescriptorSetLayoutBinding diffuseSamplerBinding = generateSamplerLayoutBinding(1, 1);
+		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = generateSamplerLayoutBinding(2, 1);
+		VkDescriptorSetLayoutBinding normalSamplerBinding = generateSamplerLayoutBinding(3, 1);
 
-		VkDescriptorSetLayoutBinding diffuseSamplerBinding = {};
-		diffuseSamplerBinding.binding = 1;
-		diffuseSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		diffuseSamplerBinding.descriptorCount = 1;
-		diffuseSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		diffuseSamplerBinding.pImmutableSamplers = nullptr;
-
-		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = {};
-		metalRoughSamplerBinding.binding = 2;
-		metalRoughSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		metalRoughSamplerBinding.descriptorCount = 1;
-		metalRoughSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		metalRoughSamplerBinding.pImmutableSamplers = nullptr;
-
-		VkDescriptorSetLayoutBinding normalSamplerBinding = {};
-		normalSamplerBinding.binding = 3;
-		normalSamplerBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		normalSamplerBinding.descriptorCount = 1;
-		normalSamplerBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		normalSamplerBinding.pImmutableSamplers = nullptr;
-
-		std::array<VkDescriptorSetLayoutBinding, 4> bindings = { 
+		std::vector<VkDescriptorSetLayoutBinding> bindings = {
             uboLayoutBinding, 
             diffuseSamplerBinding,
             metalRoughSamplerBinding,
             normalSamplerBinding
         };
-		VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-		layoutInfo.pBindings = bindings.data();
+		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
-		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
-
-		std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+		std::vector<VkDescriptorPoolSize> poolSizes(2, VkDescriptorPoolSize{});
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = MAX_UBOS;
 		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 		poolSizes[1].descriptorCount = MAX_SAMPLERS;
 
-		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = MAX_DESCRIPTORS;
-
-		assert(vkCreateDescriptorPool(mDevice.device, &poolInfo, nullptr, &mDescriptorPool) == VK_SUCCESS);
+		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/*************
 		 Create Lights UBO
@@ -105,25 +73,14 @@ namespace hvk
 		/*****************
 		 Create Lights descriptor set
 		******************/
-		VkDescriptorSetLayoutBinding lightLayoutBinding = {};
-		lightLayoutBinding.binding = 0;
-		lightLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		lightLayoutBinding.descriptorCount = 1;
-		lightLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		lightLayoutBinding.pImmutableSamplers = nullptr;
+		VkDescriptorSetLayoutBinding lightLayoutBinding = generateUboLayoutBinding(0, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+		std::vector<decltype(lightLayoutBinding)> lightBindings = {
+			lightLayoutBinding
+		};
+		createDescriptorSetLayout(mDevice.device, lightBindings, mLightsDescriptorSetLayout);
 
-		VkDescriptorSetLayoutCreateInfo lightsLayoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-		lightsLayoutInfo.bindingCount = 1;
-		lightsLayoutInfo.pBindings = &lightLayoutBinding;
-
-		assert(vkCreateDescriptorSetLayout(mDevice.device, &lightsLayoutInfo, nullptr, &mLightsDescriptorSetLayout) == VK_SUCCESS);
-
-		VkDescriptorSetAllocateInfo lightsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
-		lightsAlloc.descriptorPool = mDescriptorPool;
-		lightsAlloc.descriptorSetCount = 1;
-		lightsAlloc.pSetLayouts = &mLightsDescriptorSetLayout;
-
-		assert(vkAllocateDescriptorSets(mDevice.device, &lightsAlloc, &mLightsDescriptorSet) == VK_SUCCESS);
+		std::vector<VkDescriptorSetLayout> lightLayouts = { mLightsDescriptorSetLayout };
+		allocateDescriptorSets(mDevice.device, mDescriptorPool, mLightsDescriptorSet, lightLayouts);
 
 		VkDescriptorBufferInfo lightsBufferInfo = {};
 		lightsBufferInfo.buffer = mLightsUbo.memoryResource;

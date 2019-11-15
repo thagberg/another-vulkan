@@ -17,6 +17,11 @@ namespace hvk
 		VkCommandPool commandPool) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
+		mDescriptorSetLayout(VK_NULL_HANDLE),
+		mDescriptorPool(VK_NULL_HANDLE),
+		mDescriptorSet(VK_NULL_HANDLE),
+		mPipeline(VK_NULL_HANDLE),
+		mPipelineInfo(),
 		mSkyboxMap(),
 		mSkyboxRenderable()
 	{
@@ -148,14 +153,108 @@ namespace hvk
 			&mSkyboxRenderable.ubo.allocationInfo);
 
 		// Create descriptor pool
+		std::vector<VkDescriptorPoolSize> poolSizes(2, VkDescriptorPoolSize{});
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = 1;
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = 1;
+
+		createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
+
+		// Create descriptor set layout
+		auto uboLayoutBinding = generateUboLayoutBinding(0, 1);
+		auto skySamplerBinding = generateSamplerLayoutBinding(1, 1);
+
+		std::vector<decltype(uboLayoutBinding)> bindings = {
+			uboLayoutBinding,
+			skySamplerBinding
+		};
+		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
 		// Create descriptor set
+		std::vector<VkDescriptorSetLayout> layouts = { mDescriptorSetLayout };
+		allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
 
 		// Update descriptor set
+		VkDescriptorBufferInfo dsBufferInfo = {
+			mSkyboxRenderable.ubo.memoryResource,
+			0,
+			sizeof(hvk::UniformBufferObject)
+		};
+
+		VkDescriptorImageInfo imageInfo = {
+			mSkyboxMap.sampler,
+			mSkyboxMap.view,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
+
+		VkWriteDescriptorSet bufferWrite = {
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			mDescriptorSet,
+			0,
+			0,
+			1,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			nullptr,
+			&dsBufferInfo,
+			nullptr
+		};
+
+		std::vector<VkWriteDescriptorSet> descriptorWrites = {
+			bufferWrite
+		};
+		vkUpdateDescriptorSets(
+			mDevice.device, 
+			static_cast<uint32_t>(descriptorWrites.size()), 
+			descriptorWrites.data(), 
+			0, 
+			nullptr);
+
+
+		// Prepare pipeline
+		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+		layoutCreate.setLayoutCount = static_cast<uint32_t>(layouts.size());
+		layoutCreate.pSetLayouts = layouts.data();
+		layoutCreate.pushConstantRangeCount = 0;
+		layoutCreate.pPushConstantRanges = nullptr;
+		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+
+		mPipelineInfo.vertexInfo = { };
+		mPipelineInfo.vertexInfo.bindingDescription = hvk::ColorVertex::getBindingDescription();
+		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
+		mPipelineInfo.vertexInfo.vertexInputInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			1,
+			&mPipelineInfo.vertexInfo.bindingDescription,
+			static_cast<uint32_t>(mPipelineInfo.vertexInfo.attributeDescriptions.size()),
+			mPipelineInfo.vertexInfo.attributeDescriptions.data()
+		};
+
+		VkPipelineColorBlendAttachmentState blendAttachment = {};
+		blendAttachment.blendEnable = VK_FALSE;
+		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		mPipelineInfo.blendAttachments = { blendAttachment };
+		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mPipelineInfo.vertShaderFile = "shaders/compiled/sky_vert.spv";
+		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
+		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		
 
 		setInitialized(true);
 	}
 
+	void SkyboxGenerator::updateRenderPass(VkRenderPass renderPass)
+	{
+		mRenderPass = renderPass;
+		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		setInitialized(true);
+	}
 
 	SkyboxGenerator::~SkyboxGenerator()
 	{
@@ -165,5 +264,6 @@ namespace hvk
 	void SkyboxGenerator::invalidate()
 	{
 		setInitialized(false);
+		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
 	}
 }

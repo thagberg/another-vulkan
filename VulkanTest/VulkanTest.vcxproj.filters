@@ -160,5 +160,11 @@
     <None Include="shaders\ui.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\sky.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\sky.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

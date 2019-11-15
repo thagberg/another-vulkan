@@ -25,7 +25,7 @@ namespace hvk
 
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorPool mDescriptorPool;
-		VkDescriptorSet descriptorSet;
+		VkDescriptorSet mDescriptorSet;
 		VkPipeline mPipeline;
 		RenderPipelineInfo mPipelineInfo;
 
@@ -47,5 +47,6 @@ namespace hvk
 			const VkViewport& viewport,
 			const VkRect2D& scissor,
 			const Camera& camera);
+		void updateRenderPass(VkRenderPass renderPass);
 	};
 }

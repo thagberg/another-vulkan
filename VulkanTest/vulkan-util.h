@@ -11,23 +11,45 @@
 
 namespace hvk {
 	GLFWwindow* initializeWindow(int width, int height, const char* windowTitle);
+
 	std::vector<const char*> getRequiredExtensions();
+
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 		void* pUserData);
-	VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, VkDebugUtilsMessengerEXT* pDebugMesenger);
-	VkResult createSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, int width, int height, hvk::Swapchain& swapchain);
+
+	VkResult CreateDebugUtilsMessengerEXT(
+		VkInstance instance, 
+		const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, 
+		VkDebugUtilsMessengerEXT* pDebugMesenger);
+
+	VkResult createSwapchain(
+		VkPhysicalDevice physicalDevice, 
+		VkDevice device, 
+		VkSurfaceKHR surface, 
+		int width, 
+		int height, 
+		hvk::Swapchain& swapchain);
+
 	VkImageView createImageView(
 		VkDevice device, 
 		VkImage image, 
 		VkFormat format, 
 		VkImageAspectFlags aspectFlags=VK_IMAGE_ASPECT_COLOR_BIT,
 		uint32_t numLayers=1);
-	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat, const VkAttachmentDescription& colorAttachment, const VkAttachmentDescription& depthAttachment);
+
+	VkRenderPass createRenderPass(
+		VkDevice device, 
+		VkFormat swapchainImageFormat, 
+		const VkAttachmentDescription& colorAttachment, 
+		const VkAttachmentDescription& depthAttachment);
+
 	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat);
+
 	VkSemaphore createSemaphore(VkDevice device);
+
 	void createFramebuffers(
 		VkDevice device,
 		hvk::SwapchainImageViews& imageViews,
@@ -35,7 +57,9 @@ namespace hvk {
 		VkRenderPass renderPass,
 		VkExtent2D extent,
 		hvk::FrameBuffers& oFramebuffers);
+
 	VkCommandPool createCommandPool(VkDevice device, int queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
+
 	void transitionImageLayout(
 		VkDevice device,
 		VkCommandPool commandPool,
@@ -45,6 +69,7 @@ namespace hvk {
 		VkImageLayout oldLayout,
 		VkImageLayout newLayout,
 		uint32_t numLayers=1);
+
 	hvk::Resource<VkImage> createTextureImage(
 		VkDevice device,
 		VmaAllocator allocator,
@@ -55,8 +80,37 @@ namespace hvk {
 		int imageWidth,
 		int imageHeight,
 		int bitDepth);
+
 	VkSampler createTextureSampler(VkDevice device);
+
 	void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map);
+
+	void createDescriptorPool(
+		VkDevice device,
+		std::vector<VkDescriptorPoolSize>& poolSizes,
+		uint32_t maxSets,
+		VkDescriptorPool& pool);
+
+	void createDescriptorSetLayout(
+		VkDevice device,
+		std::vector<VkDescriptorSetLayoutBinding>& bindings,
+		VkDescriptorSetLayout& descriptorSetLayout);
+
+	void allocateDescriptorSets(
+		VkDevice device,
+		VkDescriptorPool& pool,
+		VkDescriptorSet& descriptorSet,
+		std::vector<VkDescriptorSetLayout> layouts);
+
+	VkDescriptorSetLayoutBinding generateUboLayoutBinding(
+		uint32_t binding,
+		uint32_t descriptorCount,
+		VkShaderStageFlags flags=VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	VkDescriptorSetLayoutBinding generateSamplerLayoutBinding(
+		uint32_t binding,
+		uint32_t descriptorCount,
+		VkShaderStageFlags flags=VK_SHADER_STAGE_FRAGMENT_BIT);
 }
 
 #ifdef HVK_UTIL_IMPLEMENTATION
@@ -1053,7 +1107,74 @@ namespace hvk {
 		vkDestroyImageView(device, map.view, nullptr);
 		vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
 	}
-	
+
+	void createDescriptorPool(
+		VkDevice device,
+		std::vector<VkDescriptorPoolSize>& poolSizes,
+		uint32_t maxSets,
+		VkDescriptorPool& pool)
+	{
+		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		poolInfo.pPoolSizes = poolSizes.data();
+		poolInfo.maxSets = maxSets;
+
+		assert(vkCreateDescriptorPool(device, &poolInfo, nullptr, &pool) == VK_SUCCESS);
+	}
+
+	VkDescriptorSetLayoutBinding generateUboLayoutBinding(
+		uint32_t binding,
+		uint32_t descriptorCount,
+		VkShaderStageFlags flags)
+	{
+		return VkDescriptorSetLayoutBinding {
+			binding,
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			descriptorCount,
+			flags,
+			nullptr
+		};
+	}
+
+	VkDescriptorSetLayoutBinding generateSamplerLayoutBinding(
+		uint32_t binding,
+		uint32_t descriptorCount,
+		VkShaderStageFlags flags)
+	{
+		return VkDescriptorSetLayoutBinding{
+			binding,
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			descriptorCount,
+			flags,
+			nullptr
+		};
+	}
+
+	void createDescriptorSetLayout(
+		VkDevice device,
+		std::vector<VkDescriptorSetLayoutBinding>& bindings,
+		VkDescriptorSetLayout& descriptorSetLayout)
+	{
+		VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+		layoutInfo.pBindings = bindings.data();
+
+		assert(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &descriptorSetLayout) == VK_SUCCESS);
+	}
+
+	void allocateDescriptorSets(
+		VkDevice device,
+		VkDescriptorPool& pool,
+		VkDescriptorSet& descriptorSet,
+		std::vector<VkDescriptorSetLayout> layouts)
+	{
+		VkDescriptorSetAllocateInfo alloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		alloc.descriptorPool = pool;
+		alloc.descriptorSetCount = layouts.size();
+		alloc.pSetLayouts = layouts.data();
+
+		assert(vkAllocateDescriptorSets(device, &alloc, &descriptorSet) == VK_SUCCESS);
+	}
 }
 
 #endif

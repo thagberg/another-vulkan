@@ -212,6 +212,8 @@
     <None Include="shaders\normal.vert" />
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
+    <None Include="shaders\sky.frag" />
+    <None Include="shaders\sky.vert" />
     <None Include="shaders\ui.frag" />
     <None Include="shaders\ui.vert" />
   </ItemGroup>

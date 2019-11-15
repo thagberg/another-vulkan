@@ -1,4 +1,5 @@
 #include "DebugDrawGenerator.h"
+#include "vulkan-util.h"
 
 
 namespace hvk
@@ -35,16 +36,11 @@ namespace hvk
 
 		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
 
-		std::array<VkDescriptorPoolSize, 1> poolSizes = {};
+		std::vector<VkDescriptorPoolSize> poolSizes(1, VkDescriptorPoolSize{});
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = MAX_UBOS;
 
-		VkDescriptorPoolCreateInfo poolInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-		poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = MAX_DESCRIPTORS;
-
-		assert(vkCreateDescriptorPool(mDevice.device, &poolInfo, nullptr, &mDescriptorPool) == VK_SUCCESS);
+		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/**************
 		Set up pipeline
