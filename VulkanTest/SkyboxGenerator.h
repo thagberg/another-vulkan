@@ -3,7 +3,7 @@
 #include "DrawlistGenerator.h"
 #include "Camera.h"
 #include "RenderObject.h"
-#include "DebugMesh.h"
+#include "CubeMesh.h"
 #include "types.h"
 
 namespace hvk
@@ -13,7 +13,7 @@ namespace hvk
 	private:
 		struct SkyboxRenderable
 		{
-			HVK_shared<DebugMeshRenderObject> renderObject;
+			HVK_shared<CubeMeshRenderObject> renderObject;
 
 			Resource<VkBuffer> vbo;
 			Resource<VkBuffer> ibo;

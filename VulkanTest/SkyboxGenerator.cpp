@@ -25,8 +25,9 @@ namespace hvk
 		mSkyboxMap(),
 		mSkyboxRenderable()
 	{
-		auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
-		mSkyboxRenderable.renderObject = HVK_make_shared<DebugMeshRenderObject>(
+		//auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
+        auto cube = createEnvironmentCube();
+		mSkyboxRenderable.renderObject = HVK_make_shared<CubeMeshRenderObject>(
 			"Sky Box",
 			nullptr,
 			glm::mat4(1.f),
@@ -89,11 +90,15 @@ namespace hvk
 			6, 
 			width, 
 			height, 
-			numChannels);
+			numChannels,
+            VK_IMAGE_TYPE_3D);
 		mSkyboxMap.view = createImageView(
 			mDevice.device,
 			mSkyboxMap.texture.memoryResource,
-			VK_FORMAT_R8G8B8A8_UNORM);
+			VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            1,
+            VK_IMAGE_VIEW_TYPE_CUBE);
 		mSkyboxMap.sampler = createTextureSampler(mDevice.device);
 
 		ResourceManager::free(copyTo, copySize);
@@ -105,7 +110,7 @@ namespace hvk
 		mSkyboxRenderable.numIndices = static_cast<uint32_t>(indices->size());
 
 		// Create VBO
-		size_t vertexMemorySize = sizeof(ColorVertex) * mSkyboxRenderable.numVertices;
+		size_t vertexMemorySize = sizeof(CubeVertex) * mSkyboxRenderable.numVertices;
 		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 		bufferInfo.size = vertexMemorySize;
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -208,8 +213,17 @@ namespace hvk
 			nullptr
 		};
 
+        VkWriteDescriptorSet imageWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        imageWrite.dstSet = mDescriptorSet;
+        imageWrite.dstBinding = 1;
+        imageWrite.dstArrayElement = 0;
+        imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        imageWrite.descriptorCount = 1;
+        imageWrite.pImageInfo = &imageInfo;
+
 		std::vector<VkWriteDescriptorSet> descriptorWrites = {
-			bufferWrite
+			bufferWrite,
+            imageWrite
 		};
 		vkUpdateDescriptorSets(
 			mDevice.device, 
@@ -228,8 +242,8 @@ namespace hvk
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		mPipelineInfo.vertexInfo = { };
-		mPipelineInfo.vertexInfo.bindingDescription = hvk::ColorVertex::getBindingDescription();
-		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
+		mPipelineInfo.vertexInfo.bindingDescription = hvk::CubeVertex::getBindingDescription();
+		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::CubeVertex::getAttributeDescriptions();
 		mPipelineInfo.vertexInfo.vertexInputInfo = {
 			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 			nullptr,
@@ -288,7 +302,8 @@ namespace hvk
 		ubo.model = camera.getWorldTransform();
 		ubo.model[1][1] *= -1;
 		ubo.view = camera.getViewTransform();
-		ubo.modelViewProj = camera.getProjection() * ubo.view * ubo.model;
+		//ubo.modelViewProj = camera.getProjection() * ubo.view * ubo.model;
+		ubo.modelViewProj = camera.getProjection() * ubo.view;
 		ubo.cameraPos = camera.getWorldPosition();
 		memcpy(mSkyboxRenderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 

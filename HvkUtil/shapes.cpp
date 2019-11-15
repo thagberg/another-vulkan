@@ -67,4 +67,26 @@ namespace hvk
 
 		return HVK_make_shared<DebugMesh>(vertices, indices);
 	}
+
+    HVK_shared<CubeMesh> createEnvironmentCube()
+    {
+        auto vertices = HVK_make_shared<HVK_vector<CubeVertex>>();
+        vertices->reserve(8);
+
+        for (size_t i = 0; i < cubePositions.size(); ++i)
+        {
+            const auto& pos = cubePositions[i];
+            const auto& uvw = cubeUVs3D[i];
+            vertices->push_back({ pos, uvw });
+        }
+
+		auto indices = HVK_make_shared<HVK_vector<VertIndex>>();
+		indices->reserve(cubeIndices.size());
+		for (auto& index : cubeIndices)
+		{
+			indices->push_back(index);
+		}
+
+        return HVK_make_shared<CubeMesh>(vertices, indices);
+    }
 }

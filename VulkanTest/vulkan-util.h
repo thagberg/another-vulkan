@@ -38,7 +38,8 @@ namespace hvk {
 		VkImage image, 
 		VkFormat format, 
 		VkImageAspectFlags aspectFlags=VK_IMAGE_ASPECT_COLOR_BIT,
-		uint32_t numLayers=1);
+		uint32_t numLayers=1,
+        VkImageViewType viewType=VK_IMAGE_VIEW_TYPE_2D);
 
 	VkRenderPass createRenderPass(
 		VkDevice device, 
@@ -79,7 +80,8 @@ namespace hvk {
 		size_t numLayers,
 		int imageWidth,
 		int imageHeight,
-		int bitDepth);
+		int bitDepth,
+        VkImageType imageType=VK_IMAGE_TYPE_2D);
 
 	VkSampler createTextureSampler(VkDevice device);
 
@@ -967,7 +969,8 @@ namespace hvk {
 		size_t numLayers,
 		int imageWidth,
 		int imageHeight,
-		int bitDepth) {
+		int bitDepth,
+        VkImageType imageType) {
 
         hvk::Resource<VkImage> textureResource;
 
@@ -1011,11 +1014,12 @@ namespace hvk {
         //stbi_image_free(pixels);
 
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        imageInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageInfo.imageType = imageType;
         imageInfo.extent.width = static_cast<uint32_t>(imageWidth);
         imageInfo.extent.height = static_cast<uint32_t>(imageHeight);
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
+        //imageInfo.arrayLayers = numLayers;
         imageInfo.arrayLayers = 1;
         imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -1044,7 +1048,8 @@ namespace hvk {
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			numLayers);
+			1);
+			//numLayers);
 
         copyBufferToImage(
             device,
@@ -1053,7 +1058,22 @@ namespace hvk {
             imageStagingBuffer,
             textureResource.memoryResource,
             imageWidth,
-            imageHeight);
+            imageHeight,
+            numLayers,
+            singleImageSize);
+
+        /*
+    void copyBufferToImage(
+        VkDevice device,
+        VkCommandPool commandPool,
+        VkQueue graphicsQueue,
+        VkBuffer buffer,
+        VkImage image,
+        uint32_t width,
+        uint32_t height,
+		size_t numFaces=1,
+		size_t faceSize=0) {
+        */
 
 
 		transitionImageLayout(
@@ -1064,7 +1084,8 @@ namespace hvk {
 			VK_FORMAT_R8G8B8A8_UNORM,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			numLayers);
+			1);
+			//numLayers);
 
 
         vmaDestroyBuffer(allocator, imageStagingBuffer, stagingAllocation);
@@ -1077,13 +1098,14 @@ namespace hvk {
 		VkImage image, 
 		VkFormat format, 
 		VkImageAspectFlags aspectFlags,
-		uint32_t numLayers)
+		uint32_t numLayers,
+        VkImageViewType viewType)
 	{
         VkImageView imageView;
 
         VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
         createInfo.image = image;
-        createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        createInfo.viewType = viewType;
         createInfo.format = format;
         createInfo.subresourceRange.aspectMask = aspectFlags;
         createInfo.subresourceRange.baseMipLevel = 0;

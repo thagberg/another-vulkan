@@ -25,6 +25,7 @@ namespace hvk
 	const VkFormat VertexUVFormat = VK_FORMAT_R32G32_SFLOAT;
 	const VkFormat VertexNormalFormat = VK_FORMAT_R32G32B32_SFLOAT;
     const VkFormat VertexTangentFormat = VK_FORMAT_R32G32B32A32_SFLOAT;
+    const VkFormat VertexUVWFormat = VK_FORMAT_R32G32B32_SFLOAT;
 
 	template <typename T>
 	using HVK_shared = std::shared_ptr<T>;
@@ -126,6 +127,37 @@ namespace hvk
 			return attributeDescriptions;
 		}
 	};
+
+    struct CubeVertex {
+        glm::vec3 pos;
+        glm::vec3 texCoord;
+
+        static VkVertexInputBindingDescription getBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription = {};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(CubeVertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+            return bindingDescription;
+        }
+
+		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+			std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+			attributeDescriptions.resize(2);
+
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VertexPositionFormat;
+			attributeDescriptions[0].offset = offsetof(CubeVertex, pos);
+
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VertexUVWFormat;
+			attributeDescriptions[1].offset = offsetof(CubeVertex, texCoord);
+
+			return attributeDescriptions;
+		}
+    };
 
 	struct Command {
 		uint16_t id;
