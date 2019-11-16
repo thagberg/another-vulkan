@@ -81,7 +81,8 @@ namespace hvk {
 		int imageWidth,
 		int imageHeight,
 		int bitDepth,
-        VkImageType imageType=VK_IMAGE_TYPE_2D);
+        VkImageType imageType=VK_IMAGE_TYPE_2D,
+		VkImageCreateFlags flags=0);
 
 	VkSampler createTextureSampler(VkDevice device);
 
@@ -970,7 +971,8 @@ namespace hvk {
 		int imageWidth,
 		int imageHeight,
 		int bitDepth,
-        VkImageType imageType) {
+        VkImageType imageType,
+		VkImageCreateFlags flags) {
 
         hvk::Resource<VkImage> textureResource;
 
@@ -1001,17 +1003,24 @@ namespace hvk {
         void* stagingData;
 		int offset = 0;
         vmaMapMemory(allocator, stagingAllocation, &stagingData);
-		for (uint32_t i = 0; i < numLayers; ++i)
-		{
-			void* copyAddress = static_cast<unsigned char*>(stagingData) + offset;
-			const unsigned char* srcAddress = imageDataLayers + offset;
-			memcpy(stagingData, srcAddress, imageSize);
-			offset += singleImageSize;
-		}
+		memcpy(stagingData, imageDataLayers, imageSize);
+		//for (uint32_t i = 0; i < numLayers; ++i)
+		//{
+		//	void* copyAddress = static_cast<unsigned char*>(stagingData) + offset;
+		//	const unsigned char* srcAddress = imageDataLayers + offset;
+		//	//memcpy(stagingData, srcAddress, imageSize);
+		//	memcpy(stagingData, srcAddress, singleImageSize);
+		//	offset += singleImageSize;
+		//}
         vmaUnmapMemory(allocator, stagingAllocation);
 
         // free the pixel data
         //stbi_image_free(pixels);
+		
+		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+		if (bitDepth == 3) {
+			format = VK_FORMAT_R8G8B8_UNORM;
+		}
 
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.imageType = imageType;
@@ -1019,15 +1028,16 @@ namespace hvk {
         imageInfo.extent.height = static_cast<uint32_t>(imageHeight);
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
-        //imageInfo.arrayLayers = numLayers;
-        imageInfo.arrayLayers = 1;
-        imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+        imageInfo.arrayLayers = numLayers;
+        //imageInfo.arrayLayers = 1;
+        //imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+		imageInfo.format = format;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
         imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags = 0;
+        imageInfo.flags = flags;
 
         VmaAllocationCreateInfo imageAllocationCreateInfo = {};
         imageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -1048,8 +1058,8 @@ namespace hvk {
             VK_FORMAT_R8G8B8A8_UNORM,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1);
-			//numLayers);
+			//1);
+			numLayers);
 
         copyBufferToImage(
             device,
@@ -1084,8 +1094,8 @@ namespace hvk {
 			VK_FORMAT_R8G8B8A8_UNORM,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			1);
-			//numLayers);
+			//1);
+			numLayers);
 
 
         vmaDestroyBuffer(allocator, imageStagingBuffer, stagingAllocation);

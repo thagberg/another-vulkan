@@ -14,6 +14,9 @@ layout(location = 1) in vec3 inUVW;
 layout(location = 0) out vec3 outUVW;
 
 void main() {
-	outUVW = inUVW;
-	gl_Position = ubo.modelViewProj * vec4(inPosition, 1.0);
+	outUVW = inPosition;
+	outUVW.y *= -1.0;
+	outUVW.x *= -1.0;
+	vec4 pos = ubo.modelViewProj * vec4(inPosition, 1.0);
+	gl_Position = pos.xyww;
 }

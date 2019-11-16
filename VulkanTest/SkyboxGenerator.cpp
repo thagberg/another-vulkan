@@ -42,12 +42,12 @@ namespace hvk
         
         */
         std::array<std::string, 6> skyboxFiles = {
-            "resources/sky/desertsky_lf.tga",
-            "resources/sky/desertsky_ft.tga",
-            "resources/sky/desertsky_up.tga",
-            "resources/sky/desertsky_dn.tga",
-            "resources/sky/desertsky_rt.tga",
-            "resources/sky/desertsky_bk.tga"
+            "resources/sky/desertsky_rt.png",
+            "resources/sky/desertsky_lf.png",
+            "resources/sky/desertsky_up.png",
+            "resources/sky/desertsky_dn.png",
+            "resources/sky/desertsky_bk.png",
+            "resources/sky/desertsky_ft.png"
         };
 
         int width, height, numChannels;
@@ -82,16 +82,18 @@ namespace hvk
 		}
 
 		mSkyboxMap.texture = createTextureImage(
-			mDevice.device, 
-			mAllocator, 
-			mCommandPool, 
-			mGraphicsQueue, 
-			copyTo, 
-			6, 
-			width, 
-			height, 
+			mDevice.device,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			copyTo,
+			6,
+			width,
+			height,
 			numChannels,
-            VK_IMAGE_TYPE_3D);
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+            //VK_IMAGE_TYPE_3D);
 		mSkyboxMap.view = createImageView(
 			mDevice.device,
 			mSkyboxMap.texture.memoryResource,
@@ -262,7 +264,7 @@ namespace hvk
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		mPipelineInfo.vertShaderFile = "shaders/compiled/sky_vert.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
-		mPipelineInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
 
@@ -300,10 +302,10 @@ namespace hvk
 		// Update UBO
 		UniformBufferObject ubo = {};
 		ubo.model = camera.getWorldTransform();
-		ubo.model[1][1] *= -1;
+		//ubo.model[1][1] *= -1;
 		ubo.view = camera.getViewTransform();
 		//ubo.modelViewProj = camera.getProjection() * ubo.view * ubo.model;
-		ubo.modelViewProj = camera.getProjection() * ubo.view;
+		ubo.modelViewProj = camera.getProjection() * glm::mat4(glm::mat3(ubo.view));
 		ubo.cameraPos = camera.getWorldPosition();
 		memcpy(mSkyboxRenderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 
