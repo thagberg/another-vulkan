@@ -9,7 +9,6 @@
 
 namespace hvk
 {
-
 	VkPipeline generatePipeline(const VulkanDevice& device, VkRenderPass renderPass, const RenderPipelineInfo& pipelineInfo) {
 
 		VkPipeline pipeline;
@@ -66,7 +65,7 @@ namespace hvk
 		mDevice(device),
 		mAllocator(allocator),
 		mGraphicsQueue(graphicsQueue),
-		mRenderPass(renderPass),
+		mColorRenderPass(renderPass),
 		mRenderFinished(VK_NULL_HANDLE),
 		mCommandPool(commandPool),
 		mCommandBuffer(VK_NULL_HANDLE)

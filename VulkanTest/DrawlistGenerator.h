@@ -44,7 +44,7 @@ namespace hvk
         VmaAllocator mAllocator;
         VkQueue mGraphicsQueue;
 
-        VkRenderPass mRenderPass;
+        VkRenderPass mColorRenderPass;
         VkFence mRenderFence;
         VkSemaphore mRenderFinished;
         VkCommandPool mCommandPool;

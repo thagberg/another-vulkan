@@ -33,15 +33,18 @@ namespace hvk {
 
 		uint32_t mGraphicsIndex;
 		VkQueue mGraphicsQueue;
-		VkRenderPass mRenderPass;
+		VkRenderPass mColorRenderPass;
+        VkRenderPass mFinalRenderPass;
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mPrimaryCommandBuffer;
 
-		SwapchainImageViews mImageViews;
-		SwapchainImages mSwapchainImages;
+		SwapchainImageViews mFinalPassImageViews;
+		SwapchainImages mFinalPassSwapchainImages;
+        std::vector<TextureMap> mColorPassMaps;
 		Resource<VkImage> mDepthResource;
 		VkImageView mDepthView;
-		FrameBuffers mFramebuffers;
+		FrameBuffers mFinalPassFramebuffers;
+        FrameBuffers mColorPassFramebuffers;
 		hvk::Swapchain mSwapchain;
 
 		VkSemaphore mImageAvailable;

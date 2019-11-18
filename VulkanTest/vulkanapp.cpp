@@ -28,13 +28,16 @@ namespace hvk {
         mDevice(VK_NULL_HANDLE),
         mPhysicalDevice(VK_NULL_HANDLE),
         mGraphicsIndex(),
-        mRenderPass(VK_NULL_HANDLE),
+        mColorRenderPass(VK_NULL_HANDLE),
+        mFinalRenderPass(VK_NULL_HANDLE),
         mCommandPool(VK_NULL_HANDLE),
         mPrimaryCommandBuffer(VK_NULL_HANDLE),
-        mImageViews(),
-        mSwapchainImages(),
+        mFinalPassImageViews(),
+        mFinalPassSwapchainImages(),
+        mColorPassMaps(),
         mDepthResource(),
-        mFramebuffers(),
+        mFinalPassFramebuffers(),
+        mColorPassFramebuffers(),
         mSwapchain(),
         mImageAvailable(VK_NULL_HANDLE),
         mRenderFinished(VK_NULL_HANDLE),
@@ -191,14 +194,14 @@ namespace hvk {
             device, 
             mAllocator, 
             mGraphicsQueue, 
-            mRenderPass, 
+            mColorRenderPass, 
             mCommandPool);
 
 		mUiRenderer = std::make_shared<UiDrawGenerator>(
             device, 
             mAllocator, 
             mGraphicsQueue, 
-            mRenderPass, 
+            mColorRenderPass, 
             mCommandPool, 
             mSwapchain.swapchainExtent);
 
@@ -206,14 +209,14 @@ namespace hvk {
             device, 
             mAllocator, 
             mGraphicsQueue, 
-            mRenderPass, 
+            mColorRenderPass, 
             mCommandPool);
 
 		mSkyboxRenderer = HVK_make_shared<SkyboxGenerator>(
 			device,
 			mAllocator,
 			mGraphicsQueue,
-			mRenderPass,
+			mColorRenderPass,
 			mCommandPool);
 
         mImageAvailable = createSemaphore(mDevice);
@@ -259,10 +262,10 @@ namespace hvk {
                 0.001f,
                 1000.0f);
         }
-		mSkyboxRenderer->updateRenderPass(mRenderPass);
-		mMeshRenderer->updateRenderPass(mRenderPass);
-		mUiRenderer->updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
-		mDebugRenderer->updateRenderPass(mRenderPass);
+		mSkyboxRenderer->updateRenderPass(mColorRenderPass);
+		mMeshRenderer->updateRenderPass(mColorRenderPass);
+		mUiRenderer->updateRenderPass(mColorRenderPass, mSwapchain.swapchainExtent);
+		mDebugRenderer->updateRenderPass(mColorRenderPass);
 	}
 
     void VulkanApp::init(
@@ -298,12 +301,25 @@ namespace hvk {
         uint32_t imageCount = 0;
         vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
         vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
-        mSwapchainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, mSwapchainImages.data());
+        mFinalPassSwapchainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, mFinalPassSwapchainImages.data());
 
-        mImageViews.resize(mSwapchainImages.size());
-        for (size_t i = 0; i < mSwapchainImages.size(); i++) {
-            mImageViews[i] = createImageView(mDevice, mSwapchainImages[i], mSwapchain.swapchainImageFormat);
+        mFinalPassImageViews.resize(mFinalPassSwapchainImages.size());
+        for (size_t i = 0; i < mFinalPassSwapchainImages.size(); i++) {
+            mFinalPassImageViews[i] = createImageView(mDevice, mFinalPassSwapchainImages[i], mSwapchain.swapchainImageFormat);
+        }
+
+        mColorPassMaps.resize(mFinalPassSwapchainImages.size());
+        for (size_t i = 0; i < mColorPassMaps.size(); i++) {
+            mColorPassMaps[i] = createImageMap(
+                mDevice, 
+                mAllocator, 
+                mCommandPool, 
+                mGraphicsQueue,
+                mSwapchain.swapchainImageFormat,
+                mSwapchain.swapchainExtent.width,
+                mSwapchain.swapchainExtent.height,
+                VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
         }
 
 		// create depth image and view
@@ -343,21 +359,30 @@ namespace hvk {
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 
-        mRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
+        mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
 
-        createFramebuffers(mDevice, mImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFramebuffers);
+        auto finalColorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat);
+        mFinalRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, &finalColorAttachment);
+
+        //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFinalPassFramebuffers);
+        createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
+        mFinalPassFramebuffers.resize(mFinalPassImageViews.size());
+        for (size_t i = 0; i < mFinalPassImageViews.size(); ++i)
+        {
+            createFramebuffer(mDevice, mFinalRenderPass, mSwapchain.swapchainExtent, mFinalPassImageViews[i], nullptr, &mFinalPassFramebuffers[i]);
+        }
 	}
 
 	void VulkanApp::cleanupSwapchain() {
 		vkDestroyImageView(mDevice, mDepthView, nullptr);
 		vmaDestroyImage(mAllocator, mDepthResource.memoryResource, mDepthResource.allocation);
-		for (auto& imageView : mImageViews) {
+		for (auto& imageView : mFinalPassImageViews) {
 			vkDestroyImageView(mDevice, imageView, nullptr);
 		}
-		for (auto& framebuffer : mFramebuffers) {
+		for (auto& framebuffer : mFinalPassFramebuffers) {
 			vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
 		}
-		vkDestroyRenderPass(mDevice, mRenderPass, nullptr);
+		vkDestroyRenderPass(mDevice, mColorRenderPass, nullptr);
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 	}
 
@@ -396,8 +421,8 @@ namespace hvk {
 		commandBegin.pInheritanceInfo = nullptr;
 
 		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		renderBegin.renderPass = mRenderPass;
-		renderBegin.framebuffer = mFramebuffers[imageIndex];
+		renderBegin.renderPass = mColorRenderPass;
+		renderBegin.framebuffer = mColorPassFramebuffers[imageIndex];
 		renderBegin.renderArea = scissor;
 		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
 		renderBegin.pClearValues = clearValues.data();
@@ -407,21 +432,22 @@ namespace hvk {
 
         VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
         inheritanceInfo.pNext = nullptr;
-        inheritanceInfo.renderPass = mRenderPass;
+        inheritanceInfo.renderPass = mColorRenderPass;
         inheritanceInfo.subpass = 0;
-        inheritanceInfo.framebuffer = mFramebuffers[imageIndex];
+        //inheritanceInfo.framebuffer = mFinalPassFramebuffers[imageIndex];
+        inheritanceInfo.framebuffer = mColorPassFramebuffers[imageIndex];
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
 		commandBuffers[0] = mSkyboxRenderer->drawFrame(
 			inheritanceInfo,
-			mFramebuffers[imageIndex],
+			mColorPassFramebuffers[imageIndex],
 			viewport,
 			scissor,
 			*mActiveCamera);
 		
 		commandBuffers[1] = mMeshRenderer->drawFrame(
             inheritanceInfo,
-			mFramebuffers[imageIndex],
+			mColorPassFramebuffers[imageIndex],
 			viewport,
 			scissor,
 			*mActiveCamera.get(),
@@ -429,14 +455,14 @@ namespace hvk {
 
 		commandBuffers[2] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 
-			mFramebuffers[imageIndex], 
+			mColorPassFramebuffers[imageIndex], 
 			viewport, 
 			scissor,
 			*mActiveCamera.get());
 
 		commandBuffers[3] = mUiRenderer->drawFrame(
             inheritanceInfo,
-			mFramebuffers[imageIndex],
+			mColorPassFramebuffers[imageIndex],
 			viewport,
 			scissor);
 

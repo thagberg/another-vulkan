@@ -172,7 +172,7 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = createDepthStencilState();
 
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 
 		setInitialized(true);
 	}
@@ -201,8 +201,8 @@ namespace hvk
 	void UiDrawGenerator::updateRenderPass(VkRenderPass renderPass, VkExtent2D windowExtent)
 	{
 		mWindowExtent = windowExtent;
-		mRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mColorRenderPass = renderPass;
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 
 		ImGuiIO& io = ImGui::GetIO();
         setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));

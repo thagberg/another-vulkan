@@ -231,7 +231,7 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
 
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		
 
 		setInitialized(true);
@@ -239,8 +239,8 @@ namespace hvk
 
 	void SkyboxGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
-		mRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mColorRenderPass = renderPass;
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 

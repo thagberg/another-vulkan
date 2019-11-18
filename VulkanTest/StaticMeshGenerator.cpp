@@ -43,12 +43,7 @@ namespace hvk
         };
 		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
-		std::vector<VkDescriptorPoolSize> poolSizes(2, VkDescriptorPoolSize{});
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = MAX_UBOS;
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = MAX_SAMPLERS;
-
+        auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_UBOS, MAX_SAMPLERS);
 		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/*************
@@ -161,13 +156,13 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = createDepthStencilState();
 
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 	}
 
 	void StaticMeshGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
-		mRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mColorRenderPass = renderPass;
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 

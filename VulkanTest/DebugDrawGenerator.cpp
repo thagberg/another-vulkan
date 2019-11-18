@@ -64,7 +64,7 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = createDepthStencilState();
 
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 
 		setInitialized(true);
 	}
@@ -95,8 +95,8 @@ namespace hvk
 
 	void DebugDrawGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
-		mRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mRenderPass, mPipelineInfo);
+		mColorRenderPass = renderPass;
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 
