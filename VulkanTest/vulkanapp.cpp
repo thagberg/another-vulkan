@@ -365,10 +365,13 @@ namespace hvk {
         mFinalRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, &finalColorAttachment);
 
         //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFinalPassFramebuffers);
-        createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
+        //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
+
         mFinalPassFramebuffers.resize(mFinalPassImageViews.size());
         for (size_t i = 0; i < mFinalPassImageViews.size(); ++i)
         {
+            //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
+            createFramebuffer(mDevice, )
             createFramebuffer(mDevice, mFinalRenderPass, mSwapchain.swapchainExtent, mFinalPassImageViews[i], nullptr, &mFinalPassFramebuffers[i]);
         }
 	}
