@@ -103,5 +103,11 @@ namespace hvk {
 		COMP1_ALIGN(bool) bool sRGBTextures;
 	};
 
+	struct VertexInfo 
+	{
+		VkVertexInputBindingDescription bindingDescription;
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
+	};
 
 }

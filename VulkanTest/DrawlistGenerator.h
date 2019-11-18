@@ -17,13 +17,6 @@ namespace hvk
 	const uint32_t NUM_INITIAL_LIGHTS = 10;
 	const uint32_t NUM_INITIAL_STATICMESHES = 10;
 
-	struct VertexInfo 
-	{
-		VkVertexInputBindingDescription bindingDescription;
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-		VkPipelineVertexInputStateCreateInfo vertexInputInfo;
-	};
-
 	struct RenderPipelineInfo 
 	{
 		VkPrimitiveTopology topology;

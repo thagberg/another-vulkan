@@ -147,18 +147,7 @@ namespace hvk
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		mPipelineInfo.vertexInfo = { };
-		mPipelineInfo.vertexInfo.bindingDescription = hvk::Vertex::getBindingDescription();
-		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::Vertex::getAttributeDescriptions();
-		mPipelineInfo.vertexInfo.vertexInputInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			1,
-			&mPipelineInfo.vertexInfo.bindingDescription,
-			static_cast<uint32_t>(mPipelineInfo.vertexInfo.attributeDescriptions.size()),
-			mPipelineInfo.vertexInfo.attributeDescriptions.data()
-		};
+		fillVertexInfo<hvk::Vertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;

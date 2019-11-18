@@ -122,6 +122,71 @@ namespace hvk {
 		float minDepthBounds = 0.f,
 		float maxDepthBounds = 1.f,
 		VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL);
+
+	VkWriteDescriptorSet createDescriptorBufferWrite(
+		std::vector<VkDescriptorBufferInfo>& bufferInfos,
+		VkDescriptorSet& descriptorSet,
+		uint32_t binding);
+
+	VkWriteDescriptorSet createDescriptorImageWrite(
+		std::vector<VkDescriptorImageInfo>& imageInfos,
+		VkDescriptorSet& descriptorSet,
+		uint32_t binding);
+
+	void writeDescriptorSets(
+		VkDevice device,
+		std::vector<VkWriteDescriptorSet>& descriptorWrites);
+
+	template <VkDescriptorType T>
+	void _buildPoolSizes(std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t count)
+	{
+		poolSizes.push_back({
+			T,
+			count});
+	}
+
+	template <VkDescriptorType T, VkDescriptorType... Args>
+	void _buildPoolSizes(std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t count, uint32_t counts...)
+	{
+		poolSizes.push_back({
+			T,
+			count});
+		_buildPoolSizes<Args...>(poolSizes, counts);
+	}
+
+	template <VkDescriptorType... Args>
+	std::vector<VkDescriptorPoolSize> createPoolSizes(const uint32_t count, const uint32_t counts...)
+	{
+		std::vector<VkDescriptorPoolSize> poolSizes;
+		poolSizes.reserve(sizeof...(Args));
+		_buildPoolSizes<Args...>(poolSizes, count, counts);
+		return poolSizes;
+	}
+
+	template <VkDescriptorType T>
+	std::vector<VkDescriptorPoolSize> createPoolSizes(const uint32_t count)
+	{
+		std::vector<VkDescriptorPoolSize> poolSizes;
+		poolSizes.reserve(1);
+		_buildPoolSizes<T>(poolSizes, count);
+		return poolSizes;
+	}
+
+	template <typename T>
+	void fillVertexInfo(VertexInfo& vertexInfo) 
+	{
+		vertexInfo.bindingDescription = T::getBindingDescription();
+		vertexInfo.attributeDescriptions = T::getAttributeDescriptions();
+		vertexInfo.vertexInputInfo = {
+			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+			nullptr,
+			0,
+			1,
+			&vertexInfo.bindingDescription,
+			static_cast<uint32_t>(vertexInfo.attributeDescriptions.size()),
+			vertexInfo.attributeDescriptions.data()
+		};
+	}
 }
 
 #ifdef HVK_UTIL_IMPLEMENTATION
@@ -1230,6 +1295,57 @@ namespace hvk {
 		alloc.pSetLayouts = layouts.data();
 
 		assert(vkAllocateDescriptorSets(device, &alloc, &descriptorSet) == VK_SUCCESS);
+	}
+
+	VkWriteDescriptorSet createDescriptorBufferWrite(
+		std::vector<VkDescriptorBufferInfo>& bufferInfos,
+		VkDescriptorSet& descriptorSet,
+		uint32_t binding)
+	{
+		return VkWriteDescriptorSet{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			descriptorSet,
+			binding,
+			0,
+			static_cast<uint32_t>(bufferInfos.size()),
+			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+			nullptr,
+			bufferInfos.data(),
+			nullptr
+		};
+	}
+
+	VkWriteDescriptorSet createDescriptorImageWrite(
+		std::vector<VkDescriptorImageInfo>& imageInfos,
+		VkDescriptorSet& descriptorSet,
+		uint32_t binding)
+	{
+		return VkWriteDescriptorSet{
+			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			nullptr,
+			descriptorSet,
+			binding,
+			0,
+			static_cast<uint32_t>(imageInfos.size()),
+			VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			imageInfos.data(),
+			nullptr,
+			nullptr
+		};
+	}
+
+	void writeDescriptorSets(
+		VkDevice device,
+		std::vector<VkWriteDescriptorSet>& descriptorWrites)
+	{
+		vkUpdateDescriptorSets(
+			device,
+			static_cast<uint32_t>(descriptorWrites.size()),
+			descriptorWrites.data(),
+			0,
+			nullptr
+		);
 	}
 }
 

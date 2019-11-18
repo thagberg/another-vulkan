@@ -36,10 +36,7 @@ namespace hvk
 
 		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
 
-		std::vector<VkDescriptorPoolSize> poolSizes(1, VkDescriptorPoolSize{});
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = MAX_UBOS;
-
+		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(MAX_UBOS);
 		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/**************
@@ -53,18 +50,7 @@ namespace hvk
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		mPipelineInfo.vertexInfo = { };
-		mPipelineInfo.vertexInfo.bindingDescription = hvk::ColorVertex::getBindingDescription();
-		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::ColorVertex::getAttributeDescriptions();
-		mPipelineInfo.vertexInfo.vertexInputInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			1,
-			&mPipelineInfo.vertexInfo.bindingDescription,
-			static_cast<uint32_t>(mPipelineInfo.vertexInfo.attributeDescriptions.size()),
-			mPipelineInfo.vertexInfo.attributeDescriptions.data()
-		};
+		fillVertexInfo<ColorVertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;

@@ -61,10 +61,7 @@ namespace hvk
 		/***************
 		 Create descriptor set layout and descriptor pool
 		***************/
-		std::vector<VkDescriptorPoolSize> poolSizes(1, VkDescriptorPoolSize{});
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[0].descriptorCount = MAX_SAMPLERS;
-
+		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_SAMPLERS);
 		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		VkDescriptorSetLayout uiDescriptorSetLayout;

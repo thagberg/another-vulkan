@@ -44,8 +44,8 @@ namespace hvk
         std::array<std::string, 6> skyboxFiles = {
             "resources/sky/desertsky_rt.png",
             "resources/sky/desertsky_lf.png",
-            "resources/sky/desertsky_up.png",
-            "resources/sky/desertsky_dn.png",
+            "resources/sky/desertsky_up_fixed.png",
+            "resources/sky/desertsky_dn_fixed.png",
             "resources/sky/desertsky_bk.png",
             "resources/sky/desertsky_ft.png"
         };
@@ -93,7 +93,6 @@ namespace hvk
 			numChannels,
 			VK_IMAGE_TYPE_2D,
 			VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
-            //VK_IMAGE_TYPE_3D);
 		mSkyboxMap.view = createImageView(
 			mDevice.device,
 			mSkyboxMap.texture.memoryResource,
@@ -167,12 +166,7 @@ namespace hvk
 			&mSkyboxRenderable.ubo.allocationInfo);
 
 		// Create descriptor pool
-		std::vector<VkDescriptorPoolSize> poolSizes(2, VkDescriptorPoolSize{});
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = 1;
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 1;
-
+		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1, 1);
 		createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
 
 		// Create descriptor set layout
@@ -202,37 +196,17 @@ namespace hvk
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
-		VkWriteDescriptorSet bufferWrite = {
-			VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			nullptr,
-			mDescriptorSet,
-			0,
-			0,
-			1,
-			VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			nullptr,
-			&dsBufferInfo,
-			nullptr
-		};
+		std::vector<VkDescriptorBufferInfo> bufferInfos = { dsBufferInfo };
+		auto bufferWrite = createDescriptorBufferWrite(bufferInfos, mDescriptorSet, 0);
 
-        VkWriteDescriptorSet imageWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-        imageWrite.dstSet = mDescriptorSet;
-        imageWrite.dstBinding = 1;
-        imageWrite.dstArrayElement = 0;
-        imageWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        imageWrite.descriptorCount = 1;
-        imageWrite.pImageInfo = &imageInfo;
+		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
+		auto imageWrite = createDescriptorImageWrite(imageInfos, mDescriptorSet, 1);
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites = {
 			bufferWrite,
             imageWrite
 		};
-		vkUpdateDescriptorSets(
-			mDevice.device, 
-			static_cast<uint32_t>(descriptorWrites.size()), 
-			descriptorWrites.data(), 
-			0, 
-			nullptr);
+		writeDescriptorSets(mDevice.device, descriptorWrites);
 
 
 		// Prepare pipeline
@@ -243,18 +217,7 @@ namespace hvk
 		layoutCreate.pPushConstantRanges = nullptr;
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		mPipelineInfo.vertexInfo = { };
-		mPipelineInfo.vertexInfo.bindingDescription = hvk::CubeVertex::getBindingDescription();
-		mPipelineInfo.vertexInfo.attributeDescriptions = hvk::CubeVertex::getAttributeDescriptions();
-		mPipelineInfo.vertexInfo.vertexInputInfo = {
-			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			nullptr,
-			0,
-			1,
-			&mPipelineInfo.vertexInfo.bindingDescription,
-			static_cast<uint32_t>(mPipelineInfo.vertexInfo.attributeDescriptions.size()),
-			mPipelineInfo.vertexInfo.attributeDescriptions.data()
-		};
+		fillVertexInfo<hvk::CubeVertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
