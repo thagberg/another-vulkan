@@ -62,7 +62,7 @@ namespace hvk
 		createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
 
 		// Create descriptor set layout
-		auto quadSamplerBinding = generateSamplerLayoutBinding(1, 1);
+		auto quadSamplerBinding = generateSamplerLayoutBinding(0, 1);
 		std::vector<decltype(quadSamplerBinding)> bindings = { quadSamplerBinding };
 		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
@@ -98,8 +98,8 @@ namespace hvk
 
 		mPipelineInfo.blendAttachments = { blendAttachment };
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		mPipelineInfo.vertShaderFile = "shaders/compiled/sky_vert.spv";
-		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
+		mPipelineInfo.vertShaderFile = "shaders/compiled/quad_vert.spv";
+		mPipelineInfo.fragShaderFile = "shaders/compiled/quad_frag.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
@@ -117,10 +117,52 @@ namespace hvk
 	void QuadGenerator::invalidate()
 	{
 		setInitialized(false);
+        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
 	}
 
 	void QuadGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
+        mColorRenderPass = renderPass;
+        mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
+
+
+    VkCommandBuffer& QuadGenerator::drawFrame(
+        const VkCommandBufferInheritanceInfo& inheritance,
+        const VkFramebuffer& framebuffer,
+        const VkViewport& viewport,
+        const VkRect2D& scissor)
+    {
+        // record commands
+        VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+        commandBegin.pInheritanceInfo = &inheritance;
+
+        assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
+
+        // bind pipeline
+        vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+        vkCmdSetViewport(mCommandBuffer, 0, 1, &viewport);
+        vkCmdSetScissor(mCommandBuffer, 0, 1, &scissor);
+
+        VkDeviceSize offsets[] = { 0 };
+
+        vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mRenderable.vbo.memoryResource, offsets);
+        vkCmdBindIndexBuffer(mCommandBuffer, mRenderable.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+        vkCmdBindDescriptorSets(
+            mCommandBuffer,
+            VK_PIPELINE_BIND_POINT_GRAPHICS,
+            mPipelineInfo.pipelineLayout,
+            0,
+            1,
+            &mDescriptorSet,
+            0,
+            nullptr);
+
+        vkCmdDrawIndexed(mCommandBuffer, numIndices, 1, 0, 0, 0);
+        assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
+
+        return mCommandBuffer;
+    }
 }

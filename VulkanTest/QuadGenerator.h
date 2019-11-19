@@ -22,7 +22,7 @@ namespace hvk
 
 		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
 			std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
-			attributeDescriptions.resize(4);
+			attributeDescriptions.resize(2);
 
 			attributeDescriptions[0].binding = 0;
 			attributeDescriptions[0].location = 0;
@@ -80,5 +80,10 @@ namespace hvk
 		virtual ~QuadGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);
+        VkCommandBuffer& drawFrame(
+            const VkCommandBufferInheritanceInfo& inheritance,
+            const VkFramebuffer& framebuffer,
+            const VkViewport& viewport,
+            const VkRect2D& scissor);
 	};
 }

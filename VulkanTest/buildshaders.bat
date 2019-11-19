@@ -6,3 +6,5 @@ C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/ui_v.spv -
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/ui_f.spv -V shaders/ui.frag
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/sky_vert.spv -V shaders/sky.vert
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/sky_frag.spv -V shaders/sky.frag
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/quad_vert.spv -V shaders/quad.vert
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/quad_frag.spv -V shaders/quad.frag

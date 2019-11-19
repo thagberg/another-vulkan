@@ -18,6 +18,7 @@
 #include "UiDrawGenerator.h"
 #include "DebugDrawGenerator.h"
 #include "SkyboxGenerator.h"
+#include "QuadGenerator.h"
 #include "CameraController.h"
 
 namespace hvk {
@@ -40,11 +41,13 @@ namespace hvk {
 
 		SwapchainImageViews mFinalPassImageViews;
 		SwapchainImages mFinalPassSwapchainImages;
-        std::vector<TextureMap> mColorPassMaps;
+        //std::vector<TextureMap> mColorPassMaps;
+        HVK_shared<TextureMap> mColorPassMap;
 		Resource<VkImage> mDepthResource;
 		VkImageView mDepthView;
 		FrameBuffers mFinalPassFramebuffers;
-        FrameBuffers mColorPassFramebuffers;
+        //FrameBuffers mColorPassFramebuffers;
+        VkFramebuffer mColorPassFramebuffer;
 		hvk::Swapchain mSwapchain;
 
 		VkSemaphore mImageAvailable;
@@ -58,6 +61,7 @@ namespace hvk {
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
 		HVK_shared<SkyboxGenerator> mSkyboxRenderer;
+        HVK_shared<QuadGenerator> mQuadRenderer;
 		HVK_shared<AmbientLight> mAmbientLight;
 
 		VkFence mRenderFence;
