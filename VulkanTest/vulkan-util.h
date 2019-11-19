@@ -25,7 +25,10 @@ namespace hvk {
 		const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, 
 		VkDebugUtilsMessengerEXT* pDebugMesenger);
 
-    VkAttachmentDescription createColorAttachment(VkFormat imageFormat);
+	VkAttachmentDescription createColorAttachment(
+		VkFormat imageFormat,
+		VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+		VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
     VkAttachmentDescription createDepthAttachment();
 
@@ -424,7 +427,10 @@ namespace hvk {
         return shaderModule;
     }
 
-    VkAttachmentDescription createColorAttachment(VkFormat imageFormat)
+    VkAttachmentDescription createColorAttachment(
+		VkFormat imageFormat,
+		VkImageLayout initialLayout,
+		VkImageLayout finalLayout)
     {
         VkAttachmentDescription colorAttachment = {};
         colorAttachment.format = imageFormat;
@@ -433,8 +439,8 @@ namespace hvk {
         colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        colorAttachment.initialLayout = initialLayout;
+        colorAttachment.finalLayout = finalLayout;
 
         return colorAttachment;
     }

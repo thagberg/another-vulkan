@@ -359,7 +359,9 @@ namespace hvk {
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 
-        mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat);
+		auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		auto depthAttachment = createDepthAttachment();
+        mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, &colorAttachment, &depthAttachment);
 
         auto finalColorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat);
         mFinalRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, &finalColorAttachment);
@@ -368,10 +370,11 @@ namespace hvk {
         //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
 
         mFinalPassFramebuffers.resize(mFinalPassImageViews.size());
+		mColorPassFramebuffers.resize(mFinalPassImageViews.size());
         for (size_t i = 0; i < mFinalPassImageViews.size(); ++i)
         {
             //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
-            createFramebuffer(mDevice, )
+			createFramebuffer(mDevice, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassMaps[i].view, &mDepthView, &mColorPassFramebuffers[i]);
             createFramebuffer(mDevice, mFinalRenderPass, mSwapchain.swapchainExtent, mFinalPassImageViews[i], nullptr, &mFinalPassFramebuffers[i]);
         }
 	}
