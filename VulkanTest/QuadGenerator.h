@@ -10,6 +10,33 @@ namespace hvk
 	struct QuadVertex {
 		glm::vec2 pos;
 		glm::vec2 uv;
+
+		static VkVertexInputBindingDescription getBindingDescription() {
+			VkVertexInputBindingDescription bindingDescription = {};
+			bindingDescription.binding = 0;
+			bindingDescription.stride = sizeof(QuadVertex);
+			bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			return bindingDescription;
+		}
+
+		static std::vector<VkVertexInputAttributeDescription> getAttributeDescriptions() {
+			std::vector<VkVertexInputAttributeDescription> attributeDescriptions = {};
+			attributeDescriptions.resize(4);
+
+			attributeDescriptions[0].binding = 0;
+			attributeDescriptions[0].location = 0;
+			attributeDescriptions[0].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[0].offset = offsetof(QuadVertex, pos);
+
+			attributeDescriptions[1].binding = 0;
+			attributeDescriptions[1].location = 1;
+			attributeDescriptions[1].format = VK_FORMAT_R32G32_SFLOAT;
+			attributeDescriptions[1].offset = offsetof(QuadVertex, uv);
+
+
+			return attributeDescriptions;
+		}
 	};
 
 	const std::array<QuadVertex, 4> quadVertices = {

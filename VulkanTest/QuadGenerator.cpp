@@ -83,6 +83,30 @@ namespace hvk
 		writeDescriptorSets(mDevice.device, descriptorWrites);
 
 		// Prepare pipeline
+		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+		layoutCreate.setLayoutCount = static_cast<uint32_t>(layouts.size());
+		layoutCreate.pSetLayouts = layouts.data();
+		layoutCreate.pushConstantRangeCount = 0;
+		layoutCreate.pPushConstantRanges = nullptr;
+		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+
+		fillVertexInfo<QuadVertex>(mPipelineInfo.vertexInfo);
+
+		VkPipelineColorBlendAttachmentState blendAttachment = {};
+		blendAttachment.blendEnable = VK_FALSE;
+		blendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+		mPipelineInfo.blendAttachments = { blendAttachment };
+		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+		mPipelineInfo.vertShaderFile = "shaders/compiled/sky_vert.spv";
+		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
+		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+
+		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
+
+		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+
+		setInitialized(true);
 	}
 
 	QuadGenerator::~QuadGenerator()
