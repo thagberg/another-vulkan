@@ -47,7 +47,7 @@ namespace hvk
 	};
 
 	const std::array<uint16_t, 6> quadIndices = {
-		0,1,2,
+        2,1,0,
 		1,2,3
 	};
 

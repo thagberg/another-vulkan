@@ -260,6 +260,7 @@ namespace hvk {
 		mMeshRenderer->invalidate();
 		mUiRenderer->invalidate();
 		mDebugRenderer->invalidate();
+        mQuadRenderer->invalidate();
 		cleanupSwapchain();
 
         if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
@@ -279,6 +280,7 @@ namespace hvk {
 		mMeshRenderer->updateRenderPass(mColorRenderPass);
 		mUiRenderer->updateRenderPass(mColorRenderPass, mSwapchain.swapchainExtent);
 		mDebugRenderer->updateRenderPass(mColorRenderPass);
+        mQuadRenderer->updateRenderPass(mFinalRenderPass);
 	}
 
     void VulkanApp::init(
