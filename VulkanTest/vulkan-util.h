@@ -51,9 +51,19 @@ namespace hvk {
     VkSampler createImageSampler(
         VkDevice device);
 
+	VkSubpassDependency createSubpassDependency(
+		uint32_t srcSubpass = VK_SUBPASS_EXTERNAL,
+		uint32_t dstSubpass = 0,
+		VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+		VkAccessFlags srcAccessMask = 0,
+		VkAccessFlags dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+		VkDependencyFlags dependencyFlags=0);
+
 	VkRenderPass createRenderPass(
 		VkDevice device, 
 		VkFormat swapchainImageFormat, 
+		std::vector<VkSubpassDependency>& subpassDependencies,
 		const VkAttachmentDescription* pColorAttachment, 
 		const VkAttachmentDescription* pDepthAttachment=nullptr);
 
@@ -460,9 +470,31 @@ namespace hvk {
         return depthAttachment;
     }
 
+	VkSubpassDependency createSubpassDependency(
+		uint32_t srcSubpass,
+		uint32_t dstSubpass,
+		VkPipelineStageFlags srcStageMask,
+		VkPipelineStageFlags dstStageMask,
+		VkAccessFlags srcAccessMask,
+		VkAccessFlags dstAccessMask,
+		VkDependencyFlags dependencyFlags)
+	{
+        VkSubpassDependency dependency = {};
+        dependency.srcSubpass = srcSubpass;
+        dependency.dstSubpass = dstSubpass;
+        dependency.srcStageMask = srcStageMask;
+        dependency.dstStageMask = dstStageMask;
+        dependency.srcAccessMask = srcAccessMask;
+        dependency.dstAccessMask = dstAccessMask;
+		dependency.dependencyFlags = dependencyFlags;
+
+		return dependency;
+	}
+
 	VkRenderPass createRenderPass(
 		VkDevice device, 
 		VkFormat swapchainImageFormat, 
+		std::vector<VkSubpassDependency>& subpassDependencies,
 		const VkAttachmentDescription* pColorAttachment, 
 		const VkAttachmentDescription* pDepthAttachment)
 	{
@@ -501,34 +533,26 @@ namespace hvk {
             subpass.pDepthStencilAttachment = nullptr;
         }
 
-        VkSubpassDependency dependency = {};
-        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-        dependency.dstSubpass = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.srcAccessMask = 0;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
         VkRenderPassCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
         createInfo.pAttachments = attachments.data();
         createInfo.subpassCount = 1;
         createInfo.pSubpasses = &subpass;
-        createInfo.dependencyCount = 1;
-        createInfo.pDependencies = &dependency;
+        createInfo.dependencyCount = subpassDependencies.size();
+        createInfo.pDependencies = subpassDependencies.data();
 
 		assert(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass) == VK_SUCCESS);
 
         return renderPass;
 	}
 
-    VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat) {
-        VkAttachmentDescription colorAttachment = createColorAttachment(swapchainImageFormat);
-        VkAttachmentDescription depthAttachment = createDepthAttachment();
+  //  VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat) {
+  //      VkAttachmentDescription colorAttachment = createColorAttachment(swapchainImageFormat);
+  //      VkAttachmentDescription depthAttachment = createDepthAttachment();
 
-		return createRenderPass(device, swapchainImageFormat, &colorAttachment, &depthAttachment);
-    }
+		//return createRenderPass(device, swapchainImageFormat, &colorAttachment, &depthAttachment);
+  //  }
 
     VkPipelineLayout createGraphicsPipelineLayout(VkDevice device, VkDescriptorSetLayout layout) {
         VkPipelineLayout pipelineLayout;

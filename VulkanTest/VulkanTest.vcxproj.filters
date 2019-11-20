@@ -93,6 +93,9 @@
     <ClInclude Include="SkyboxGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="QuadGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -140,6 +143,9 @@
     <ClCompile Include="SkyboxGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="QuadGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.vert">
@@ -164,6 +170,12 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\sky.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\quad.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\quad.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

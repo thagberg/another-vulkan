@@ -172,6 +172,7 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="Inputs.h" />
+    <ClInclude Include="QuadGenerator.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="SkyboxGenerator.h" />
     <ClInclude Include="StaticMeshGenerator.h" />
@@ -193,6 +194,7 @@
     <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="QuadGenerator.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="SkyboxGenerator.cpp" />
     <ClCompile Include="StaticMeshGenerator.cpp" />
@@ -210,6 +212,8 @@
   <ItemGroup>
     <None Include="shaders\normal.frag" />
     <None Include="shaders\normal.vert" />
+    <None Include="shaders\quad.frag" />
+    <None Include="shaders\quad.vert" />
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
     <None Include="shaders\sky.frag" />

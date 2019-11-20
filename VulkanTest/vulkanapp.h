@@ -52,6 +52,7 @@ namespace hvk {
 
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
+		VkSemaphore mFinalRenderFinished;
 
 		VmaAllocator mAllocator;
 

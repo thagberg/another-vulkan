@@ -42,6 +42,7 @@ namespace hvk {
         mSwapchain(),
         mImageAvailable(VK_NULL_HANDLE),
         mRenderFinished(VK_NULL_HANDLE),
+		mFinalRenderFinished(VK_NULL_HANDLE),
         mAllocator(),
         mActiveCamera(nullptr),
         mMeshRenderer(nullptr),
@@ -183,6 +184,7 @@ namespace hvk {
 		fenceCreate.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
 		mRenderFinished = createSemaphore(mDevice);
+		mFinalRenderFinished = createSemaphore(mDevice);
 		assert(vkCreateFence(device.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
 		// Allocate command buffer
@@ -197,7 +199,7 @@ namespace hvk {
             device,
             mAllocator,
             mGraphicsQueue,
-            mColorRenderPass,
+            mFinalRenderPass,
             mCommandPool,
             mColorPassMap);
 
@@ -368,12 +370,32 @@ namespace hvk {
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 
+		//auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		auto depthAttachment = createDepthAttachment();
-        mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, &colorAttachment, &depthAttachment);
+		std::vector<VkSubpassDependency> colorPassDependencies = {
+			createSubpassDependency(
+				VK_SUBPASS_EXTERNAL,
+				0,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT),
+			createSubpassDependency(
+				0,
+				VK_SUBPASS_EXTERNAL,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT)
+		};
+        mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorPassDependencies,&colorAttachment, &depthAttachment);
 
         auto finalColorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat);
-        mFinalRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, &finalColorAttachment);
+		std::vector<VkSubpassDependency> finalPassDependencies = { createSubpassDependency() };
+        mFinalRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, finalPassDependencies, &finalColorAttachment);
 
         //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFinalPassFramebuffers);
         //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
@@ -451,10 +473,6 @@ namespace hvk {
 		finalRenderBegin.clearValueCount = static_cast<float>(clearValues.size());
 		finalRenderBegin.pClearValues = clearValues.data();
 
-		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
-
-		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
         VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
         inheritanceInfo.pNext = nullptr;
         inheritanceInfo.renderPass = mColorRenderPass;
@@ -463,6 +481,10 @@ namespace hvk {
         //inheritanceInfo.framebuffer = mColorPassFramebuffers[imageIndex];
         inheritanceInfo.framebuffer = mColorPassFramebuffer;
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+
+		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
+
+		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
 		commandBuffers[0] = mSkyboxRenderer->drawFrame(
 			inheritanceInfo,
@@ -499,7 +521,10 @@ namespace hvk {
 		vkCmdExecuteCommands(mPrimaryCommandBuffer, static_cast<float>(commandBuffers.size()), commandBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
 
-		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		inheritanceInfo.renderPass = mFinalRenderPass;
+		inheritanceInfo.framebuffer = mFinalPassFramebuffers[imageIndex];
+
+		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &finalRenderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
         auto finalCommandBuffer = mQuadRenderer->drawFrame(
             inheritanceInfo,
