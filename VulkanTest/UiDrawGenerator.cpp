@@ -265,7 +265,8 @@ namespace hvk
 					if (mVbo.allocationInfo.pMappedData != nullptr) {
 						vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
 					}
-					VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO }; bufferInfo.size = vertexMemorySize;
+					VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO }; 
+					bufferInfo.size = vertexMemorySize;
 					bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
 					VmaAllocationCreateInfo allocCreateInfo = {};

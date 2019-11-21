@@ -41,12 +41,10 @@ namespace hvk {
 
 		SwapchainImageViews mFinalPassImageViews;
 		SwapchainImages mFinalPassSwapchainImages;
-        //std::vector<TextureMap> mColorPassMaps;
         HVK_shared<TextureMap> mColorPassMap;
 		Resource<VkImage> mDepthResource;
 		VkImageView mDepthView;
 		FrameBuffers mFinalPassFramebuffers;
-        //FrameBuffers mColorPassFramebuffers;
         VkFramebuffer mColorPassFramebuffer;
 		hvk::Swapchain mSwapchain;
 
@@ -66,6 +64,10 @@ namespace hvk {
 		HVK_shared<AmbientLight> mAmbientLight;
 
 		VkFence mRenderFence;
+
+		std::vector<VkCommandBuffer> mSecondaryCommandBuffers;
+
+		HVK_shared<GammaSettings> mGammaSettings;
 
 		void enableVulkanValidationLayers();
 		void initializeDevice();

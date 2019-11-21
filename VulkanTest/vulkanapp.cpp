@@ -28,6 +28,7 @@ namespace hvk {
         mDevice(VK_NULL_HANDLE),
         mPhysicalDevice(VK_NULL_HANDLE),
         mGraphicsIndex(),
+		mGraphicsQueue(VK_NULL_HANDLE),
         mColorRenderPass(VK_NULL_HANDLE),
         mFinalRenderPass(VK_NULL_HANDLE),
         mCommandPool(VK_NULL_HANDLE),
@@ -36,8 +37,8 @@ namespace hvk {
         mFinalPassSwapchainImages(),
         mColorPassMap(nullptr),
         mDepthResource(),
+		mDepthView(VK_NULL_HANDLE),
         mFinalPassFramebuffers(),
-        //mColorPassFramebuffers(),
         mColorPassFramebuffer(VK_NULL_HANDLE),
         mSwapchain(),
         mImageAvailable(VK_NULL_HANDLE),
@@ -51,7 +52,9 @@ namespace hvk {
 		mSkyboxRenderer(nullptr),
         mQuadRenderer(nullptr),
 		mAmbientLight(nullptr),
-        mRenderFence(VK_NULL_HANDLE)
+        mRenderFence(VK_NULL_HANDLE),
+		mSecondaryCommandBuffers(),
+		mGammaSettings(nullptr)
     {
 
     }
@@ -69,6 +72,9 @@ namespace hvk {
         mUiRenderer.reset();
         mDebugRenderer.reset();
 		mSkyboxRenderer.reset();
+
+		destroyMap(mDevice, mAllocator, *mColorPassMap);
+		vkDestroyFramebuffer(mDevice, mColorPassFramebuffer, nullptr);
 
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
         vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
@@ -192,16 +198,20 @@ namespace hvk {
 		bufferAlloc.commandBufferCount = 1;
 		bufferAlloc.commandPool = mCommandPool;
 		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
 		assert(vkAllocateCommandBuffers(mDevice, &bufferAlloc, &mPrimaryCommandBuffer) == VK_SUCCESS);
 
+		// Initialize gamma settings
+		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
+
+		// Initialize drawlist generators
         mQuadRenderer = HVK_make_shared<QuadGenerator>(
             device,
             mAllocator,
             mGraphicsQueue,
             mFinalRenderPass,
             mCommandPool,
-            mColorPassMap);
+            mColorPassMap,
+			mGammaSettings);
 
 		mMeshRenderer = std::make_shared<StaticMeshGenerator>(
             device, 
@@ -231,6 +241,8 @@ namespace hvk {
 			mGraphicsQueue,
 			mColorRenderPass,
 			mCommandPool);
+
+		mSecondaryCommandBuffers.resize(4);
 
         mImageAvailable = createSemaphore(mDevice);
     }
@@ -262,6 +274,10 @@ namespace hvk {
 		mDebugRenderer->invalidate();
         mQuadRenderer->invalidate();
 		cleanupSwapchain();
+
+		// the color pass map which we render to in the color pass
+		// needs to be recreated at the new size
+		destroyMap(mDevice, mAllocator, *mColorPassMap);
 
         if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Swapchain");
@@ -324,16 +340,29 @@ namespace hvk {
             mFinalPassImageViews[i] = createImageView(mDevice, mFinalPassSwapchainImages[i], mSwapchain.swapchainImageFormat);
         }
 
-        //mColorPassMaps.resize(mFinalPassSwapchainImages.size());
-        mColorPassMap = HVK_make_shared<TextureMap>(createImageMap(
-            mDevice, 
-            mAllocator, 
-            mCommandPool, 
-            mGraphicsQueue,
-            mSwapchain.swapchainImageFormat,
-            mSwapchain.swapchainExtent.width,
-            mSwapchain.swapchainExtent.height,
-            VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
+		// if mColorPassMap already exists, then just overwrite the value there instead
+		if (mColorPassMap == nullptr) {
+			mColorPassMap = HVK_make_shared<TextureMap>(createImageMap(
+				mDevice,
+				mAllocator,
+				mCommandPool,
+				mGraphicsQueue,
+				mSwapchain.swapchainImageFormat,
+				mSwapchain.swapchainExtent.width,
+				mSwapchain.swapchainExtent.height,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
+		}
+		else {
+			*mColorPassMap =createImageMap(
+				mDevice,
+				mAllocator,
+				mCommandPool,
+				mGraphicsQueue,
+				mSwapchain.swapchainImageFormat,
+				mSwapchain.swapchainExtent.width,
+				mSwapchain.swapchainExtent.height,
+				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+		}
 
 		// create depth image and view
 		VkImageCreateInfo depthImageCreate = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
@@ -449,7 +478,6 @@ namespace hvk {
 		scissor.extent = mSwapchain.swapchainExtent;
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
-		std::array<VkCommandBuffer, 4> commandBuffers;
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -461,7 +489,6 @@ namespace hvk {
 
 		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		renderBegin.renderPass = mColorRenderPass;
-		//renderBegin.framebuffer = mColorPassFramebuffers[imageIndex];
 		renderBegin.framebuffer = mColorPassFramebuffer;
 		renderBegin.renderArea = scissor;
 		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
@@ -469,7 +496,6 @@ namespace hvk {
 
 		VkRenderPassBeginInfo finalRenderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 		finalRenderBegin.renderPass = mFinalRenderPass;
-		//renderBegin.framebuffer = mColorPassFramebuffers[imageIndex];
 		finalRenderBegin.framebuffer = mFinalPassFramebuffers[imageIndex];
 		finalRenderBegin.renderArea = scissor;
 		finalRenderBegin.clearValueCount = static_cast<float>(clearValues.size());
@@ -479,53 +505,52 @@ namespace hvk {
         inheritanceInfo.pNext = nullptr;
         inheritanceInfo.renderPass = mColorRenderPass;
         inheritanceInfo.subpass = 0;
-        //inheritanceInfo.framebuffer = mFinalPassFramebuffers[imageIndex];
-        //inheritanceInfo.framebuffer = mColorPassFramebuffers[imageIndex];
         inheritanceInfo.framebuffer = mColorPassFramebuffer;
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
 		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
 
+		// Color pass
 		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-		commandBuffers[0] = mSkyboxRenderer->drawFrame(
+		mSecondaryCommandBuffers[0] = mSkyboxRenderer->drawFrame(
 			inheritanceInfo,
-			//mColorPassFramebuffers[imageIndex],
 			mColorPassFramebuffer,
 			viewport,
 			scissor,
 			*mActiveCamera);
 		
-		commandBuffers[1] = mMeshRenderer->drawFrame(
+		mSecondaryCommandBuffers[1] = mMeshRenderer->drawFrame(
             inheritanceInfo,
-			//mColorPassFramebuffers[imageIndex],
 			mColorPassFramebuffer,
 			viewport,
 			scissor,
 			*mActiveCamera.get(),
 			*mAmbientLight);
 
-		commandBuffers[2] = mDebugRenderer->drawFrame(
+		mSecondaryCommandBuffers[2] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 
-			//mColorPassFramebuffers[imageIndex], 
 			mColorPassFramebuffer, 
 			viewport, 
 			scissor,
 			*mActiveCamera.get());
 
-		commandBuffers[3] = mUiRenderer->drawFrame(
+		mSecondaryCommandBuffers[3] = mUiRenderer->drawFrame(
             inheritanceInfo,
-			//mColorPassFramebuffers[imageIndex],
 			mColorPassFramebuffer,
 			viewport,
 			scissor);
 
-		vkCmdExecuteCommands(mPrimaryCommandBuffer, static_cast<float>(commandBuffers.size()), commandBuffers.data());
+		vkCmdExecuteCommands(
+			mPrimaryCommandBuffer, 
+			static_cast<float>(mSecondaryCommandBuffers.size()), 
+			mSecondaryCommandBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
 
 		inheritanceInfo.renderPass = mFinalRenderPass;
 		inheritanceInfo.framebuffer = mFinalPassFramebuffers[imageIndex];
 
+		// Final pass -- renders previous color attachment to quad
 		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &finalRenderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
         auto finalCommandBuffer = mQuadRenderer->drawFrame(

@@ -103,6 +103,10 @@ namespace hvk {
 		COMP1_ALIGN(bool) bool sRGBTextures;
 	};
 
+	struct GammaSettings {
+		float gamma;
+	};
+
 	struct VertexInfo 
 	{
 		VkVertexInputBindingDescription bindingDescription;
