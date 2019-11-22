@@ -512,15 +512,7 @@ namespace hvk {
 		// Color pass
 		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-		mSecondaryCommandBuffers[0] = mSkyboxRenderer->drawFrame(
-			inheritanceInfo,
-			mColorPassFramebuffer,
-			viewport,
-			scissor,
-			*mActiveCamera,
-			*mGammaSettings);
-		
-		mSecondaryCommandBuffers[1] = mMeshRenderer->drawFrame(
+		mSecondaryCommandBuffers[0] = mMeshRenderer->drawFrame(
             inheritanceInfo,
 			mColorPassFramebuffer,
 			viewport,
@@ -529,12 +521,21 @@ namespace hvk {
 			*mAmbientLight,
 			*mGammaSettings);
 
-		mSecondaryCommandBuffers[2] = mDebugRenderer->drawFrame(
+		mSecondaryCommandBuffers[1] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 
 			mColorPassFramebuffer, 
 			viewport, 
 			scissor,
 			*mActiveCamera.get());
+
+		mSecondaryCommandBuffers[2] = mSkyboxRenderer->drawFrame(
+			inheritanceInfo,
+			mColorPassFramebuffer,
+			viewport,
+			scissor,
+			*mActiveCamera,
+			*mGammaSettings);
+		
 
 		mSecondaryCommandBuffers[3] = mUiRenderer->drawFrame(
             inheritanceInfo,

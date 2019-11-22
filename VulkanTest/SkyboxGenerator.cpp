@@ -236,7 +236,7 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
+		mPipelineInfo.depthStencilState = createDepthStencilState(true, true);
 
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		
