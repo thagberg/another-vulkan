@@ -67,6 +67,8 @@ void main() {
 	vec3 diffuseLight = vec3(0.f, 0.f, 0.f);
 	vec3 specularLight = vec3(0.f, 0.f, 0.f);
 
+    vec3 testColor = vec3(0.f, 0.f, 0.f);
+
 	vec4 dynamicColor = vec4(0.f, 0.f, 0.f, 0.f);
 	for (int i = 0; i < lbo.numLights; i++) {
 		Light thisLight = lbo.lights[i];
@@ -76,15 +78,20 @@ void main() {
 		float d = thisLight.intensity * max(dot(surfaceNormal, lightDir), 0);
 		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
 
-        vec3 reflectColor = environmentColor * metallicRoughness.b;
+        float reflectance = (1.0 - metallicRoughness.g);
+        vec3 reflectColor = thisLight.color * environmentColor * metallicRoughness.b;
         vec3 F0 = vec3(0.04);
         F0 = mix(F0, correctedColor.rgb, metallicRoughness.b);
 		//specularLight += reflectColor * (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), F0) * s;
 		specularLight += (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), F0) * s;
-        specularLight = mix(specularLight, reflectColor, metallicRoughness.b);
+        testColor += getSchlickFresnel(max(dot(halfVec, viewDir), 0), F0);
+        //specularLight = mix(specularLight, reflectColor, metallicRoughness.b);
+        vec3 specularColor = thisLight.color;
+        specularColor = specularLight * mix(specularColor, reflectColor, metallicRoughness.b);
 		diffuseLight = (1.0 - specularLight) * thisLight.color * d;
-		dynamicColor += vec4(diffuseLight, 1.f) * correctedColor;
+		dynamicColor += vec4(diffuseLight, 1.f) * vec4(mix(reflectColor, correctedColor.rgb, reflectance), correctedColor.a);
 		dynamicColor += vec4(specularLight, 1.f);
+		//dynamicColor += vec4(specularColor, 1.f);
 
         //dynamicColor = vec4(reflectColor, 1.f);
 	}
@@ -97,4 +104,6 @@ void main() {
 	outColor = fragColor;
     //outColor = vec4(environmentColor, 1.0);
     //outColor = dynamicColor;
+    //outColor = vec4(testColor, 1.0);
+    //outColor = vec4(specularLight, 1.0);
 }
