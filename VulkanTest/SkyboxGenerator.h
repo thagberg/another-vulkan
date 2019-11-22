@@ -30,7 +30,7 @@ namespace hvk
 		VkPipeline mPipeline;
 		RenderPipelineInfo mPipelineInfo;
 
-		TextureMap mSkyboxMap;
+		HVK_shared<TextureMap> mSkyboxMap;
 		SkyboxRenderable mSkyboxRenderable;
 		
 	public:
@@ -39,7 +39,8 @@ namespace hvk
 			VmaAllocator allocator,
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
-			VkCommandPool commandPool);
+			VkCommandPool commandPool,
+            HVK_shared<TextureMap> skyboxMap);
 		virtual ~SkyboxGenerator();
 		virtual void invalidate() override;
 		VkCommandBuffer& drawFrame(

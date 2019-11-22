@@ -33,6 +33,7 @@ layout(set = 1, binding = 0) uniform UniformBufferObject {
 layout(set = 1, binding = 1) uniform sampler2D diffuseSampler;
 layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessSampler;
 layout(set = 1, binding = 3) uniform sampler2D normalSampler;
+layout(set = 1, binding = 4) uniform samplerCube environmentSampler;
 
 layout (push_constant) uniform PushConstant {
 	float gamma;
@@ -50,12 +51,18 @@ void main() {
 	vec4 baseColor = texture(diffuseSampler, fragTexCoord);
     vec4 correctedColor = baseColor;
     if (push.sRGBTextures) {
-        correctedColor = vec4(pow(baseColor.rgb, vec3(push.gamma)), baseColor.a);
+        //correctedColor = vec4(pow(baseColor.rgb, vec3(push.gamma)), baseColor.a);
+        correctedColor = vec4(pow(baseColor.rgb, vec3(2.2)), baseColor.a);
     }
+
 	vec3 metallicRoughness = texture(metallicRoughnessSampler, fragTexCoord).rgb;
 	vec3 surfaceNormal = texture(normalSampler, fragTexCoord).rgb;
     surfaceNormal = normalize(surfaceNormal * 2.0 - 1.0);
     surfaceNormal = normalize(inTBN * surfaceNormal);
+
+    vec3 environmentReflect = reflect(viewDir, surfaceNormal);
+    vec3 environmentColor = texture(environmentSampler, environmentReflect).rgb;
+
 	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
 	vec3 diffuseLight = vec3(0.f, 0.f, 0.f);
 	vec3 specularLight = vec3(0.f, 0.f, 0.f);
@@ -69,11 +76,17 @@ void main() {
 		float d = thisLight.intensity * max(dot(surfaceNormal, lightDir), 0);
 		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
 
-
-		specularLight += (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
+        vec3 reflectColor = environmentColor * metallicRoughness.b;
+        vec3 F0 = vec3(0.04);
+        F0 = mix(F0, correctedColor.rgb, metallicRoughness.b);
+		//specularLight += reflectColor * (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), F0) * s;
+		specularLight += (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), F0) * s;
+        specularLight = mix(specularLight, reflectColor, metallicRoughness.b);
 		diffuseLight = (1.0 - specularLight) * thisLight.color * d;
 		dynamicColor += vec4(diffuseLight, 1.f) * correctedColor;
 		dynamicColor += vec4(specularLight, 1.f);
+
+        //dynamicColor = vec4(reflectColor, 1.f);
 	}
 	vec4 ambientColor = vec4(ambientLight, 1.f) * correctedColor;
 
@@ -82,4 +95,6 @@ void main() {
     fragColor.rgb = pow(fragColor.rgb, vec3(1.0/push.gamma));
 
 	outColor = fragColor;
+    //outColor = vec4(environmentColor, 1.0);
+    //outColor = dynamicColor;
 }

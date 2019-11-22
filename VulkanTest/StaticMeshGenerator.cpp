@@ -9,7 +9,8 @@ namespace hvk
 		VmaAllocator allocator, 
 		VkQueue graphicsQueue, 
 		VkRenderPass renderPass,
-		VkCommandPool commandPool) :
+		VkCommandPool commandPool,
+        HVK_shared<TextureMap> environmentMap) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -21,6 +22,7 @@ namespace hvk
 		mLightsUbo(),
 		mRenderables(),
 		mLights(),
+        mEnvironmentMap(environmentMap),
         mGammaCorrection(2.2f),
         mUseSRGBTex(false)
 	{
@@ -34,12 +36,14 @@ namespace hvk
 		VkDescriptorSetLayoutBinding diffuseSamplerBinding = generateSamplerLayoutBinding(1, 1);
 		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = generateSamplerLayoutBinding(2, 1);
 		VkDescriptorSetLayoutBinding normalSamplerBinding = generateSamplerLayoutBinding(3, 1);
+        VkDescriptorSetLayoutBinding environmentSamplerBinding = generateSamplerLayoutBinding(4, 1);
 
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {
             uboLayoutBinding, 
             diffuseSamplerBinding,
             metalRoughSamplerBinding,
-            normalSamplerBinding
+            normalSamplerBinding,
+            environmentSamplerBinding
         };
 		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
@@ -329,6 +333,7 @@ namespace hvk
 			normalInfo.imageView = newRenderable.normalMap.view;
 			normalInfo.sampler = newRenderable.normalMap.sampler;
 
+
 			VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 			descriptorWrite.dstSet = newRenderable.descriptorSet;
 			descriptorWrite.dstBinding = 0;
@@ -361,11 +366,22 @@ namespace hvk
 			normalDescriptorWrite.descriptorCount = 1;
 			normalDescriptorWrite.pImageInfo = &normalInfo;
 
-			std::array<VkWriteDescriptorSet, 4> descriptorWrites = {
+            std::vector<VkDescriptorImageInfo> environmentImageInfos = {
+                VkDescriptorImageInfo{
+                    mEnvironmentMap->sampler,
+                    mEnvironmentMap->view,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL} };
+            auto environmentDescriptorWrite = createDescriptorImageWrite(
+                environmentImageInfos, 
+                newRenderable.descriptorSet, 
+                4);
+
+			std::array<VkWriteDescriptorSet, 5> descriptorWrites = {
 				descriptorWrite,
 				imageDescriptorWrite,
 				mtlRoughDescriptorWrite,
-				normalDescriptorWrite
+				normalDescriptorWrite,
+                environmentDescriptorWrite
 			};
 
 			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);

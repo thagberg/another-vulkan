@@ -15,7 +15,7 @@ layout (push_constant) uniform GammaSettings {
 void main() {
 	vec4 sampledColor = texture(samplerCubeMap, inUVW);
 	if (gammaSettings.sRGB) {
-		sampledColor.rgb = pow(sampledColor.rgb, vec3(gammaSettings.gamma));
+		sampledColor.rgb = pow(sampledColor.rgb, vec3(2.2));
 	}
 	outColor = vec4(pow(sampledColor.rgb, vec3(1.0/gammaSettings.gamma)), sampledColor.a);
 }

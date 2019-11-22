@@ -14,7 +14,8 @@ namespace hvk
 		VmaAllocator allocator, 
 		VkQueue graphicsQueue, 
 		VkRenderPass renderPass, 
-		VkCommandPool commandPool) :
+		VkCommandPool commandPool,
+        HVK_shared<TextureMap> skyboxMap) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -22,7 +23,7 @@ namespace hvk
 		mDescriptorSet(VK_NULL_HANDLE),
 		mPipeline(VK_NULL_HANDLE),
 		mPipelineInfo(),
-		mSkyboxMap(),
+		mSkyboxMap(skyboxMap),
 		mSkyboxRenderable()
 	{
 		//auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
@@ -33,25 +34,7 @@ namespace hvk
 			glm::mat4(1.f),
 			cube);
 
-        // load skybox textures
-        /*
-        
-                T
-            |L |F |R |BA
-                BO
-        
-        */
-        std::array<std::string, 6> skyboxFiles = {
-            "resources/sky/desertsky_rt.png",
-            "resources/sky/desertsky_lf.png",
-            "resources/sky/desertsky_up_fixed.png",
-            "resources/sky/desertsky_dn_fixed.png",
-            "resources/sky/desertsky_bk.png",
-            "resources/sky/desertsky_ft.png"
-        };
-
 		mSkyboxRenderable.sRGB = true;
-		mSkyboxMap = createCubeMap(mDevice.device, mAllocator, mCommandPool, mGraphicsQueue, skyboxFiles);
 
 		auto skyboxMesh = createColoredCube(glm::vec3(0.1f, 4.f, 1.f));
 		auto vertices = skyboxMesh->getVertices();
@@ -140,8 +123,8 @@ namespace hvk
 		};
 
 		VkDescriptorImageInfo imageInfo = {
-			mSkyboxMap.sampler,
-			mSkyboxMap.view,
+			mSkyboxMap->sampler,
+			mSkyboxMap->view,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
@@ -200,7 +183,7 @@ namespace hvk
 
 	SkyboxGenerator::~SkyboxGenerator()
 	{
-		destroyMap(mDevice.device, mAllocator, mSkyboxMap);
+		//destroyMap(mDevice.device, mAllocator, mSkyboxMap);
 	}
 
 	void SkyboxGenerator::invalidate()

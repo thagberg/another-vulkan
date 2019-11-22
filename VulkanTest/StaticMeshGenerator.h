@@ -38,10 +38,12 @@ namespace hvk
 		VkDescriptorSet mLightsDescriptorSet;
 		VkPipeline mPipeline;
 		RenderPipelineInfo mPipelineInfo;
-		Resource<VkBuffer> mLightsUbo;						// should this be a ptr?
+		Resource<VkBuffer> mLightsUbo;
 
 		HVK_vector<StaticMeshRenderable> mRenderables;
 		HVK_vector<HVK_shared<Light>> mLights;
+
+        HVK_shared<TextureMap> mEnvironmentMap;
 
         float mGammaCorrection;
         bool mUseSRGBTex;
@@ -54,7 +56,8 @@ namespace hvk
 			VmaAllocator allocator, 
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
-			VkCommandPool commandPool);
+			VkCommandPool commandPool,
+            HVK_shared<TextureMap> environmentMap);
 		virtual ~StaticMeshGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);

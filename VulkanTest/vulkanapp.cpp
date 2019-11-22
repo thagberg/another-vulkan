@@ -200,6 +200,23 @@ namespace hvk {
 		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		assert(vkAllocateCommandBuffers(mDevice, &bufferAlloc, &mPrimaryCommandBuffer) == VK_SUCCESS);
 
+        // Create cubemap for skybox and environmental mapping
+        std::array<std::string, 6> skyboxFiles = {
+            "resources/sky/desertsky_rt.png",
+            "resources/sky/desertsky_lf.png",
+            "resources/sky/desertsky_up_fixed.png",
+            "resources/sky/desertsky_dn_fixed.png",
+            "resources/sky/desertsky_bk.png",
+            "resources/sky/desertsky_ft.png"
+        };
+        auto skyboxMap = HVK_make_shared<TextureMap>(createCubeMap(
+            mDevice,
+            mAllocator,
+            mCommandPool,
+            mGraphicsQueue,
+            skyboxFiles));
+
+
 		// Initialize gamma settings
 		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
 
@@ -217,7 +234,8 @@ namespace hvk {
             mAllocator, 
             mGraphicsQueue, 
             mColorRenderPass, 
-            mCommandPool);
+            mCommandPool,
+            skyboxMap);
 
 		mUiRenderer = std::make_shared<UiDrawGenerator>(
             device, 
@@ -239,7 +257,8 @@ namespace hvk {
 			mAllocator,
 			mGraphicsQueue,
 			mColorRenderPass,
-			mCommandPool);
+			mCommandPool,
+            skyboxMap);
 
 		mSecondaryCommandBuffers.resize(4);
 
