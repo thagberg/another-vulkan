@@ -169,3 +169,8 @@ hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
 {
 	return mApp->getAmbientLight();
 }
+
+hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
+{
+	return mApp->getGammaSettings();
+}

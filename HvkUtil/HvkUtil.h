@@ -52,6 +52,7 @@ namespace hvk
 		MaterialProperty diffuseProp;
 		MaterialProperty metallicRoughnessProp;
         MaterialProperty normalProp;
+		bool sRGB;
 	};
 
 	struct Vertex {

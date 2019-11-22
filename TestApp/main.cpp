@@ -46,6 +46,7 @@ public:
 	{
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
+		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
         //duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
         mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
@@ -185,10 +186,12 @@ protected:
 
         ImGui::Begin("Rendering");
         float gamma = getGammaCorrection();
+		auto gammaSettings = getGammaSettings();
         bool useSRGBTex = isUseSRGBTex();
-        ImGui::SliderFloat("Gamma", &gamma, 0.f, 10.f);
+        //ImGui::SliderFloat("Gamma", &gamma, 0.f, 10.f);
+        ImGui::SliderFloat("Gamma", &gammaSettings->gamma, 0.f, 10.f);
         ImGui::Checkbox("Use sRGB Textures", &useSRGBTex);
-        setGammaCorrection(gamma);
+        //setGammaCorrection(gamma);
         setUseSRGBTex(useSRGBTex);
 		ImGui::Text("Ambient Light");
 		auto ambientLight = getAmbientLight();

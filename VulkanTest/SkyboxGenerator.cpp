@@ -50,6 +50,8 @@ namespace hvk
             "resources/sky/desertsky_ft.png"
         };
 
+		mSkyboxRenderable.sRGB = true;
+
         int width, height, numChannels;
 		int copyOffset = 0;
 		int copySize = 0;
@@ -210,11 +212,16 @@ namespace hvk
 
 
 		// Prepare pipeline
+		VkPushConstantRange push = {};
+		push.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		push.offset = 0;
+		push.size = sizeof(PushConstant);
+
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 		layoutCreate.setLayoutCount = static_cast<uint32_t>(layouts.size());
 		layoutCreate.pSetLayouts = layouts.data();
-		layoutCreate.pushConstantRangeCount = 0;
-		layoutCreate.pPushConstantRanges = nullptr;
+		layoutCreate.pushConstantRangeCount = 1;
+		layoutCreate.pPushConstantRanges = &push;
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		fillVertexInfo<hvk::CubeVertex>(mPipelineInfo.vertexInfo);
@@ -260,7 +267,8 @@ namespace hvk
 		const VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
-		const Camera& camera)
+		const Camera& camera,
+		const GammaSettings& gammaSettings)
 	{
 		// Update UBO
 		UniformBufferObject ubo = {};
@@ -297,6 +305,15 @@ namespace hvk
 			&mDescriptorSet,
 			0,
 			nullptr);
+
+		PushConstant push = { gammaSettings.gamma, mSkyboxRenderable.sRGB };
+		vkCmdPushConstants(
+			mCommandBuffer, 
+			mPipelineInfo.pipelineLayout, 
+			VK_SHADER_STAGE_FRAGMENT_BIT, 
+			0, 
+			sizeof(PushConstant), 
+			&push);
 
 		vkCmdDrawIndexed(mCommandBuffer, mSkyboxRenderable.numIndices, 1, 0, 0, 0);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);

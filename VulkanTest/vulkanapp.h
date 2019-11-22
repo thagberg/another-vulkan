@@ -96,6 +96,7 @@ namespace hvk {
 		void recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight);
 
         void setGammaCorrection(float gamma);
+		HVK_shared<GammaSettings> getGammaSettings() { return mGammaSettings; }
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }

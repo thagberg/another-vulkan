@@ -68,7 +68,6 @@ namespace hvk
 
 		QuadRenderable mRenderable;
 		HVK_shared<TextureMap> mOffscreenMap;
-		HVK_shared<GammaSettings> mGammaSettings;
 
 	public:
 		QuadGenerator(
@@ -77,8 +76,7 @@ namespace hvk
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
-			HVK_shared<TextureMap> offscreenMap,
-			HVK_shared<GammaSettings> gammaSettings);
+			HVK_shared<TextureMap> offscreenMap);
 		virtual ~QuadGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);

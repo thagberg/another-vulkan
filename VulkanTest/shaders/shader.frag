@@ -64,15 +64,12 @@ void main() {
 	for (int i = 0; i < lbo.numLights; i++) {
 		Light thisLight = lbo.lights[i];
 		vec3 lightDir = normalize(thisLight.pos - fragPos);
-		//vec3 reflectDir = reflect(-lightDir, inNormal);
 		vec3 reflectDir = reflect(-lightDir, surfaceNormal);
 		vec3 halfVec = normalize(lightDir + viewDir);
-		//float d = thisLight.intensity * max(dot(inNormal, lightDir), 0);
 		float d = thisLight.intensity * max(dot(surfaceNormal, lightDir), 0);
 		float s = thisLight.intensity * pow(max(dot(viewDir, reflectDir), 0.f), 32);
 
 
-		//specularLight += push.specularStrength * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
 		specularLight += (1.0 - metallicRoughness.g) * getSchlickFresnel(max(dot(halfVec, viewDir), 0), vec3(0.04)) * s;
 		diffuseLight = (1.0 - specularLight) * thisLight.color * d;
 		dynamicColor += vec4(diffuseLight, 1.f) * correctedColor;
@@ -81,7 +78,7 @@ void main() {
 	vec4 ambientColor = vec4(ambientLight, 1.f) * correctedColor;
 
     // gamma correction
-    vec4 fragColor = ambientColor + dynamicColor;
+	vec4 fragColor = ambientColor + dynamicColor;
     fragColor.rgb = pow(fragColor.rgb, vec3(1.0/push.gamma));
 
 	outColor = fragColor;

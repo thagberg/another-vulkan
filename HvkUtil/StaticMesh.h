@@ -9,10 +9,6 @@ namespace hvk {
 	class StaticMesh
 	{
 	public:
-		//using Vertices = std::shared_ptr<std::vector<Vertex>>;
-		//using Vertices = std::shared_ptr<std::vector<Vertex, Hallocator<Vertex>>>;
-		//using Indices = std::shared_ptr<std::vector<VertIndex>>;
-
 		using Vertices = HVK_shared<HVK_vector<Vertex>>;
 		using Indices = HVK_shared<HVK_vector<VertIndex>>;
 
@@ -33,5 +29,7 @@ namespace hvk {
 		const Vertices getVertices() const { return mVertices; }
 		const Indices getIndices() const { return mIndices; }
 		const HVK_shared<Material> getMaterial() const { return mMaterial; }
+		bool isUsingSRGBMat() { return mMaterial->sRGB; }
+		void setUsingSRGMat(bool usingSRGB) { mMaterial->sRGB = usingSRGB; }
 	};
 }

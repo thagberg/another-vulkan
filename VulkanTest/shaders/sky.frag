@@ -7,8 +7,15 @@ layout(location = 0) in vec3 inUVW;
 
 layout(location = 0) out vec4 outColor;
 
+layout (push_constant) uniform GammaSettings {
+	float gamma;
+	bool sRGB;
+} gammaSettings;
 
 void main() {
-	//outColor = vec4(inColor, 1.0f);
-    outColor = texture(samplerCubeMap, inUVW);
+	vec4 sampledColor = texture(samplerCubeMap, inUVW);
+	if (gammaSettings.sRGB) {
+		sampledColor.rgb = pow(sampledColor.rgb, vec3(gammaSettings.gamma));
+	}
+	outColor = vec4(pow(sampledColor.rgb, vec3(1.0/gammaSettings.gamma)), sampledColor.a);
 }

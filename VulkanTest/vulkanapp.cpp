@@ -210,8 +210,7 @@ namespace hvk {
             mGraphicsQueue,
             mFinalRenderPass,
             mCommandPool,
-            mColorPassMap,
-			mGammaSettings);
+            mColorPassMap);
 
 		mMeshRenderer = std::make_shared<StaticMeshGenerator>(
             device, 
@@ -518,7 +517,8 @@ namespace hvk {
 			mColorPassFramebuffer,
 			viewport,
 			scissor,
-			*mActiveCamera);
+			*mActiveCamera,
+			*mGammaSettings);
 		
 		mSecondaryCommandBuffers[1] = mMeshRenderer->drawFrame(
             inheritanceInfo,
@@ -526,7 +526,8 @@ namespace hvk {
 			viewport,
 			scissor,
 			*mActiveCamera.get(),
-			*mAmbientLight);
+			*mAmbientLight,
+			*mGammaSettings);
 
 		mSecondaryCommandBuffers[2] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 

@@ -21,6 +21,7 @@ namespace hvk
 			uint32_t numIndices;
 
 			Resource<VkBuffer> ubo;
+			bool sRGB;
 		};
 
 		VkDescriptorSetLayout mDescriptorSetLayout;
@@ -46,7 +47,8 @@ namespace hvk
 			const VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
 			const VkRect2D& scissor,
-			const Camera& camera);
+			const Camera& camera,
+			const GammaSettings& gammaSettings);
 		void updateRenderPass(VkRenderPass renderPass);
 	};
 }

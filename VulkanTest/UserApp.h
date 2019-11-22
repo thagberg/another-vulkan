@@ -23,6 +23,7 @@ namespace hvk
 	class DebugMeshRenderObject;
 	class Camera;
 	struct AmbientLight;
+	struct GammaSettings;
 }
 
 class UserApp
@@ -55,6 +56,7 @@ public:
     void addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node);
     void activateCamera(hvk::HVK_shared<hvk::Camera> camera);
     void setGammaCorrection(float gamma);
+	hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
     void setUseSRGBTex(bool useSRGBTex);
 	hvk::HVK_shared<hvk::AmbientLight> getAmbientLight();
     float getGammaCorrection();
