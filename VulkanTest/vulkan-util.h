@@ -7,6 +7,8 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#include "stb_image.h"
+
 #include "types.h"
 
 namespace hvk {
@@ -174,6 +176,13 @@ namespace hvk {
 	void writeDescriptorSets(
 		VkDevice device,
 		std::vector<VkWriteDescriptorSet>& descriptorWrites);
+
+	TextureMap createCubeMap(
+		VkDevice device,
+		VmaAllocator allocator,
+		VkCommandPool commandPool,
+		VkQueue graphicsQueue,
+		std::array<std::string, 6>& fileNames);
 
 	template <VkDescriptorType T>
 	void _buildPoolSizes(std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t count)
@@ -1500,6 +1509,80 @@ namespace hvk {
 			0,
 			nullptr
 		);
+	}
+
+	TextureMap createCubeMap(
+		VkDevice device, 
+		VmaAllocator allocator, 
+		VkCommandPool commandPool, 
+		VkQueue graphicsQueue, 
+		std::array<std::string, 6>& fileNames)
+	{
+		TextureMap cubeMap;
+
+        // load cubemap textures
+        /*
+        
+                T
+            |L |F |R |BA
+                BO
+        
+        */
+        int width, height, numChannels;
+		int copyOffset = 0;
+		int copySize = 0;
+		int layerSize = 0;
+		unsigned char* copyTo = nullptr;
+		unsigned char* layers[6];
+        for (size_t i = 0; i < fileNames.size(); ++i)
+        {
+            unsigned char* data = stbi_load(
+                fileNames[i].c_str(), 
+                &width, 
+                &height, 
+                &numChannels, 
+                0);
+
+			assert(data != nullptr);
+
+			layers[i] = data;
+			copySize += width * height * numChannels;
+        }
+		layerSize = copySize / fileNames.size();
+
+		copyTo = static_cast<unsigned char*>(ResourceManager::alloc(copySize, alignof(unsigned char)));
+		for (size_t i = 0; i < 6; ++i)
+		{
+			void* dst = copyTo + copyOffset;
+			copyOffset += layerSize;
+			memcpy(dst, layers[i], layerSize);
+			stbi_image_free(layers[i]);
+		}
+
+		cubeMap.texture = createTextureImage(
+			device,
+			allocator,
+			commandPool,
+			graphicsQueue,
+			copyTo,
+			6,
+			width,
+			height,
+			numChannels,
+			VK_IMAGE_TYPE_2D,
+			VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
+		cubeMap.view = createImageView(
+			device,
+			cubeMap.texture.memoryResource,
+			VK_FORMAT_R8G8B8A8_UNORM,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            1,
+            VK_IMAGE_VIEW_TYPE_CUBE);
+		cubeMap.sampler = createTextureSampler(device);
+
+		ResourceManager::free(copyTo, copySize);
+
+		return cubeMap;
 	}
 }
 
