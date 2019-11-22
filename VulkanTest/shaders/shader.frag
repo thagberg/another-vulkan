@@ -92,6 +92,9 @@ void main() {
     surfaceNormal = normalize(inTBN * surfaceNormal);
 
 	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
+
+    vec3 environmentReflect = reflect(viewDir, surfaceNormal);
+    vec3 environmentColor = texture(environmentSampler, environmentReflect).rgb;
     
     vec3 Lo = vec3(0.0);
     for (int i = 0; i < lbo.numLights; i++)
@@ -120,7 +123,9 @@ void main() {
         kD *= 1.0 - metallicRoughness.b;
 
         float NdotL = max(dot(surfaceNormal, lightDir), 0.0);
-        Lo += (kD * albedo.rgb / PI + specular) * lightRadiance * NdotL;
+        //Lo += (kD * albedo.rgb / PI + specular) * lightRadiance * NdotL;
+        Lo += (kD * albedo.rgb / PI + specular) * mix(environmentColor, thisLight.color, metallicRoughness.g) * NdotL * thisLight.intensity;
+        //vec3 dynamicColor = (kD * albedo.rgb / PI + specular) * lightRadiance * NdotL;
     }
 
     vec4 ambientColor = albedo * vec4(ambientLight, 1.0);
