@@ -42,11 +42,92 @@ layout (push_constant) uniform PushConstant {
 
 layout(location = 0) out vec4 outColor;
 
+const float PI = 3.14159265359;
+
 vec3 getSchlickFresnel(float dotP, vec3 F0) {
 	return F0 + (1.0f - F0) * pow(1.0 - dotP, 5);
 }
 
+float getDistributionGGX(vec3 surfaceNormal, vec3 halfVec, float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(surfaceNormal, halfVec), 0.0);
+    float NdotH2 = NdotH * NdotH;
+
+    float denom = (NdotH2 * (a2 - 1.0) + 1.0);
+    denom = PI * denom * denom;
+
+    return a2 / denom;
+}
+
+float getSchlickGeometryGGX(float NdotV, float roughness)
+{
+    float r = (roughness + 1.0);
+    float k = (r*r) / 8.0;
+
+    float num = NdotV;
+    float denom = NdotV * (1.0 - k) + k;
+
+    return num / denom;
+}
+
+float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2  = getSchlickGeometryGGX(NdotV, roughness);
+    float ggx1  = getSchlickGeometryGGX(NdotL, roughness);
+	
+    return ggx1 * ggx2;
+}
+
 void main() {
+    vec3 viewDir = normalize(ubo.cameraPos - fragPos);
+
+    vec4 albedo = texture(diffuseSampler, fragTexCoord);
+	vec3 metallicRoughness = texture(metallicRoughnessSampler, fragTexCoord).rgb;
+	vec3 surfaceNormal = texture(normalSampler, fragTexCoord).rgb;
+    surfaceNormal = normalize(surfaceNormal * 2.0 - 1.0);
+    surfaceNormal = normalize(inTBN * surfaceNormal);
+
+	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
+    
+    vec3 Lo = vec3(0.0);
+    for (int i = 0; i < lbo.numLights; i++)
+    {
+        Light thisLight = lbo.lights[i];
+        
+        vec3 lightDir = normalize(thisLight.pos - fragPos);
+        vec3 lightReflect = reflect(-lightDir, surfaceNormal);
+        vec3 lightRadiance = thisLight.color * thisLight.intensity;
+		vec3 halfVec = normalize(lightDir + viewDir);
+
+        // surface reflection at zero incidence
+        vec3 F0 = vec3(0.04);
+        F0 = mix(F0, albedo.rgb, metallicRoughness.b);
+        vec3 F = getSchlickFresnel(max(dot(halfVec, viewDir), 0.0), F0);
+
+        float NDF = getDistributionGGX(surfaceNormal, halfVec, metallicRoughness.g);
+        float G = GeometrySmith(surfaceNormal, viewDir, lightDir, metallicRoughness.g);
+
+        vec3 numerator = NDF * G * F;
+        float denominator = 4.0 * max(dot(surfaceNormal, viewDir), 0.0) * max(dot(surfaceNormal, lightDir), 0.0);
+        vec3 specular = numerator / max(denominator, 0.001);
+
+        vec3 kS = F;
+        vec3 kD = vec3(1.0) - kS;
+        kD *= 1.0 - metallicRoughness.b;
+
+        float NdotL = max(dot(surfaceNormal, lightDir), 0.0);
+        Lo += (kD * albedo.rgb / PI + specular) * lightRadiance * NdotL;
+    }
+
+    vec4 ambientColor = albedo * vec4(ambientLight, 1.0);
+    outColor = ambientColor + vec4(Lo, 1.0);
+
+
+    /*
 	vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 	vec4 baseColor = texture(diffuseSampler, fragTexCoord);
     vec4 correctedColor = baseColor;
@@ -106,4 +187,5 @@ void main() {
     //outColor = dynamicColor;
     //outColor = vec4(testColor, 1.0);
     //outColor = vec4(specularLight, 1.0);
+    */
 }
