@@ -24,6 +24,7 @@ namespace hvk
 	class Camera;
 	struct AmbientLight;
 	struct GammaSettings;
+	struct PBRWeight;
 }
 
 class UserApp
@@ -57,6 +58,7 @@ public:
     void activateCamera(hvk::HVK_shared<hvk::Camera> camera);
     void setGammaCorrection(float gamma);
 	hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
+	hvk::HVK_shared<hvk::PBRWeight> getPBRWeight();
     void setUseSRGBTex(bool useSRGBTex);
 	hvk::HVK_shared<hvk::AmbientLight> getAmbientLight();
     float getGammaCorrection();

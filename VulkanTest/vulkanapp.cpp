@@ -220,6 +220,9 @@ namespace hvk {
 		// Initialize gamma settings
 		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
 
+		// Initialize PBR weight values
+		mPBRWeight = HVK_make_shared<PBRWeight>(PBRWeight{ 1.f, 1.f });
+
 		// Initialize drawlist generators
         mQuadRenderer = HVK_make_shared<QuadGenerator>(
             device,
@@ -538,7 +541,8 @@ namespace hvk {
 			scissor,
 			*mActiveCamera.get(),
 			*mAmbientLight,
-			*mGammaSettings);
+			*mGammaSettings,
+			*mPBRWeight);
 
 		mSecondaryCommandBuffers[1] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 

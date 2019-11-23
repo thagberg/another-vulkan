@@ -402,7 +402,8 @@ namespace hvk
 		const VkRect2D& scissor,
 		const Camera& camera,
 		const AmbientLight& ambientLight,
-		const GammaSettings& gammaSettings)
+		const GammaSettings& gammaSettings,
+		const PBRWeight& pbrWeight)
 	{
 		/****************
 		 update MVP uniform for renderables
@@ -481,6 +482,7 @@ namespace hvk
 			const Material& mat = *renderable.renderObject->getMaterial();
             push.gamma = gammaSettings.gamma;
             push.sRGBTextures = mat.sRGB;
+			push.pbrWeight = pbrWeight;
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
 			vkCmdDrawIndexed(mCommandBuffer, renderable.numIndices, 1, 0, 0, 0);
 		}

@@ -198,6 +198,9 @@ protected:
 		//ambientLight->lightColor.r
 		ImGui::ColorEdit3("Color##Ambient", &(ambientLight->lightColor.r));
 		ImGui::SliderFloat("IntensityF##Ambient", &(ambientLight->lightIntensity), 0.f, 1.f);
+		auto pbrWeight = getPBRWeight();
+		ImGui::SliderFloat("Metallic", &pbrWeight->metallic, 0.f, 1.f);
+		ImGui::SliderFloat("Roughness", &pbrWeight->roughness, 0.f, 1.f);
         ImGui::End();
 		
 		ImGui::Begin("Status");

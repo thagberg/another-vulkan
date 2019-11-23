@@ -70,7 +70,8 @@ namespace hvk
 			const VkRect2D& scissor,
 			const Camera& camera,
 			const AmbientLight& ambientLight,
-			const GammaSettings& gammaSettings);
+			const GammaSettings& gammaSettings,
+			const PBRWeight& pbrWeight);
         void setGammaCorrection(float gamma);
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mGammaCorrection; }

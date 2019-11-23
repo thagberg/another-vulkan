@@ -174,3 +174,8 @@ hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
 {
 	return mApp->getGammaSettings();
 }
+
+hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
+{
+	return mApp->getPBRWeight();
+}

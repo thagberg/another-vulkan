@@ -68,6 +68,7 @@ namespace hvk {
 		std::vector<VkCommandBuffer> mSecondaryCommandBuffers;
 
 		HVK_shared<GammaSettings> mGammaSettings;
+		HVK_shared<PBRWeight> mPBRWeight;
 
 		void enableVulkanValidationLayers();
 		void initializeDevice();
@@ -97,6 +98,7 @@ namespace hvk {
 
         void setGammaCorrection(float gamma);
 		HVK_shared<GammaSettings> getGammaSettings() { return mGammaSettings; }
+		HVK_shared<PBRWeight> getPBRWeight() { return mPBRWeight; }
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }

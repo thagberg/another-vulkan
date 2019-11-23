@@ -98,9 +98,15 @@ namespace hvk {
 		COMP2_ALIGN(float) glm::vec2 pos;
 	};
 
+	struct PBRWeight {
+		COMP1_ALIGN(float) float roughness;
+		COMP1_ALIGN(float) float metallic;
+	};
+
 	struct PushConstant {
 		COMP1_ALIGN(float) float gamma;
 		COMP1_ALIGN(bool) bool sRGBTextures;
+		COMP1_ALIGN(float) PBRWeight pbrWeight;
 	};
 
 	struct GammaSettings {
