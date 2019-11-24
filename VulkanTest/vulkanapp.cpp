@@ -54,7 +54,9 @@ namespace hvk {
 		mAmbientLight(nullptr),
         mRenderFence(VK_NULL_HANDLE),
 		mSecondaryCommandBuffers(),
-		mGammaSettings(nullptr)
+		mGammaSettings(nullptr),
+		mPBRWeight(nullptr),
+		mExposureSettings(nullptr)
     {
 
     }
@@ -223,6 +225,9 @@ namespace hvk {
 		// Initialize PBR weight values
 		mPBRWeight = HVK_make_shared<PBRWeight>(PBRWeight{ 1.f, 1.f });
 
+		// Initialize Exposure settings
+		mExposureSettings = HVK_make_shared<ExposureSettings>(ExposureSettings{ 1.0 });
+
 		// Initialize drawlist generators
         mQuadRenderer = HVK_make_shared<QuadGenerator>(
             device,
@@ -368,7 +373,8 @@ namespace hvk {
 				mAllocator,
 				mCommandPool,
 				mGraphicsQueue,
-				mSwapchain.swapchainImageFormat,
+				//mSwapchain.swapchainImageFormat,
+				VK_FORMAT_R16G16B16A16_SFLOAT,
 				mSwapchain.swapchainExtent.width,
 				mSwapchain.swapchainExtent.height,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
@@ -379,7 +385,8 @@ namespace hvk {
 				mAllocator,
 				mCommandPool,
 				mGraphicsQueue,
-				mSwapchain.swapchainImageFormat,
+				//mSwapchain.swapchainImageFormat,
+				VK_FORMAT_R16G16B16A16_SFLOAT,
 				mSwapchain.swapchainExtent.width,
 				mSwapchain.swapchainExtent.height,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
@@ -423,7 +430,8 @@ namespace hvk {
 
 
 		//auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		//auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		auto colorAttachment = createColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		auto depthAttachment = createDepthAttachment();
 		std::vector<VkSubpassDependency> colorPassDependencies = {
 			createSubpassDependency(
@@ -443,7 +451,8 @@ namespace hvk {
 				VK_ACCESS_SHADER_READ_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT)
 		};
-        mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorPassDependencies,&colorAttachment, &depthAttachment);
+        //mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorPassDependencies,&colorAttachment, &depthAttachment);
+        mColorRenderPass = createRenderPass(mDevice, VK_FORMAT_R16G16B16A16_SFLOAT, colorPassDependencies,&colorAttachment, &depthAttachment);
 
         auto finalColorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat);
 		std::vector<VkSubpassDependency> finalPassDependencies = { createSubpassDependency() };
@@ -582,7 +591,8 @@ namespace hvk {
             inheritanceInfo,
             mFinalPassFramebuffers[imageIndex],
             viewport,
-            scissor);
+            scissor,
+			*mExposureSettings);
 
         vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &finalCommandBuffer);
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);

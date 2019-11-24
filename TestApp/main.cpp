@@ -201,6 +201,8 @@ protected:
 		auto pbrWeight = getPBRWeight();
 		ImGui::SliderFloat("Metallic", &pbrWeight->metallic, 0.f, 1.f);
 		ImGui::SliderFloat("Roughness", &pbrWeight->roughness, 0.f, 1.f);
+		auto exposureSettings = getExposureSettings();
+		ImGui::SliderFloat("Exposure", &exposureSettings->exposure, 0.f, 10.f);
         ImGui::End();
 		
 		ImGui::Begin("Status");

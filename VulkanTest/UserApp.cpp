@@ -179,3 +179,8 @@ hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
 {
 	return mApp->getPBRWeight();
 }
+
+hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
+{
+	return mApp->getExposureSettings();
+}

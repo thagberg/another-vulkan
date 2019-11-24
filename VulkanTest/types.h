@@ -113,6 +113,10 @@ namespace hvk {
 		float gamma;
 	};
 
+	struct ExposureSettings {
+		float exposure;
+	};
+
 	struct VertexInfo 
 	{
 		VkVertexInputBindingDescription bindingDescription;

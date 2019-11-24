@@ -83,11 +83,16 @@ namespace hvk
 		writeDescriptorSets(mDevice.device, descriptorWrites);
 
 		// Prepare pipeline
+		VkPushConstantRange pushRange = {};
+		pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		pushRange.size = sizeof(ExposureSettings);
+		pushRange.offset = 0;
+
 		VkPipelineLayoutCreateInfo layoutCreate = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 		layoutCreate.setLayoutCount = static_cast<uint32_t>(layouts.size());
 		layoutCreate.pSetLayouts = layouts.data();
-		layoutCreate.pushConstantRangeCount = 0;
-		layoutCreate.pPushConstantRanges = nullptr;
+		layoutCreate.pushConstantRangeCount = 1;
+		layoutCreate.pPushConstantRanges = &pushRange;
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		fillVertexInfo<QuadVertex>(mPipelineInfo.vertexInfo);
@@ -145,7 +150,8 @@ namespace hvk
         const VkCommandBufferInheritanceInfo& inheritance,
         const VkFramebuffer& framebuffer,
         const VkViewport& viewport,
-        const VkRect2D& scissor)
+        const VkRect2D& scissor,
+		const ExposureSettings& exposure)
     {
         // record commands
         VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -172,6 +178,14 @@ namespace hvk
             &mDescriptorSet,
             0,
             nullptr);
+
+		vkCmdPushConstants(
+			mCommandBuffer, 
+			mPipelineInfo.pipelineLayout, 
+			VK_SHADER_STAGE_FRAGMENT_BIT, 
+			0, 
+			sizeof(ExposureSettings), 
+			&exposure);
 
         vkCmdDrawIndexed(mCommandBuffer, numIndices, 1, 0, 0, 0);
         assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);

@@ -69,6 +69,7 @@ namespace hvk {
 
 		HVK_shared<GammaSettings> mGammaSettings;
 		HVK_shared<PBRWeight> mPBRWeight;
+		HVK_shared<ExposureSettings> mExposureSettings;
 
 		void enableVulkanValidationLayers();
 		void initializeDevice();
@@ -99,6 +100,7 @@ namespace hvk {
         void setGammaCorrection(float gamma);
 		HVK_shared<GammaSettings> getGammaSettings() { return mGammaSettings; }
 		HVK_shared<PBRWeight> getPBRWeight() { return mPBRWeight; }
+		HVK_shared<ExposureSettings> getExposureSettings() { return mExposureSettings; }
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }

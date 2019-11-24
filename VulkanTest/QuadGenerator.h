@@ -84,6 +84,7 @@ namespace hvk
             const VkCommandBufferInheritanceInfo& inheritance,
             const VkFramebuffer& framebuffer,
             const VkViewport& viewport,
-            const VkRect2D& scissor);
+            const VkRect2D& scissor,
+			const ExposureSettings& exposure);
 	};
 }
