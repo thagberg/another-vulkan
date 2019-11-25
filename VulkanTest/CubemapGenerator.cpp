@@ -2,9 +2,10 @@
 
 #include "stb_image.h"
 
-#include "vulkan-util.h"
 #include "ResourceManager.h"
 #include "shapes.h"
+#include "descriptor-util.h"
+#include "pipeline-util.h"
 
 
 namespace hvk
@@ -99,22 +100,22 @@ namespace hvk
 			&mCubeRenderable.ubo.allocationInfo);
 
 		// Create descriptor pool
-		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1, 1);
-		createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
+		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1, 1);
+		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
 
 		// Create descriptor set layout
-		auto uboLayoutBinding = generateUboLayoutBinding(0, 1);
-		auto skySamplerBinding = generateSamplerLayoutBinding(1, 1);
+		auto uboLayoutBinding = util::descriptor::generateUboLayoutBinding(0, 1);
+		auto skySamplerBinding = util::descriptor::generateSamplerLayoutBinding(1, 1);
 
 		std::vector<decltype(uboLayoutBinding)> bindings = {
 			uboLayoutBinding,
 			skySamplerBinding
 		};
-		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
 		// Create descriptor set
 		std::vector<VkDescriptorSetLayout> layouts = { mDescriptorSetLayout };
-		allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
+		util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
 
 		// Update descriptor set
 		VkDescriptorBufferInfo dsBufferInfo = {
@@ -130,16 +131,16 @@ namespace hvk
 		};
 
 		std::vector<VkDescriptorBufferInfo> bufferInfos = { dsBufferInfo };
-		auto bufferWrite = createDescriptorBufferWrite(bufferInfos, mDescriptorSet, 0);
+		auto bufferWrite = util::descriptor::createDescriptorBufferWrite(bufferInfos, mDescriptorSet, 0);
 
 		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
-		auto imageWrite = createDescriptorImageWrite(imageInfos, mDescriptorSet, 1);
+		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 1);
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites = {
 			bufferWrite,
             imageWrite
 		};
-		writeDescriptorSets(mDevice.device, descriptorWrites);
+		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
 
 
 		// Prepare pipeline
@@ -155,7 +156,7 @@ namespace hvk
 		layoutCreate.pPushConstantRanges = &push;
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		fillVertexInfo<hvk::CubeVertex>(mPipelineInfo.vertexInfo);
+		util::pipeline::fillVertexInfo<CubeVertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
@@ -167,7 +168,7 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = shaderFiles[1];
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-		mPipelineInfo.depthStencilState = createDepthStencilState(true, true);
+		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState(true, true);
 
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		

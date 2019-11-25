@@ -1,6 +1,8 @@
+#include "pch.h"
 #include "DebugDrawGenerator.h"
-#include "vulkan-util.h"
 
+#include "descriptor-util.h"
+#include "pipeline-util.h"
 
 namespace hvk
 {
@@ -36,8 +38,8 @@ namespace hvk
 
 		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
 
-		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(MAX_UBOS);
-		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(MAX_UBOS);
+		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/**************
 		Set up pipeline
@@ -50,7 +52,7 @@ namespace hvk
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		fillVertexInfo<ColorVertex>(mPipelineInfo.vertexInfo);
+		util::pipeline::fillVertexInfo<ColorVertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
@@ -62,7 +64,7 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = "shaders/compiled/normal_f.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-		mPipelineInfo.depthStencilState = createDepthStencilState();
+		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
 
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 

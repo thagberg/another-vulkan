@@ -5,6 +5,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include "stb_image.h"
 
 #include "vulkanapp.h"
 #include "vulkan-util.h"
@@ -14,6 +15,7 @@
 #include "renderpass-util.h"
 #include "framebuffer-util.h"
 #include "signal-util.h"
+#include "command-util.h"
 
 #include "HvkUtil.h"
 
@@ -167,7 +169,10 @@ namespace hvk {
 		vmaCreateAllocator(&allocatorCreate, &mAllocator);
 
         vkGetDeviceQueue(mDevice, mGraphicsIndex, 0, &mGraphicsQueue);
-        mCommandPool = createCommandPool(mDevice, mGraphicsIndex, VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
+        mCommandPool = util::command::createCommandPool(
+			mDevice, 
+			mGraphicsIndex, 
+			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
         VkBool32 surfaceSupported;
         vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, mSurface, &surfaceSupported);

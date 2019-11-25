@@ -107,6 +107,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\include;$(SolutionDir)HvkUtil</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,6 +149,7 @@
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\include;$(SolutionDir)HvkUtil</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -162,9 +164,13 @@
     </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="command-util.h" />
     <ClInclude Include="ContextManager.h" />
     <ClInclude Include="DebugDrawGenerator.h" />
+    <ClInclude Include="descriptor-util.h" />
     <ClInclude Include="DrawlistGenerator.h" />
+    <ClInclude Include="framebuffer-util.h" />
+    <ClInclude Include="image-util.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
     <ClInclude Include="include\imgui\imgui.h" />
     <ClInclude Include="include\imgui\imgui_internal.h" />
@@ -172,11 +178,14 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="Inputs.h" />
+    <ClInclude Include="pipeline-util.h" />
     <ClInclude Include="QuadGenerator.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="CubemapGenerator.h" />
+    <ClInclude Include="renderpass-util.h" />
+    <ClInclude Include="signal-util.h" />
     <ClInclude Include="StaticMeshGenerator.h" />
-    <ClInclude Include="stdafx.h" />
+    <ClInclude Include="pch.h" />
     <ClInclude Include="Subscription.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="types.h" />
@@ -187,18 +196,25 @@
     <ClInclude Include="vulkanapp.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="command-util.cpp" />
     <ClCompile Include="ContextManager.cpp" />
     <ClCompile Include="DebugDrawGenerator.cpp" />
+    <ClCompile Include="descriptor-util.cpp" />
     <ClCompile Include="DrawlistGenerator.cpp" />
+    <ClCompile Include="framebuffer-util.cpp" />
+    <ClCompile Include="image-util.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
     <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="pipeline-util.cpp" />
     <ClCompile Include="QuadGenerator.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="CubemapGenerator.cpp" />
+    <ClCompile Include="renderpass-util.cpp" />
+    <ClCompile Include="signal-util.cpp" />
     <ClCompile Include="StaticMeshGenerator.cpp" />
-    <ClCompile Include="stdafx.cpp">
+    <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
@@ -207,6 +223,7 @@
     <ClCompile Include="Subscription.cpp" />
     <ClCompile Include="UiDrawGenerator.cpp" />
     <ClCompile Include="UserApp.cpp" />
+    <ClCompile Include="vulkan-util.cpp" />
     <ClCompile Include="vulkanapp.cpp" />
   </ItemGroup>
   <ItemGroup>

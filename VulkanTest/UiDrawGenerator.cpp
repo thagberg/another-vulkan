@@ -1,8 +1,10 @@
 #include "UiDrawGenerator.h"
-//#define HVK_UTIL_IMPLEMENTATION
-#include "vulkan-util.h"
 
 #include "imgui/imgui.h"
+
+#include "descriptor-util.h"
+#include "pipeline-util.h"
+#include "image-util.h"
 
 namespace hvk
 {
@@ -47,7 +49,7 @@ namespace hvk
 		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight, &bytesPerPixel);
         setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));
 
-        Resource<VkImage> uiFont = createTextureImage(
+        Resource<VkImage> uiFont = util::image::createTextureImage(
 			mDevice.device, 
 			mAllocator, 
 			mCommandPool, 
@@ -61,12 +63,12 @@ namespace hvk
 		/***************
 		 Create descriptor set layout and descriptor pool
 		***************/
-		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_SAMPLERS);
-		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_SAMPLERS);
+		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		VkDescriptorSetLayout uiDescriptorSetLayout;
-		mFontView = createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-		mFontSampler = createImageSampler(mDevice.device);
+		mFontView = util::image::createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+		mFontSampler = util::image::createImageSampler(mDevice.device);
 
 		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
 		uiLayoutImageBinding.binding = 0;
@@ -170,7 +172,7 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = "shaders/compiled/ui_f.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 
-		mPipelineInfo.depthStencilState = createDepthStencilState();
+		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
 
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 

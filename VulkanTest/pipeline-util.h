@@ -5,6 +5,8 @@
 #include <GLFW/glfw3.h>
 #endif
 
+#include "types.h"
+
 namespace hvk
 {
 	namespace util

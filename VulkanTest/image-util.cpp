@@ -263,10 +263,10 @@ namespace hvk
 				VkImage image,
 				uint32_t width,
 				uint32_t height,
-				size_t numFaces=1,
-				size_t faceSize=0) {
+				size_t numFaces,
+				size_t faceSize) {
 
-				VkCommandBuffer commandBuffer = beginSingleTimeCommand(device, commandPool);
+				VkCommandBuffer commandBuffer = command::beginSingleTimeCommand(device, commandPool);
 
 
 				std::vector<VkBufferImageCopy> faceRegions;
@@ -298,7 +298,7 @@ namespace hvk
 					numFaces, 
 					faceRegions.data());
 
-				endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
+				command::endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
 			}
 
 

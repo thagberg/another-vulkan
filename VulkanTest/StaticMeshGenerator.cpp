@@ -1,6 +1,8 @@
 #include "StaticMeshGenerator.h"
-//#define HVK_UTIL_IMPLEMENTATION
-#include "vulkan-util.h"
+
+#include "descriptor-util.h"
+#include "pipeline-util.h"
+#include "image-util.h"
 
 namespace hvk
 {
@@ -32,11 +34,11 @@ namespace hvk
 		/***************
 		 Create descriptor set layout and descriptor pool
 		***************/
-		VkDescriptorSetLayoutBinding uboLayoutBinding = generateUboLayoutBinding(0, 1);
-		VkDescriptorSetLayoutBinding diffuseSamplerBinding = generateSamplerLayoutBinding(1, 1);
-		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = generateSamplerLayoutBinding(2, 1);
-		VkDescriptorSetLayoutBinding normalSamplerBinding = generateSamplerLayoutBinding(3, 1);
-        VkDescriptorSetLayoutBinding environmentSamplerBinding = generateSamplerLayoutBinding(4, 1);
+		VkDescriptorSetLayoutBinding uboLayoutBinding = util::descriptor::generateUboLayoutBinding(0, 1);
+		VkDescriptorSetLayoutBinding diffuseSamplerBinding = util::descriptor::generateSamplerLayoutBinding(1, 1);
+		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = util::descriptor::generateSamplerLayoutBinding(2, 1);
+		VkDescriptorSetLayoutBinding normalSamplerBinding = util::descriptor::generateSamplerLayoutBinding(3, 1);
+        VkDescriptorSetLayoutBinding environmentSamplerBinding = util::descriptor::generateSamplerLayoutBinding(4, 1);
 
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {
             uboLayoutBinding, 
@@ -45,10 +47,10 @@ namespace hvk
             normalSamplerBinding,
             environmentSamplerBinding
         };
-		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
-        auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_UBOS, MAX_SAMPLERS);
-		createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+        auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_UBOS, MAX_SAMPLERS);
+		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/*************
 		 Create Lights UBO
@@ -72,14 +74,14 @@ namespace hvk
 		/*****************
 		 Create Lights descriptor set
 		******************/
-		VkDescriptorSetLayoutBinding lightLayoutBinding = generateUboLayoutBinding(0, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+		VkDescriptorSetLayoutBinding lightLayoutBinding = util::descriptor::generateUboLayoutBinding(0, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
 		std::vector<decltype(lightLayoutBinding)> lightBindings = {
 			lightLayoutBinding
 		};
-		createDescriptorSetLayout(mDevice.device, lightBindings, mLightsDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(mDevice.device, lightBindings, mLightsDescriptorSetLayout);
 
 		std::vector<VkDescriptorSetLayout> lightLayouts = { mLightsDescriptorSetLayout };
-		allocateDescriptorSets(mDevice.device, mDescriptorPool, mLightsDescriptorSet, lightLayouts);
+		util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mLightsDescriptorSet, lightLayouts);
 
 		VkDescriptorBufferInfo lightsBufferInfo = {};
 		lightsBufferInfo.buffer = mLightsUbo.memoryResource;
@@ -115,9 +117,9 @@ namespace hvk
             vmaDestroyBuffer(mAllocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
 
             // destroy textures
-			destroyMap(mDevice.device, mAllocator, renderable.diffuseMap);
-			destroyMap(mDevice.device, mAllocator, renderable.metallicRoughnessMap);
-			destroyMap(mDevice.device, mAllocator, renderable.normalMap);
+			util::image::destroyMap(mDevice.device, mAllocator, renderable.diffuseMap);
+			util::image::destroyMap(mDevice.device, mAllocator, renderable.metallicRoughnessMap);
+			util::image::destroyMap(mDevice.device, mAllocator, renderable.normalMap);
         }
 
         vmaDestroyBuffer(mAllocator, mLightsUbo.memoryResource, mLightsUbo.allocation);
@@ -146,7 +148,7 @@ namespace hvk
 
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		fillVertexInfo<hvk::Vertex>(mPipelineInfo.vertexInfo);
+		util::pipeline::fillVertexInfo<Vertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
@@ -158,7 +160,7 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = "shaders/compiled/frag.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-		mPipelineInfo.depthStencilState = createDepthStencilState();
+		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
 
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 	}
@@ -245,7 +247,7 @@ namespace hvk
 		std::shared_ptr<Material> mat = object->getMaterial();
 		if (mat->diffuseProp.texture != nullptr) {
 			const tinygltf::Image& diffuseTex = *mat->diffuseProp.texture;
-			newRenderable.diffuseMap.texture = createTextureImage(
+			newRenderable.diffuseMap.texture = util::image::createTextureImage(
 				mDevice.device,
 				mAllocator,
 				mCommandPool,
@@ -255,17 +257,17 @@ namespace hvk
 				diffuseTex.width,
 				diffuseTex.height,
 				diffuseTex.component * (diffuseTex.bits / 8));
-			newRenderable.diffuseMap.view = createImageView(
+			newRenderable.diffuseMap.view = util::image::createImageView(
                 mDevice.device, 
                 newRenderable.diffuseMap.texture.memoryResource, 
                 VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.diffuseMap.sampler = createImageSampler(mDevice.device);
+			newRenderable.diffuseMap.sampler = util::image::createImageSampler(mDevice.device);
 		}
 
         if (mat->metallicRoughnessProp.texture != nullptr)
         {
 			const tinygltf::Image& metRoughTex = *mat->metallicRoughnessProp.texture;
-			newRenderable.metallicRoughnessMap.texture = createTextureImage(
+			newRenderable.metallicRoughnessMap.texture = util::image::createTextureImage(
 				mDevice.device,
 				mAllocator,
 				mCommandPool,
@@ -275,17 +277,17 @@ namespace hvk
 				metRoughTex.width,
 				metRoughTex.height,
 				metRoughTex.component * (metRoughTex.bits / 8));
-			newRenderable.metallicRoughnessMap.view = createImageView(
+			newRenderable.metallicRoughnessMap.view = util::image::createImageView(
                 mDevice.device, 
                 newRenderable.metallicRoughnessMap.texture.memoryResource, 
                 VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.metallicRoughnessMap.sampler = createImageSampler(mDevice.device);
+			newRenderable.metallicRoughnessMap.sampler = util::image::createImageSampler(mDevice.device);
         }
 
         if (mat->normalProp.texture != nullptr)
         {
 			const tinygltf::Image& normalTex = *mat->normalProp.texture;
-			newRenderable.normalMap.texture = createTextureImage(
+			newRenderable.normalMap.texture = util::image::createTextureImage(
 				mDevice.device,
 				mAllocator,
 				mCommandPool,
@@ -295,11 +297,11 @@ namespace hvk
 				normalTex.width,
 				normalTex.height,
 				normalTex.component * (normalTex.bits / 8));
-			newRenderable.normalMap.view = createImageView(
+			newRenderable.normalMap.view = util::image::createImageView(
                 mDevice.device, 
                 newRenderable.normalMap.texture.memoryResource, 
                 VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.normalMap.sampler = createImageSampler(mDevice.device);
+			newRenderable.normalMap.sampler = util::image::createImageSampler(mDevice.device);
         }
 
 		// TODO: pre-allocate a number of descriptor sets for renderables
@@ -371,7 +373,7 @@ namespace hvk
                     mEnvironmentMap->sampler,
                     mEnvironmentMap->view,
                     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL} };
-            auto environmentDescriptorWrite = createDescriptorImageWrite(
+            auto environmentDescriptorWrite = util::descriptor::createDescriptorImageWrite(
                 environmentImageInfos, 
                 newRenderable.descriptorSet, 
                 4);

@@ -3,7 +3,8 @@
 #include "imgui/imgui.h"
 
 #include "DrawlistGenerator.h"
-#define HVK_UTIL_IMPLEMENTATION
+#include "pipeline-util.h"
+#include "signal-util.h"
 #include "vulkan-util.h"
 
 
@@ -37,7 +38,7 @@ namespace hvk
 		modelInputAssembly.primitiveRestartEnable = VK_FALSE;
 
 
-		pipeline = createCustomizedGraphicsPipeline(
+		pipeline = util::pipeline::createGraphicsPipeline(
 			device.device,
 			renderPass,
 			pipelineInfo.pipelineLayout,
@@ -78,7 +79,7 @@ namespace hvk
 		assert(vkCreateFence(mDevice.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
 		// create semaphore for rendering finished
-		mRenderFinished = createSemaphore(mDevice.device);
+		mRenderFinished = util::signal::createSemaphore(mDevice.device);
 
 		// Allocate command buffer
 		VkCommandBufferAllocateInfo bufferAlloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };

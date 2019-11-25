@@ -1,4 +1,4 @@
-#include "stdafx.h"
+#include "pch.h"
 #include "RenderObject.h"
 
 #include <glm/gtc/type_ptr.hpp>

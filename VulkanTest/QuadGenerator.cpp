@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "QuadGenerator.h"
-#include "vulkan-util.h"
+
+#include "descriptor-util.h"
+#include "pipeline-util.h"
 
 namespace hvk
 {
@@ -58,17 +60,17 @@ namespace hvk
 		memcpy(mRenderable.ibo.allocationInfo.pMappedData, quadIndices.data(), indexMemorySize);
 
 		// Create descriptor pool
-		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1);
-		createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
+		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1);
+		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
 
 		// Create descriptor set layout
-		auto quadSamplerBinding = generateSamplerLayoutBinding(0, 1);
+		auto quadSamplerBinding = util::descriptor::generateSamplerLayoutBinding(0, 1);
 		std::vector<decltype(quadSamplerBinding)> bindings = { quadSamplerBinding };
-		createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
 		// Create descriptor set
 		std::vector<VkDescriptorSetLayout> layouts = { mDescriptorSetLayout };
-		allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
+		util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
 
 		// Update descriptor set
 		VkDescriptorImageInfo imageInfo = {
@@ -77,10 +79,10 @@ namespace hvk
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
-		auto imageWrite = createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
+		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-		writeDescriptorSets(mDevice.device, descriptorWrites);
+		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
 
 		// Prepare pipeline
 		VkPushConstantRange pushRange = {};
@@ -95,7 +97,7 @@ namespace hvk
 		layoutCreate.pPushConstantRanges = &pushRange;
 		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
-		fillVertexInfo<QuadVertex>(mPipelineInfo.vertexInfo);
+		util::pipeline::fillVertexInfo<QuadVertex>(mPipelineInfo.vertexInfo);
 
 		VkPipelineColorBlendAttachmentState blendAttachment = {};
 		blendAttachment.blendEnable = VK_FALSE;
@@ -107,7 +109,7 @@ namespace hvk
 		mPipelineInfo.fragShaderFile = "shaders/compiled/quad_frag.spv";
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
-		mPipelineInfo.depthStencilState = createDepthStencilState(false, false);
+		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState(false, false);
 
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 
@@ -137,10 +139,10 @@ namespace hvk
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
-		auto imageWrite = createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
+		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
 		std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-		writeDescriptorSets(mDevice.device, descriptorWrites);
+		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
         mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
