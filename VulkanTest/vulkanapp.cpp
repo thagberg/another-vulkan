@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include "stb_image.h"
 
+#define VMA_IMPLEMENTATION
+#include "vk_mem_alloc.h"
+
 #include "vulkanapp.h"
 #include "vulkan-util.h"
 #include "RenderObject.h"

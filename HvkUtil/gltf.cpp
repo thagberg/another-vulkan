@@ -4,6 +4,13 @@
 #include <iostream>
 
 #include "gltf.h"
+#define TINYGLTF_IMPLEMENTATION
+#ifndef STB_IMAGE_IMPLEMENTATION
+#endif
+#ifndef STB_IMAGE_WRITE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#endif
+#define _CRT_SECURE_NO_WARNINGS
 #include "tiny_gltf.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
