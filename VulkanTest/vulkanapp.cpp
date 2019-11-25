@@ -6,6 +6,7 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 #define VMA_IMPLEMENTATION
 #include "vk_mem_alloc.h"
@@ -21,6 +22,10 @@
 #include "command-util.h"
 
 #include "HvkUtil.h"
+
+#include <renderdoc_app.h>
+
+RENDERDOC_API_1_4_0* rdoc_api = nullptr;
 
 const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
@@ -354,6 +359,16 @@ namespace hvk {
         mSurfaceHeight = surfaceHeight;
         mInstance = vulkanInstance;
         mSurface = surface;
+
+
+		// load Renderdoc API
+		HMODULE renderMod = LoadLibraryA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll");
+		if (HMODULE mod = GetModuleHandleA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll"))
+		{
+			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&rdoc_api);
+			assert(ret == 1);
+		}
 
         try {
 			ResourceManager::initialize(200 * 1000 * 1000);
@@ -707,13 +722,13 @@ namespace hvk {
 			1, 
 			hdrWidth, 
 			hdrHeight, 
-			8,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
+			hdrBitDepth * 4,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
 			VK_IMAGE_TYPE_2D, 
 			0, 
-			VK_FORMAT_R16G16B16A16_SFLOAT);
+			VK_FORMAT_R32G32B32A32_SFLOAT);
 		auto hdrMap = HVK_make_shared<TextureMap>(TextureMap{
 			hdrImage,
-			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R16G16B16A16_SFLOAT),
+			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R32G32B32A32_SFLOAT),
 			util::image::createImageSampler(mDevice)});
 		auto environmentMap = HVK_make_shared<TextureMap>(util::image::createImageMap(
 			mDevice,
@@ -729,7 +744,8 @@ namespace hvk {
 		auto colorAttachment = util::renderpass::createColorAttachment(
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			//VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
 			//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		std::vector<VkSubpassDependency> colorPassDependencies = {
 			util::renderpass::createSubpassDependency()
@@ -753,6 +769,7 @@ namespace hvk {
         auto environmentRenderPass = util::renderpass::createRenderPass(
 			mDevice, 
 			VK_FORMAT_R16G16B16A16_SFLOAT, 
+			//VK_FORMAT_R32G32B32A32_SFLOAT,
 			colorPassDependencies, 
 			&colorAttachment);
 		VkExtent2D environmentExtent = {
@@ -793,7 +810,18 @@ namespace hvk {
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			6,
 			VK_IMAGE_LAYOUT_UNDEFINED,
+			//VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_VIEW_TYPE_CUBE));
+
+		auto onetime = util::command::beginSingleTimeCommand(mDevice, mCommandPool);
+		util::image::transitionImageLayout(
+			onetime,
+			cubemap->texture.memoryResource,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			6,
+			0);
+		util::command::endSingleTimeCommand(mDevice, mCommandPool, onetime, mGraphicsQueue);
 
 		VkViewport viewport = {};
 		viewport.x = 0.f;
@@ -831,6 +859,11 @@ namespace hvk {
 
 		for (uint8_t i = 0; i < 6; ++i)
 		{
+			// Capture offline render via Renderdoc
+			if (rdoc_api) {
+				rdoc_api->StartFrameCapture(nullptr, nullptr);
+			}
+
 			vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
 			vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
@@ -909,8 +942,13 @@ namespace hvk {
 			submitInfo.signalSemaphoreCount = 0;
 			submitInfo.pSignalSemaphores = nullptr;
 
+			assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
 			assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
 			assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+
+			if (rdoc_api) {
+				rdoc_api->EndFrameCapture(nullptr, nullptr);
+			}
 		}
 
 		// Finally, update the skybox

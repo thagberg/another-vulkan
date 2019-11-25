@@ -137,7 +137,7 @@ namespace hvk
 				VmaAllocationCreateInfo imageAllocationCreateInfo = {};
 				imageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
-				vmaCreateImage(
+				auto createResult = vmaCreateImage(
 					allocator,
 					&imageInfo,
 					&imageAllocationCreateInfo,
