@@ -697,7 +697,6 @@ namespace hvk {
 			mAllocator,
 			mCommandPool,
 			mGraphicsQueue,
-			//mSwapchain.swapchainImageFormat,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			1024,
 			1024,
