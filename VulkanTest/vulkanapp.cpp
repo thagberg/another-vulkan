@@ -219,6 +219,37 @@ namespace hvk {
             mGraphicsQueue,
             skyboxFiles));
 
+		// Convert HDR equirectangular map to cubemap
+		int hdrWidth, hdrHeight, hdrBitDepth;
+		float* hdrData = stbi_loadf("resources/Alexs_Apartment/Alexs_Apt_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
+		auto hdrImage = createTextureImage(
+			mDevice, 
+			mAllocator, 
+			mCommandPool, 
+			mGraphicsQueue, 
+			hdrData, 
+			1, 
+			hdrWidth, 
+			hdrHeight, 
+			8,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
+			VK_IMAGE_TYPE_2D, 
+			0, 
+			VK_FORMAT_R16G16B16A16_SFLOAT);
+		auto hdrMap = HVK_make_shared<TextureMap>(TextureMap{
+			hdrImage,
+			createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R16G16B16A16_SFLOAT),
+			createTextureSampler(mDevice)});
+		std::array<std::string, 2> hdrMapShaders = {
+			"shaders/compiled/hdr_to_cubemap_vert.spv",
+			"shaders/compiled/hdr_to_cubemap_frag.spv"};
+		auto hdrToCubemap = CubemapGenerator(
+			device, 
+			mAllocator, 
+			mGraphicsQueue, 
+			mColorRenderPass, 
+			mCommandPool, 
+			hdrMap, 
+			hdrMapShaders);
 
 		// Initialize gamma settings
 		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
@@ -262,13 +293,17 @@ namespace hvk {
             mColorRenderPass, 
             mCommandPool);
 
+		std::array<std::string, 2> skyboxShaders = {
+			"shaders/compiled/sky_vert.spv",
+			"shaders/compiled/sky_frag.spv"};
 		mSkyboxRenderer = HVK_make_shared<CubemapGenerator>(
 			device,
 			mAllocator,
 			mGraphicsQueue,
 			mColorRenderPass,
 			mCommandPool,
-            skyboxMap);
+            skyboxMap,
+			skyboxShaders);
 
 		mFirstPassCommandBuffers.resize(3);
 		mSecondPassCommandBuffers.resize(2);

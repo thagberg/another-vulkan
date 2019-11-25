@@ -11,7 +11,7 @@ namespace hvk
 	class CubemapGenerator : public DrawlistGenerator
 	{
 	private:
-		struct SkyboxRenderable
+		struct CubemapRenderable
 		{
 			HVK_shared<CubeMeshRenderObject> renderObject;
 
@@ -30,8 +30,8 @@ namespace hvk
 		VkPipeline mPipeline;
 		RenderPipelineInfo mPipelineInfo;
 
-		HVK_shared<TextureMap> mSkyboxMap;
-		SkyboxRenderable mSkyboxRenderable;
+		HVK_shared<TextureMap> mCubeMap;
+		CubemapRenderable mCubeRenderable;
 		
 	public:
 		CubemapGenerator(
@@ -40,7 +40,8 @@ namespace hvk
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
-            HVK_shared<TextureMap> skyboxMap);
+            HVK_shared<TextureMap> skyboxMap,
+			std::array<std::string, 2>& shaderFiles);
 		virtual ~CubemapGenerator();
 		virtual void invalidate() override;
 		VkCommandBuffer& drawFrame(

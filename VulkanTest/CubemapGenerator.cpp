@@ -1,4 +1,4 @@
-#include CubemapGenerator.h"
+#include "CubemapGenerator.h"
 
 #include "stb_image.h"
 
@@ -15,7 +15,8 @@ namespace hvk
 		VkQueue graphicsQueue, 
 		VkRenderPass renderPass, 
 		VkCommandPool commandPool,
-        HVK_shared<TextureMap> skyboxMap) :
+        HVK_shared<TextureMap> skyboxMap,
+		std::array<std::string, 2>& shaderFiles) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -23,27 +24,27 @@ namespace hvk
 		mDescriptorSet(VK_NULL_HANDLE),
 		mPipeline(VK_NULL_HANDLE),
 		mPipelineInfo(),
-		mSkyboxMap(skyboxMap),
-		mSkyboxRenderable()
+		mCubeMap(skyboxMap),
+		mCubeRenderable()
 	{
 		//auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
         auto cube = createEnvironmentCube();
-		mSkyboxRenderable.renderObject = HVK_make_shared<CubeMeshRenderObject>(
+		mCubeRenderable.renderObject = HVK_make_shared<CubeMeshRenderObject>(
 			"Sky Box",
 			nullptr,
 			glm::mat4(1.f),
 			cube);
 
-		mSkyboxRenderable.sRGB = true;
+		mCubeRenderable.sRGB = true;
 
 		auto skyboxMesh = createColoredCube(glm::vec3(0.1f, 4.f, 1.f));
 		auto vertices = skyboxMesh->getVertices();
 		auto indices = skyboxMesh->getIndices();
-		mSkyboxRenderable.numVertices = static_cast<uint32_t>(vertices->size());
-		mSkyboxRenderable.numIndices = static_cast<uint32_t>(indices->size());
+		mCubeRenderable.numVertices = static_cast<uint32_t>(vertices->size());
+		mCubeRenderable.numIndices = static_cast<uint32_t>(indices->size());
 
 		// Create VBO
-		size_t vertexMemorySize = sizeof(CubeVertex) * mSkyboxRenderable.numVertices;
+		size_t vertexMemorySize = sizeof(CubeVertex) * mCubeRenderable.numVertices;
 		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 		bufferInfo.size = vertexMemorySize;
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -55,14 +56,14 @@ namespace hvk
 			mAllocator,
 			&bufferInfo,
 			&allocCreateInfo,
-			&mSkyboxRenderable.vbo.memoryResource,
-			&mSkyboxRenderable.vbo.allocation,
-			&mSkyboxRenderable.vbo.allocationInfo);
+			&mCubeRenderable.vbo.memoryResource,
+			&mCubeRenderable.vbo.allocation,
+			&mCubeRenderable.vbo.allocationInfo);
 
-		memcpy(mSkyboxRenderable.vbo.allocationInfo.pMappedData, vertices->data(), vertexMemorySize);
+		memcpy(mCubeRenderable.vbo.allocationInfo.pMappedData, vertices->data(), vertexMemorySize);
 
 		// Create IBO
-        size_t indexMemorySize = sizeof(uint16_t) * mSkyboxRenderable.numIndices;
+        size_t indexMemorySize = sizeof(uint16_t) * mCubeRenderable.numIndices;
         VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         iboInfo.size = indexMemorySize;
         iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -74,11 +75,11 @@ namespace hvk
             mAllocator,
             &iboInfo,
             &indexAllocCreateInfo,
-            &mSkyboxRenderable.ibo.memoryResource,
-            &mSkyboxRenderable.ibo.allocation,
-            &mSkyboxRenderable.ibo.allocationInfo);
+            &mCubeRenderable.ibo.memoryResource,
+            &mCubeRenderable.ibo.allocation,
+            &mCubeRenderable.ibo.allocationInfo);
 
-        memcpy(mSkyboxRenderable.ibo.allocationInfo.pMappedData, indices->data(), indexMemorySize);
+        memcpy(mCubeRenderable.ibo.allocationInfo.pMappedData, indices->data(), indexMemorySize);
 
 		// Create UBO
         uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
@@ -93,9 +94,9 @@ namespace hvk
 			mAllocator,
 			&uboInfo,
 			&uniformAllocCreateInfo,
-			&mSkyboxRenderable.ubo.memoryResource,
-			&mSkyboxRenderable.ubo.allocation,
-			&mSkyboxRenderable.ubo.allocationInfo);
+			&mCubeRenderable.ubo.memoryResource,
+			&mCubeRenderable.ubo.allocation,
+			&mCubeRenderable.ubo.allocationInfo);
 
 		// Create descriptor pool
 		auto poolSizes = createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1, 1);
@@ -117,14 +118,14 @@ namespace hvk
 
 		// Update descriptor set
 		VkDescriptorBufferInfo dsBufferInfo = {
-			mSkyboxRenderable.ubo.memoryResource,
+			mCubeRenderable.ubo.memoryResource,
 			0,
 			sizeof(hvk::UniformBufferObject)
 		};
 
 		VkDescriptorImageInfo imageInfo = {
-			mSkyboxMap->sampler,
-			mSkyboxMap->view,
+			mCubeMap->sampler,
+			mCubeMap->view,
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 		};
 
@@ -162,8 +163,8 @@ namespace hvk
 
 		mPipelineInfo.blendAttachments = { blendAttachment };
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		mPipelineInfo.vertShaderFile = "shaders/compiled/sky_vert.spv";
-		mPipelineInfo.fragShaderFile = "shaders/compiled/sky_frag.spv";
+		mPipelineInfo.vertShaderFile = shaderFiles[0].c_str();
+		mPipelineInfo.fragShaderFile = shaderFiles[1].c_str();
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mPipelineInfo.depthStencilState = createDepthStencilState(true, true);
@@ -183,14 +184,14 @@ namespace hvk
 
 	CubemapGenerator::~CubemapGenerator()
 	{
-		vmaDestroyBuffer(mAllocator, mSkyboxRenderable.vbo.memoryResource, mSkyboxRenderable.vbo.allocation);
-		vmaDestroyBuffer(mAllocator, mSkyboxRenderable.ibo.memoryResource, mSkyboxRenderable.ibo.allocation);
-		vmaDestroyBuffer(mAllocator, mSkyboxRenderable.ubo.memoryResource, mSkyboxRenderable.ubo.allocation);
+		vmaDestroyBuffer(mAllocator, mCubeRenderable.vbo.memoryResource, mCubeRenderable.vbo.allocation);
+		vmaDestroyBuffer(mAllocator, mCubeRenderable.ibo.memoryResource, mCubeRenderable.ibo.allocation);
+		vmaDestroyBuffer(mAllocator, mCubeRenderable.ubo.memoryResource, mCubeRenderable.ubo.allocation);
 		vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
 		vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
 		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
 		vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
-		mSkyboxMap.reset();
+		mCubeMap.reset();
 	}
 
 	void CubemapGenerator::invalidate()
@@ -215,7 +216,7 @@ namespace hvk
 		//ubo.modelViewProj = camera.getProjection() * ubo.view * ubo.model;
 		ubo.modelViewProj = camera.getProjection() * glm::mat4(glm::mat3(ubo.view));
 		ubo.cameraPos = camera.getWorldPosition();
-		memcpy(mSkyboxRenderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
+		memcpy(mCubeRenderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 
 		// begin command buffer
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -231,8 +232,8 @@ namespace hvk
 
 		VkDeviceSize offsets[] = { 0 };
 
-		vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mSkyboxRenderable.vbo.memoryResource, offsets);
-		vkCmdBindIndexBuffer(mCommandBuffer, mSkyboxRenderable.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mCubeRenderable.vbo.memoryResource, offsets);
+		vkCmdBindIndexBuffer(mCommandBuffer, mCubeRenderable.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
 		vkCmdBindDescriptorSets(
 			mCommandBuffer,
 			VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -243,7 +244,7 @@ namespace hvk
 			0,
 			nullptr);
 
-		PushConstant push = { gammaSettings.gamma, mSkyboxRenderable.sRGB };
+		PushConstant push = { gammaSettings.gamma, mCubeRenderable.sRGB };
 		vkCmdPushConstants(
 			mCommandBuffer, 
 			mPipelineInfo.pipelineLayout, 
@@ -252,7 +253,7 @@ namespace hvk
 			sizeof(PushConstant), 
 			&push);
 
-		vkCmdDrawIndexed(mCommandBuffer, mSkyboxRenderable.numIndices, 1, 0, 0, 0);
+		vkCmdDrawIndexed(mCommandBuffer, mCubeRenderable.numIndices, 1, 0, 0, 0);
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
 
 		return mCommandBuffer;

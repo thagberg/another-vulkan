@@ -17,7 +17,7 @@
 #include "StaticMeshGenerator.h"
 #include "UiDrawGenerator.h"
 #include "DebugDrawGenerator.h"
-#include CubemapGenerator.h"
+#include "CubemapGenerator.h"
 #include "QuadGenerator.h"
 #include "CameraController.h"
 

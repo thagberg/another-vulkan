@@ -210,6 +210,8 @@
     <ClCompile Include="vulkanapp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\hdr_to_cubemap.frag" />
+    <None Include="shaders\hdr_to_cubemap.vert" />
     <None Include="shaders\normal.frag" />
     <None Include="shaders\normal.vert" />
     <None Include="shaders\quad.frag" />

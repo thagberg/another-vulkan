@@ -178,5 +178,11 @@
     <None Include="shaders\quad.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\hdr_to_cubemap.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\hdr_to_cubemap.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

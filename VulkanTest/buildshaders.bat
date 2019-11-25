@@ -8,3 +8,5 @@ C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/sky_vert.s
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/sky_frag.spv -V shaders/sky.frag
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/quad_vert.spv -V shaders/quad.vert
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/quad_frag.spv -V shaders/quad.frag
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/hdr_to_cubemap_vert.spv -V shaders/hdr_to_cubemap.vert
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/hdr_to_cubemap_frag.spv -V shaders/hdr_to_cubemap.frag

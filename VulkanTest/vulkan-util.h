@@ -116,13 +116,14 @@ namespace hvk {
 		VmaAllocator allocator,
 		VkCommandPool commandPool,
 		VkQueue graphicsQueue,
-		const unsigned char* imageDataLayers,
+		const void* imageDataLayers,
 		size_t numLayers,
 		int imageWidth,
 		int imageHeight,
 		int bitDepth,
         VkImageType imageType=VK_IMAGE_TYPE_2D,
-		VkImageCreateFlags flags=0);
+		VkImageCreateFlags flags=0,
+		VkFormat imageFormat=VK_FORMAT_R8G8B8A8_UNORM);
 
 	VkSampler createTextureSampler(VkDevice device);
 
@@ -1184,13 +1185,14 @@ namespace hvk {
         VmaAllocator allocator,
         VkCommandPool commandPool,
         VkQueue graphicsQueue,
-		const unsigned char* imageDataLayers,
+		const void* imageDataLayers,
 		size_t numLayers,
 		int imageWidth,
 		int imageHeight,
 		int bitDepth,
         VkImageType imageType,
-		VkImageCreateFlags flags) {
+		VkImageCreateFlags flags,
+		VkFormat imageFormat) {
 
         hvk::Resource<VkImage> textureResource;
 
@@ -1224,11 +1226,6 @@ namespace hvk {
 		memcpy(stagingData, imageDataLayers, imageSize);
         vmaUnmapMemory(allocator, stagingAllocation);
 
-		VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-		if (bitDepth == 3) {
-			format = VK_FORMAT_R8G8B8_UNORM;
-		}
-
         VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
         imageInfo.imageType = imageType;
         imageInfo.extent.width = static_cast<uint32_t>(imageWidth);
@@ -1236,9 +1233,7 @@ namespace hvk {
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
         imageInfo.arrayLayers = numLayers;
-        //imageInfo.arrayLayers = 1;
-        //imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
-		imageInfo.format = format;
+		imageInfo.format = imageFormat;
         imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
         imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -1262,10 +1257,9 @@ namespace hvk {
             commandPool,
             graphicsQueue,
             textureResource.memoryResource,
-            VK_FORMAT_R8G8B8A8_UNORM,
+            imageFormat,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			//1);
 			numLayers);
 
         copyBufferToImage(
@@ -1279,26 +1273,12 @@ namespace hvk {
             numLayers,
             singleImageSize);
 
-        /*
-    void copyBufferToImage(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue,
-        VkBuffer buffer,
-        VkImage image,
-        uint32_t width,
-        uint32_t height,
-		size_t numFaces=1,
-		size_t faceSize=0) {
-        */
-
-
 		transitionImageLayout(
 			device,
 			commandPool,
 			graphicsQueue,
 			textureResource.memoryResource,
-			VK_FORMAT_R8G8B8A8_UNORM,
+			imageFormat,
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
             VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			//1);
