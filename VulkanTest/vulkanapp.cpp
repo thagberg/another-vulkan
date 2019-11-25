@@ -781,7 +781,7 @@ namespace hvk {
 			hdrMapShaders);
 
 		// Create cubemap which we will iteratively copy environmentFramebuffer onto
-		auto cubemap = util::image::createImageMap(
+		auto cubemap = HVK_make_shared<TextureMap>(util::image::createImageMap(
 			mDevice,
 			mAllocator,
 			mCommandPool,
@@ -793,7 +793,7 @@ namespace hvk {
 			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 			6,
 			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_VIEW_TYPE_CUBE);
+			VK_IMAGE_VIEW_TYPE_CUBE));
 
 		VkViewport viewport = {};
 		viewport.x = 0.f;
@@ -876,7 +876,7 @@ namespace hvk {
 				mPrimaryCommandBuffer,
 				environmentMap->texture.memoryResource,
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				cubemap.texture.memoryResource,
+				cubemap->texture.memoryResource,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				1,
 				&copyRegion);
@@ -891,7 +891,7 @@ namespace hvk {
 			// transition cubemap face to shader read
 			util::image::transitionImageLayout(
 				mPrimaryCommandBuffer,
-				cubemap.texture.memoryResource,
+				cubemap->texture.memoryResource,
 				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				1,
@@ -912,5 +912,8 @@ namespace hvk {
 			assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
 			assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		}
+
+		// Finally, update the skybox
+		mSkyboxRenderer->setCubemap(cubemap);
 	}
 }

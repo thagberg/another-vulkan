@@ -32,6 +32,8 @@ namespace hvk
 
 		HVK_shared<TextureMap> mCubeMap;
 		CubemapRenderable mCubeRenderable;
+
+		void updateDescriptorSet();
 		
 	public:
 		CubemapGenerator(
@@ -52,5 +54,6 @@ namespace hvk
 			const Camera& camera,
 			const GammaSettings& gammaSettings);
 		void updateRenderPass(VkRenderPass renderPass);
+		void setCubemap(HVK_shared<TextureMap> cubeMap);
 	};
 }

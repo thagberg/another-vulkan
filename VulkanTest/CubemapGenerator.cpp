@@ -176,6 +176,41 @@ namespace hvk
 		setInitialized(true);
 	}
 
+	void CubemapGenerator::updateDescriptorSet()
+	{
+		// Update descriptor set
+		VkDescriptorBufferInfo dsBufferInfo = {
+			mCubeRenderable.ubo.memoryResource,
+			0,
+			sizeof(hvk::UniformBufferObject)
+		};
+
+		VkDescriptorImageInfo imageInfo = {
+			mCubeMap->sampler,
+			mCubeMap->view,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
+
+		std::vector<VkDescriptorBufferInfo> bufferInfos = { dsBufferInfo };
+		auto bufferWrite = util::descriptor::createDescriptorBufferWrite(bufferInfos, mDescriptorSet, 0);
+
+		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
+		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 1);
+
+		std::vector<VkWriteDescriptorSet> descriptorWrites = {
+			bufferWrite,
+            imageWrite
+		};
+		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+	}
+
+	void CubemapGenerator::setCubemap(HVK_shared<TextureMap> cubeMap)
+	{
+		mCubeMap.reset();
+		mCubeMap = cubeMap;
+		updateDescriptorSet();
+	}
+
 	void CubemapGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
 		mColorRenderPass = renderPass;
