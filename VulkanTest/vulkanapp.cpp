@@ -777,31 +777,35 @@ namespace hvk {
         inheritanceInfo.framebuffer = environmentFramebuffer;
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
-		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
-		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		for (uint8_t i = 0; i < 6; ++i)
+		{
+			vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
+			vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-		auto cubemapCommandBuffer = hdrToCubemap.drawFrame(
-			inheritanceInfo, 
-			environmentFramebuffer, 
-			viewport, 
-			scissor, 
-			*mActiveCamera.get(),
-			*mGammaSettings);
+			auto cubemapCommandBuffer = hdrToCubemap.drawFrame(
+				inheritanceInfo, 
+				environmentFramebuffer, 
+				viewport, 
+				scissor, 
+				*mActiveCamera.get(),
+				*mGammaSettings);
 
-		vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &cubemapCommandBuffer);
-		vkCmdEndRenderPass(mPrimaryCommandBuffer);
+			vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &cubemapCommandBuffer);
+			vkCmdEndRenderPass(mPrimaryCommandBuffer);
+			vkEndCommandBuffer(mPrimaryCommandBuffer);
 
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = &mImageAvailable;
-		submitInfo.pWaitDstStageMask = waitStages;
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &mPrimaryCommandBuffer;
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = &mRenderFinished;
+			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+			submitInfo.waitSemaphoreCount = 0;
+			submitInfo.pWaitSemaphores = nullptr;
+			submitInfo.pWaitDstStageMask = waitStages;
+			submitInfo.commandBufferCount = 1;
+			submitInfo.pCommandBuffers = &mPrimaryCommandBuffer;
+			submitInfo.signalSemaphoreCount = 0;
+			submitInfo.pSignalSemaphores = nullptr;
 
-		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
-
+			assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
+			assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+		}
 	}
 }
