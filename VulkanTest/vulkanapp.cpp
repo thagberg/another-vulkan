@@ -53,7 +53,8 @@ namespace hvk {
         mQuadRenderer(nullptr),
 		mAmbientLight(nullptr),
         mRenderFence(VK_NULL_HANDLE),
-		mSecondaryCommandBuffers(),
+		mFirstPassCommandBuffers(),
+		mSecondPassCommandBuffers(),
 		mGammaSettings(nullptr),
 		mPBRWeight(nullptr),
 		mExposureSettings(nullptr)
@@ -249,7 +250,8 @@ namespace hvk {
             device, 
             mAllocator, 
             mGraphicsQueue, 
-            mColorRenderPass, 
+            //mColorRenderPass, 
+            mFinalRenderPass, 
             mCommandPool, 
             mSwapchain.swapchainExtent);
 
@@ -268,7 +270,8 @@ namespace hvk {
 			mCommandPool,
             skyboxMap);
 
-		mSecondaryCommandBuffers.resize(4);
+		mFirstPassCommandBuffers.resize(3);
+		mSecondPassCommandBuffers.resize(2);
 
         mImageAvailable = createSemaphore(mDevice);
     }
@@ -320,9 +323,9 @@ namespace hvk {
         }
 		mSkyboxRenderer->updateRenderPass(mColorRenderPass);
 		mMeshRenderer->updateRenderPass(mColorRenderPass);
-		mUiRenderer->updateRenderPass(mColorRenderPass, mSwapchain.swapchainExtent);
 		mDebugRenderer->updateRenderPass(mColorRenderPass);
         mQuadRenderer->updateRenderPass(mFinalRenderPass);
+		mUiRenderer->updateRenderPass(mFinalRenderPass, mSwapchain.swapchainExtent);
 	}
 
     void VulkanApp::init(
@@ -543,7 +546,7 @@ namespace hvk {
 		// Color pass
 		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-		mSecondaryCommandBuffers[0] = mMeshRenderer->drawFrame(
+		mFirstPassCommandBuffers[0] = mMeshRenderer->drawFrame(
             inheritanceInfo,
 			mColorPassFramebuffer,
 			viewport,
@@ -553,32 +556,25 @@ namespace hvk {
 			*mGammaSettings,
 			*mPBRWeight);
 
-		mSecondaryCommandBuffers[1] = mDebugRenderer->drawFrame(
+		mFirstPassCommandBuffers[1] = mDebugRenderer->drawFrame(
 			inheritanceInfo, 
 			mColorPassFramebuffer, 
 			viewport, 
 			scissor,
 			*mActiveCamera.get());
 
-		mSecondaryCommandBuffers[2] = mSkyboxRenderer->drawFrame(
+		mFirstPassCommandBuffers[2] = mSkyboxRenderer->drawFrame(
 			inheritanceInfo,
 			mColorPassFramebuffer,
 			viewport,
 			scissor,
 			*mActiveCamera,
 			*mGammaSettings);
-		
-
-		mSecondaryCommandBuffers[3] = mUiRenderer->drawFrame(
-            inheritanceInfo,
-			mColorPassFramebuffer,
-			viewport,
-			scissor);
 
 		vkCmdExecuteCommands(
 			mPrimaryCommandBuffer, 
-			static_cast<float>(mSecondaryCommandBuffers.size()), 
-			mSecondaryCommandBuffers.data());
+			static_cast<float>(mFirstPassCommandBuffers.size()), 
+			mFirstPassCommandBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
 
 		inheritanceInfo.renderPass = mFinalRenderPass;
@@ -587,14 +583,22 @@ namespace hvk {
 		// Final pass -- renders previous color attachment to quad
 		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &finalRenderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-        auto finalCommandBuffer = mQuadRenderer->drawFrame(
+        mSecondPassCommandBuffers[0] = mQuadRenderer->drawFrame(
             inheritanceInfo,
             mFinalPassFramebuffers[imageIndex],
             viewport,
             scissor,
 			*mExposureSettings);
 
-        vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &finalCommandBuffer);
+		mSecondPassCommandBuffers[1] = mUiRenderer->drawFrame(
+            inheritanceInfo,
+			//mColorPassFramebuffer,
+			mFinalPassFramebuffers[imageIndex],
+			viewport,
+			scissor);
+
+
+        vkCmdExecuteCommands(mPrimaryCommandBuffer, mSecondPassCommandBuffers.size(), mSecondPassCommandBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
 
 		vkEndCommandBuffer(mPrimaryCommandBuffer);

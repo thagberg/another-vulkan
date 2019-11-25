@@ -65,7 +65,8 @@ namespace hvk {
 
 		VkFence mRenderFence;
 
-		std::vector<VkCommandBuffer> mSecondaryCommandBuffers;
+		std::vector<VkCommandBuffer> mFirstPassCommandBuffers;
+		std::vector<VkCommandBuffer> mSecondPassCommandBuffers;
 
 		HVK_shared<GammaSettings> mGammaSettings;
 		HVK_shared<PBRWeight> mPBRWeight;
