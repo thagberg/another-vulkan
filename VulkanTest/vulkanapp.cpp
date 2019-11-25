@@ -10,6 +10,9 @@
 #include "vulkan-util.h"
 #include "RenderObject.h"
 #include "InputManager.h"
+#include "image-util.h"
+#include "renderpass-util.h"
+#include "framebuffer-util.h"
 
 #include "HvkUtil.h"
 
@@ -370,29 +373,27 @@ namespace hvk {
 
         mFinalPassImageViews.resize(mFinalPassSwapchainImages.size());
         for (size_t i = 0; i < mFinalPassSwapchainImages.size(); i++) {
-            mFinalPassImageViews[i] = createImageView(mDevice, mFinalPassSwapchainImages[i], mSwapchain.swapchainImageFormat);
+            mFinalPassImageViews[i] = util::image::createImageView(mDevice, mFinalPassSwapchainImages[i], mSwapchain.swapchainImageFormat);
         }
 
 		// if mColorPassMap already exists, then just overwrite the value there instead
 		if (mColorPassMap == nullptr) {
-			mColorPassMap = HVK_make_shared<TextureMap>(createImageMap(
+			mColorPassMap = HVK_make_shared<TextureMap>(util::image::createImageMap(
 				mDevice,
 				mAllocator,
 				mCommandPool,
 				mGraphicsQueue,
-				//mSwapchain.swapchainImageFormat,
 				VK_FORMAT_R16G16B16A16_SFLOAT,
 				mSwapchain.swapchainExtent.width,
 				mSwapchain.swapchainExtent.height,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
 		}
 		else {
-			*mColorPassMap =createImageMap(
+			*mColorPassMap = util::image::createImageMap(
 				mDevice,
 				mAllocator,
 				mCommandPool,
 				mGraphicsQueue,
-				//mSwapchain.swapchainImageFormat,
 				VK_FORMAT_R16G16B16A16_SFLOAT,
 				mSwapchain.swapchainExtent.width,
 				mSwapchain.swapchainExtent.height,
@@ -425,8 +426,8 @@ namespace hvk {
             &mDepthResource.allocation,
             &mDepthResource.allocationInfo);
 
-		mDepthView = createImageView(mDevice, mDepthResource.memoryResource, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT);
-		transitionImageLayout(
+		mDepthView = util::image::createImageView(mDevice, mDepthResource.memoryResource, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT);
+		util::image::transitionImageLayout(
 			mDevice, 
 			mCommandPool, 
 			mGraphicsQueue, 
@@ -436,10 +437,11 @@ namespace hvk {
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 
-		//auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		//auto colorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		auto colorAttachment = createColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		auto depthAttachment = createDepthAttachment();
+		auto colorAttachment = util::renderpass::createColorAttachment(
+			VK_FORMAT_R16G16B16A16_SFLOAT, 
+			VK_IMAGE_LAYOUT_UNDEFINED, 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		auto depthAttachment = util::renderpass::createDepthAttachment();
 		std::vector<VkSubpassDependency> colorPassDependencies = {
 			createSubpassDependency(
 				VK_SUBPASS_EXTERNAL,
@@ -458,23 +460,34 @@ namespace hvk {
 				VK_ACCESS_SHADER_READ_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT)
 		};
-        //mColorRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, colorPassDependencies,&colorAttachment, &depthAttachment);
-        mColorRenderPass = createRenderPass(mDevice, VK_FORMAT_R16G16B16A16_SFLOAT, colorPassDependencies,&colorAttachment, &depthAttachment);
+        mColorRenderPass = util::renderpass::createRenderPass(
+			mDevice, 
+			VK_FORMAT_R16G16B16A16_SFLOAT, 
+			colorPassDependencies, 
+			&colorAttachment, 
+			&depthAttachment);
 
-        auto finalColorAttachment = createColorAttachment(mSwapchain.swapchainImageFormat);
+        auto finalColorAttachment = util::renderpass::createColorAttachment(mSwapchain.swapchainImageFormat);
 		std::vector<VkSubpassDependency> finalPassDependencies = { createSubpassDependency() };
-        mFinalRenderPass = createRenderPass(mDevice, mSwapchain.swapchainImageFormat, finalPassDependencies, &finalColorAttachment);
-
-        //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mRenderPass, mSwapchain.swapchainExtent, mFinalPassFramebuffers);
-        //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
+        mFinalRenderPass = util::renderpass::createRenderPass(mDevice, mSwapchain.swapchainImageFormat, finalPassDependencies, &finalColorAttachment);
 
         mFinalPassFramebuffers.resize(mFinalPassImageViews.size());
-		//mColorPassFramebuffers.resize(mFinalPassImageViews.size());
-        createFramebuffer(mDevice, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassMap->view, &mDepthView, &mColorPassFramebuffer);
+        util::framebuffer::createFramebuffer(
+			mDevice, 
+			mColorRenderPass, 
+			mSwapchain.swapchainExtent, 
+			mColorPassMap->view, 
+			&mDepthView, 
+			&mColorPassFramebuffer);
         for (size_t i = 0; i < mFinalPassImageViews.size(); ++i)
         {
-            //createFramebuffers(mDevice, mFinalPassImageViews, mDepthView, mColorRenderPass, mSwapchain.swapchainExtent, mColorPassFramebuffers);
-            createFramebuffer(mDevice, mFinalRenderPass, mSwapchain.swapchainExtent, mFinalPassImageViews[i], nullptr, &mFinalPassFramebuffers[i]);
+            util::framebuffer::createFramebuffer(
+				mDevice, 
+				mFinalRenderPass, 
+				mSwapchain.swapchainExtent, 
+				mFinalPassImageViews[i], 
+				nullptr, 
+				&mFinalPassFramebuffers[i]);
         }
 	}
 

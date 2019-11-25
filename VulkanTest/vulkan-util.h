@@ -27,12 +27,6 @@ namespace hvk {
 		const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, 
 		VkDebugUtilsMessengerEXT* pDebugMesenger);
 
-	VkAttachmentDescription createColorAttachment(
-		VkFormat imageFormat,
-		VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
-		VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-
-    VkAttachmentDescription createDepthAttachment();
 
 	VkResult createSwapchain(
 		VkPhysicalDevice physicalDevice, 
@@ -41,17 +35,6 @@ namespace hvk {
 		int width, 
 		int height, 
 		hvk::Swapchain& swapchain);
-
-	VkImageView createImageView(
-		VkDevice device, 
-		VkImage image, 
-		VkFormat format, 
-		VkImageAspectFlags aspectFlags=VK_IMAGE_ASPECT_COLOR_BIT,
-		uint32_t numLayers=1,
-        VkImageViewType viewType=VK_IMAGE_VIEW_TYPE_2D);
-
-    VkSampler createImageSampler(
-        VkDevice device);
 
 	VkSubpassDependency createSubpassDependency(
 		uint32_t srcSubpass = VK_SUBPASS_EXTERNAL,
@@ -62,72 +45,12 @@ namespace hvk {
 		VkAccessFlags dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 		VkDependencyFlags dependencyFlags=0);
 
-	VkRenderPass createRenderPass(
-		VkDevice device, 
-		VkFormat swapchainImageFormat, 
-		std::vector<VkSubpassDependency>& subpassDependencies,
-		const VkAttachmentDescription* pColorAttachment, 
-		const VkAttachmentDescription* pDepthAttachment=nullptr);
-
-	VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat);
 
 	VkSemaphore createSemaphore(VkDevice device);
 
-    void createFramebuffer(
-        VkDevice device,
-        const VkRenderPass& renderPass,
-        const VkExtent2D& extent,
-        const VkImageView& imageView,
-        const VkImageView* pDepthView,
-        VkFramebuffer* oFramebuffer);
-
-	void createFramebuffers(
-		VkDevice device,
-		hvk::SwapchainImageViews& imageViews,
-		VkImageView depthView,
-		VkRenderPass renderPass,
-		VkExtent2D extent,
-		hvk::FrameBuffers& oFramebuffers);
 
 	VkCommandPool createCommandPool(VkDevice device, int queueFamilyIndex, VkCommandPoolCreateFlags flags = 0);
 
-	void transitionImageLayout(
-		VkDevice device,
-		VkCommandPool commandPool,
-		VkQueue graphicsQueue,
-		VkImage image,
-		VkFormat format,
-		VkImageLayout oldLayout,
-		VkImageLayout newLayout,
-		uint32_t numLayers=1);
-
-    TextureMap createImageMap(
-        VkDevice device,
-        VmaAllocator allocator,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue,
-        VkFormat imageFormat,
-        uint32_t imageWidth,
-        uint32_t imageHeight,
-        VkImageUsageFlags flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-
-	hvk::Resource<VkImage> createTextureImage(
-		VkDevice device,
-		VmaAllocator allocator,
-		VkCommandPool commandPool,
-		VkQueue graphicsQueue,
-		const void* imageDataLayers,
-		size_t numLayers,
-		int imageWidth,
-		int imageHeight,
-		int bitDepth,
-        VkImageType imageType=VK_IMAGE_TYPE_2D,
-		VkImageCreateFlags flags=0,
-		VkFormat imageFormat=VK_FORMAT_R8G8B8A8_UNORM);
-
-	VkSampler createTextureSampler(VkDevice device);
-
-	void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map);
 
 	void createDescriptorPool(
 		VkDevice device,
@@ -177,13 +100,6 @@ namespace hvk {
 	void writeDescriptorSets(
 		VkDevice device,
 		std::vector<VkWriteDescriptorSet>& descriptorWrites);
-
-	TextureMap createCubeMap(
-		VkDevice device,
-		VmaAllocator allocator,
-		VkCommandPool commandPool,
-		VkQueue graphicsQueue,
-		std::array<std::string, 6>& fileNames);
 
 	template <VkDescriptorType T>
 	void _buildPoolSizes(std::vector<VkDescriptorPoolSize>& poolSizes, uint32_t count)
@@ -447,38 +363,6 @@ namespace hvk {
         return shaderModule;
     }
 
-    VkAttachmentDescription createColorAttachment(
-		VkFormat imageFormat,
-		VkImageLayout initialLayout,
-		VkImageLayout finalLayout)
-    {
-        VkAttachmentDescription colorAttachment = {};
-        colorAttachment.format = imageFormat;
-        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        colorAttachment.initialLayout = initialLayout;
-        colorAttachment.finalLayout = finalLayout;
-
-        return colorAttachment;
-    }
-
-    VkAttachmentDescription createDepthAttachment()
-    {
-		VkAttachmentDescription depthAttachment = {};
-		depthAttachment.format = VK_FORMAT_D32_SFLOAT;  // TODO: make this dynamic
-		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        return depthAttachment;
-    }
 
 	VkSubpassDependency createSubpassDependency(
 		uint32_t srcSubpass,
@@ -501,61 +385,6 @@ namespace hvk {
 		return dependency;
 	}
 
-	VkRenderPass createRenderPass(
-		VkDevice device, 
-		VkFormat swapchainImageFormat, 
-		std::vector<VkSubpassDependency>& subpassDependencies,
-		const VkAttachmentDescription* pColorAttachment, 
-		const VkAttachmentDescription* pDepthAttachment)
-	{
-        VkRenderPass renderPass;
-
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-
-        std::vector<VkAttachmentDescription> attachments;
-        if (pColorAttachment != nullptr && pDepthAttachment != nullptr) {
-            attachments.reserve(2);
-        }
-
-        VkAttachmentReference colorAttachmentRef = {};
-        if (pColorAttachment != nullptr) {
-            colorAttachmentRef.attachment = 0;
-            colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-            attachments.push_back(*pColorAttachment);
-            subpass.pColorAttachments = &colorAttachmentRef;
-        }
-        else {
-            subpass.pColorAttachments = nullptr;
-        }
-
-        VkAttachmentReference depthAttachmentRef = {};
-        if (pDepthAttachment != nullptr) {
-            depthAttachmentRef.attachment = 1;
-            depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-            attachments.push_back(*pDepthAttachment);
-            subpass.pDepthStencilAttachment = &depthAttachmentRef;
-        }
-        else {
-            subpass.pDepthStencilAttachment = nullptr;
-        }
-
-        VkRenderPassCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-        createInfo.pAttachments = attachments.data();
-        createInfo.subpassCount = 1;
-        createInfo.pSubpasses = &subpass;
-        createInfo.dependencyCount = subpassDependencies.size();
-        createInfo.pDependencies = subpassDependencies.data();
-
-		assert(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass) == VK_SUCCESS);
-
-        return renderPass;
-	}
 
   //  VkRenderPass createRenderPass(VkDevice device, VkFormat swapchainImageFormat) {
   //      VkAttachmentDescription colorAttachment = createColorAttachment(swapchainImageFormat);
@@ -821,47 +650,6 @@ namespace hvk {
         return graphicsPipeline;
     }
 
-    void createFramebuffer(
-        VkDevice device,
-        const VkRenderPass& renderPass,
-        const VkExtent2D& extent,
-        const VkImageView& imageView,
-        const VkImageView* pDepthView,
-        VkFramebuffer* oFramebuffer)
-    {
-        std::vector<VkImageView> attachments;
-        attachments.push_back(imageView);
-        if (pDepthView != nullptr) {
-            attachments.push_back(*pDepthView);
-        }
-
-        VkFramebufferCreateInfo fb = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-        fb.renderPass = renderPass;
-        fb.attachmentCount = static_cast<uint32_t>(attachments.size());
-        fb.pAttachments = attachments.data();
-        fb.width = extent.width;
-        fb.height = extent.height;
-        fb.layers = 1;
-
-        assert(vkCreateFramebuffer(device, &fb, nullptr, oFramebuffer) == VK_SUCCESS);
-    }
-
-    void createFramebuffers(
-        VkDevice device,
-        hvk::SwapchainImageViews& imageViews,
-		VkImageView depthView,
-        VkRenderPass renderPass,
-        VkExtent2D extent,
-        hvk::FrameBuffers& oFramebuffers) {
-
-        oFramebuffers.resize(imageViews.size());
-
-        for (size_t i = 0; i < imageViews.size(); i++) {
-
-            createFramebuffer(device, renderPass, extent, imageViews[i], &depthView, &oFramebuffers[i]);
-        }
-    }
-
     VkCommandPool createCommandPool(
         VkDevice device, 
         int queueFamilyIndex, 
@@ -997,380 +785,12 @@ namespace hvk {
         return descriptorSets;
     }
 
-    VkCommandBuffer beginSingleTimeCommand(VkDevice device, VkCommandPool commandPool) {
-        VkCommandBuffer commandBuffer;
-
-        VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-        allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocInfo.commandPool = commandPool;
-        allocInfo.commandBufferCount = 1;
-
-        vkAllocateCommandBuffers(device, &allocInfo, &commandBuffer);
-
-        VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-        vkBeginCommandBuffer(commandBuffer, &beginInfo);
-        return commandBuffer;
-    }
-
-    void endSingleTimeCommand(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkQueue queue) {
-        vkEndCommandBuffer(commandBuffer);
-
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &commandBuffer;
-
-        vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
-        vkQueueWaitIdle(queue);
-        vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
-    }
-
-    void transitionImageLayout(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue,
-        VkImage image,
-        VkFormat format,
-        VkImageLayout oldLayout,
-        VkImageLayout newLayout,
-		uint32_t numLayers) {
-
-        VkCommandBuffer commandBuffer = beginSingleTimeCommand(device, commandPool);
-
-        VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        barrier.oldLayout = oldLayout;
-        barrier.newLayout = newLayout;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.image = image;
-
-		if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-			// TODO: potentially |= VK_IMAGE_ASPECT_STENCIL_BIT if the format supports stencil
-		} else {
-			barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		}
-
-        barrier.subresourceRange.baseMipLevel = 0;
-        barrier.subresourceRange.levelCount = 1;
-        barrier.subresourceRange.baseArrayLayer = 0;
-        barrier.subresourceRange.layerCount = numLayers;
-
-        VkPipelineStageFlags sourceStage;
-        VkPipelineStageFlags destinationStage;
-        if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-            barrier.srcAccessMask = 0;
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-		} else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-        } else {
-            throw std::invalid_argument("Unsupported layout transition");
-        }
-
-        vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-        endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
-    }
 
 	// TODO: Add support for mipmaps
-    void copyBufferToImage(
-        VkDevice device,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue,
-        VkBuffer buffer,
-        VkImage image,
-        uint32_t width,
-        uint32_t height,
-		size_t numFaces=1,
-		size_t faceSize=0) {
-
-        VkCommandBuffer commandBuffer = beginSingleTimeCommand(device, commandPool);
 
 
-		std::vector<VkBufferImageCopy> faceRegions;
-		faceRegions.reserve(numFaces);
-
-		uint32_t offset = 0;
-		for (size_t i = 0; i < numFaces; ++i)
-		{
-			VkBufferImageCopy region = {};
-			region.bufferOffset = offset;
-			region.bufferRowLength = 0;
-			region.bufferImageHeight = 0;
-			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			region.imageSubresource.mipLevel = 0;
-			region.imageSubresource.baseArrayLayer = i;
-			region.imageSubresource.layerCount = 1;
-			region.imageOffset = { 0, 0, 0 };
-			region.imageExtent = { width, height, 1 };
-
-			offset += faceSize;
-			faceRegions.push_back(region);
-		}
-
-        vkCmdCopyBufferToImage(
-            commandBuffer, 
-            buffer, 
-            image, 
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 
-            numFaces, 
-            faceRegions.data());
-
-        endSingleTimeCommand(device, commandPool, commandBuffer, graphicsQueue);
-    }
-
-    TextureMap createImageMap(
-        VkDevice device,
-        VmaAllocator allocator,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue,
-        VkFormat imageFormat,
-        uint32_t imageWidth,
-        uint32_t imageHeight,
-        VkImageUsageFlags flags)
-    {
-        TextureMap imageMap;
-        uint32_t bitDepth = 4;
-        if (imageFormat == VK_FORMAT_R8G8B8_UNORM) {
-            bitDepth = 3;
-        }
-
-        VkImageCreateInfo image = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        image.imageType = VK_IMAGE_TYPE_2D;
-        image.format = imageFormat;
-        image.extent.width = imageWidth;
-        image.extent.height = imageHeight;
-        image.extent.depth = 1;
-        image.mipLevels = 1;
-        image.arrayLayers = 1;
-        image.samples = VK_SAMPLE_COUNT_1_BIT;
-        image.tiling = VK_IMAGE_TILING_OPTIMAL;
-        image.usage = flags;
-
-        VmaAllocationCreateInfo imageAllocationCreateInfo = {};
-        imageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        vmaCreateImage(
-            allocator,
-            &image,
-            &imageAllocationCreateInfo,
-            &imageMap.texture.memoryResource,
-            &imageMap.texture.allocation,
-            &imageMap.texture.allocationInfo);
-
-        imageMap.view = createImageView(
-            device,
-            imageMap.texture.memoryResource,
-            imageFormat);
-
-        imageMap.sampler = createImageSampler(device);
-
-        return imageMap;
-    }
-
-    hvk::Resource<VkImage> createTextureImage(
-        VkDevice device,
-        VmaAllocator allocator,
-        VkCommandPool commandPool,
-        VkQueue graphicsQueue,
-		const void* imageDataLayers,
-		size_t numLayers,
-		int imageWidth,
-		int imageHeight,
-		int bitDepth,
-        VkImageType imageType,
-		VkImageCreateFlags flags,
-		VkFormat imageFormat) {
-
-        hvk::Resource<VkImage> textureResource;
-
-		//VkDeviceSize imageSize = imageWidth * imageHeight * components * bitDepth;
-		VkDeviceSize singleImageSize = imageWidth * imageHeight * bitDepth;
-		VkDeviceSize imageSize = singleImageSize * numLayers;
-
-        // copy image data into a staging buffer which will then be used
-        // to transfer to a Vulkan image
-        VkBuffer imageStagingBuffer;
-        VkBufferCreateInfo stagingCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        stagingCreateInfo.size = imageSize;
-        stagingCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-        VmaAllocation stagingAllocation;
-        VmaAllocationInfo stagingAllocationInfo;
-        VmaAllocationCreateInfo stagingAllocCreateInfo = {};
-        stagingAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-
-        vmaCreateBuffer(
-            allocator,
-            &stagingCreateInfo,
-            &stagingAllocCreateInfo,
-            &imageStagingBuffer,
-            &stagingAllocation,
-            &stagingAllocationInfo);
-
-        void* stagingData;
-		int offset = 0;
-        vmaMapMemory(allocator, stagingAllocation, &stagingData);
-		memcpy(stagingData, imageDataLayers, imageSize);
-        vmaUnmapMemory(allocator, stagingAllocation);
-
-        VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-        imageInfo.imageType = imageType;
-        imageInfo.extent.width = static_cast<uint32_t>(imageWidth);
-        imageInfo.extent.height = static_cast<uint32_t>(imageHeight);
-        imageInfo.extent.depth = 1;
-        imageInfo.mipLevels = 1;
-        imageInfo.arrayLayers = numLayers;
-		imageInfo.format = imageFormat;
-        imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-        imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageInfo.flags = flags;
-
-        VmaAllocationCreateInfo imageAllocationCreateInfo = {};
-        imageAllocationCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        vmaCreateImage(
-            allocator,
-            &imageInfo,
-            &imageAllocationCreateInfo,
-            &textureResource.memoryResource,
-            &textureResource.allocation,
-            &textureResource.allocationInfo);
-
-        transitionImageLayout(
-            device,
-            commandPool,
-            graphicsQueue,
-            textureResource.memoryResource,
-            imageFormat,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			numLayers);
-
-        copyBufferToImage(
-            device,
-            commandPool,
-            graphicsQueue,
-            imageStagingBuffer,
-            textureResource.memoryResource,
-            imageWidth,
-            imageHeight,
-            numLayers,
-            singleImageSize);
-
-		transitionImageLayout(
-			device,
-			commandPool,
-			graphicsQueue,
-			textureResource.memoryResource,
-			imageFormat,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			//1);
-			numLayers);
 
 
-        vmaDestroyBuffer(allocator, imageStagingBuffer, stagingAllocation);
-
-        return textureResource;
-    }
-
-    VkImageView createImageView(
-		VkDevice device, 
-		VkImage image, 
-		VkFormat format, 
-		VkImageAspectFlags aspectFlags,
-		uint32_t numLayers,
-        VkImageViewType viewType)
-	{
-        VkImageView imageView;
-
-        VkImageViewCreateInfo createInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-        createInfo.image = image;
-        createInfo.viewType = viewType;
-        createInfo.format = format;
-        createInfo.subresourceRange.aspectMask = aspectFlags;
-        createInfo.subresourceRange.baseMipLevel = 0;
-        createInfo.subresourceRange.levelCount = 1;
-        createInfo.subresourceRange.baseArrayLayer = 0;
-        createInfo.subresourceRange.layerCount = numLayers;
-
-		assert(vkCreateImageView(device, &createInfo, nullptr, &imageView) == VK_SUCCESS);
-
-        return imageView;
-    }
-
-    VkSampler createImageSampler(
-        VkDevice device)
-    {
-        VkSampler sampler;
-        VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        createInfo.magFilter = VK_FILTER_LINEAR;
-        createInfo.minFilter = VK_FILTER_LINEAR;
-        createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        createInfo.mipLodBias = 0.f;
-        createInfo.maxAnisotropy = 1.f;
-        createInfo.minLod = 0.f;
-        createInfo.maxLod = 0.f;
-        createInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
-        assert(vkCreateSampler(device, &createInfo, nullptr, &sampler) == VK_SUCCESS);
-
-        return sampler;
-    }
-
-    VkSampler createTextureSampler(VkDevice device) {
-        VkSampler textureSampler;
-
-        VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
-        createInfo.magFilter = VK_FILTER_LINEAR;
-        createInfo.minFilter = VK_FILTER_LINEAR;
-        //createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        //createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        //createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        createInfo.anisotropyEnable = VK_TRUE;
-        createInfo.maxAnisotropy = 16;
-        //createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-        createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_WHITE;
-        createInfo.unnormalizedCoordinates = VK_FALSE;
-        createInfo.compareEnable = VK_FALSE;
-        createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-        createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        createInfo.mipLodBias = 0.0f;
-        createInfo.minLod = 0.0f;
-        createInfo.maxLod = 0.0f;
-
-		assert(vkCreateSampler(device, &createInfo, nullptr, &textureSampler) == VK_SUCCESS);
-
-        return textureSampler;
-    }
-
-	void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map)
-	{
-		vkDestroySampler(device, map.sampler, nullptr);
-		vkDestroyImageView(device, map.view, nullptr);
-		vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
-	}
 
 	void createDescriptorPool(
 		VkDevice device,
@@ -1491,79 +911,6 @@ namespace hvk {
 		);
 	}
 
-	TextureMap createCubeMap(
-		VkDevice device, 
-		VmaAllocator allocator, 
-		VkCommandPool commandPool, 
-		VkQueue graphicsQueue, 
-		std::array<std::string, 6>& fileNames)
-	{
-		TextureMap cubeMap;
-
-        // load cubemap textures
-        /*
-        
-                T
-            |L |F |R |BA
-                BO
-        
-        */
-        int width, height, numChannels;
-		int copyOffset = 0;
-		int copySize = 0;
-		int layerSize = 0;
-		unsigned char* copyTo = nullptr;
-		unsigned char* layers[6];
-        for (size_t i = 0; i < fileNames.size(); ++i)
-        {
-            unsigned char* data = stbi_load(
-                fileNames[i].c_str(), 
-                &width, 
-                &height, 
-                &numChannels, 
-                0);
-
-			assert(data != nullptr);
-
-			layers[i] = data;
-			copySize += width * height * numChannels;
-        }
-		layerSize = copySize / fileNames.size();
-
-		copyTo = static_cast<unsigned char*>(ResourceManager::alloc(copySize, alignof(unsigned char)));
-		for (size_t i = 0; i < 6; ++i)
-		{
-			void* dst = copyTo + copyOffset;
-			copyOffset += layerSize;
-			memcpy(dst, layers[i], layerSize);
-			stbi_image_free(layers[i]);
-		}
-
-		cubeMap.texture = createTextureImage(
-			device,
-			allocator,
-			commandPool,
-			graphicsQueue,
-			copyTo,
-			6,
-			width,
-			height,
-			numChannels,
-			VK_IMAGE_TYPE_2D,
-			VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT);
-		cubeMap.view = createImageView(
-			device,
-			cubeMap.texture.memoryResource,
-			VK_FORMAT_R8G8B8A8_UNORM,
-            VK_IMAGE_ASPECT_COLOR_BIT,
-            1,
-            VK_IMAGE_VIEW_TYPE_CUBE);
-		cubeMap.sampler = createTextureSampler(device);
-
-		ResourceManager::free(copyTo, copySize);
-
-		return cubeMap;
-	}
 }
 
 #endif

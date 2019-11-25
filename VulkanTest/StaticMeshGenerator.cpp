@@ -259,7 +259,7 @@ namespace hvk
                 mDevice.device, 
                 newRenderable.diffuseMap.texture.memoryResource, 
                 VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.diffuseMap.sampler = createTextureSampler(mDevice.device);
+			newRenderable.diffuseMap.sampler = createImageSampler(mDevice.device);
 		}
 
         if (mat->metallicRoughnessProp.texture != nullptr)
@@ -279,7 +279,7 @@ namespace hvk
                 mDevice.device, 
                 newRenderable.metallicRoughnessMap.texture.memoryResource, 
                 VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.metallicRoughnessMap.sampler = createTextureSampler(mDevice.device);
+			newRenderable.metallicRoughnessMap.sampler = createImageSampler(mDevice.device);
         }
 
         if (mat->normalProp.texture != nullptr)
@@ -299,7 +299,7 @@ namespace hvk
                 mDevice.device, 
                 newRenderable.normalMap.texture.memoryResource, 
                 VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.normalMap.sampler = createTextureSampler(mDevice.device);
+			newRenderable.normalMap.sampler = createImageSampler(mDevice.device);
         }
 
 		// TODO: pre-allocate a number of descriptor sets for renderables

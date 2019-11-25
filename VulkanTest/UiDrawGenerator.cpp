@@ -66,7 +66,7 @@ namespace hvk
 
 		VkDescriptorSetLayout uiDescriptorSetLayout;
 		mFontView = createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-		mFontSampler = createTextureSampler(mDevice.device);
+		mFontSampler = createImageSampler(mDevice.device);
 
 		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
 		uiLayoutImageBinding.binding = 0;
