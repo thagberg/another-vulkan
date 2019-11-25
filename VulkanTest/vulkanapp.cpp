@@ -395,6 +395,7 @@ namespace hvk {
 				VK_FORMAT_R16G16B16A16_SFLOAT,
 				mSwapchain.swapchainExtent.width,
 				mSwapchain.swapchainExtent.height,
+				0,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
 		}
 		else {
@@ -406,6 +407,7 @@ namespace hvk {
 				VK_FORMAT_R16G16B16A16_SFLOAT,
 				mSwapchain.swapchainExtent.width,
 				mSwapchain.swapchainExtent.height,
+				0,
 				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 		}
 
@@ -436,14 +438,13 @@ namespace hvk {
             &mDepthResource.allocationInfo);
 
 		mDepthView = util::image::createImageView(mDevice, mDepthResource.memoryResource, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT);
+		auto commandBuffer = util::command::beginSingleTimeCommand(mDevice, mCommandPool);
 		util::image::transitionImageLayout(
-			mDevice, 
-			mCommandPool, 
-			mGraphicsQueue, 
+			commandBuffer,
 			mDepthResource.memoryResource, 
-			VK_FORMAT_D32_SFLOAT, 
 			VK_IMAGE_LAYOUT_UNDEFINED, 
 			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		util::command::endSingleTimeCommand(mDevice, mCommandPool, commandBuffer, mGraphicsQueue);
 
 
 		auto colorAttachment = util::renderpass::createColorAttachment(
@@ -722,29 +723,32 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			1024,
 			1024,
-			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
+			0,
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT));
 
 		auto colorAttachment = util::renderpass::createColorAttachment(
-			VK_FORMAT_R16G16B16A16_SFLOAT, 
-			VK_IMAGE_LAYOUT_UNDEFINED, 
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+			//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		std::vector<VkSubpassDependency> colorPassDependencies = {
-			util::renderpass::createSubpassDependency(
-				VK_SUBPASS_EXTERNAL,
-				0,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT),
-			util::renderpass::createSubpassDependency(
-				0,
-				VK_SUBPASS_EXTERNAL,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT)
+			util::renderpass::createSubpassDependency()
+			//util::renderpass::createSubpassDependency(
+			//	VK_SUBPASS_EXTERNAL,
+			//	0,
+			//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			//	VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			//	VK_ACCESS_SHADER_READ_BIT,
+			//	VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			//	VK_DEPENDENCY_BY_REGION_BIT),
+			//util::renderpass::createSubpassDependency(
+			//	0,
+			//	VK_SUBPASS_EXTERNAL,
+			//	VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			//	VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			//	VK_ACCESS_SHADER_READ_BIT,
+			//	VK_DEPENDENCY_BY_REGION_BIT)
 		};
         auto environmentRenderPass = util::renderpass::createRenderPass(
 			mDevice, 
@@ -776,6 +780,21 @@ namespace hvk {
 			hdrMap, 
 			hdrMapShaders);
 
+		// Create cubemap which we will iteratively copy environmentFramebuffer onto
+		auto cubemap = util::image::createImageMap(
+			mDevice,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			1024,
+			1024,
+			VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+			6,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_VIEW_TYPE_CUBE);
+
 		VkViewport viewport = {};
 		viewport.x = 0.f;
 		viewport.y = 0.f;
@@ -789,9 +808,8 @@ namespace hvk {
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
 
-		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
-		clearValues[1].depthStencil = { 1.0f, 0 };
+		std::array<VkClearValue, 1> clearValues = {};
+		clearValues[0].color = { 0.f, 0.f, 0.f, 1.0f };
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -826,6 +844,59 @@ namespace hvk {
 
 			vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &cubemapCommandBuffer);
 			vkCmdEndRenderPass(mPrimaryCommandBuffer);
+
+			// prepare to copy framebuffer over to cubemap
+			util::image::transitionImageLayout(
+				mPrimaryCommandBuffer,
+				environmentMap->texture.memoryResource,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				1);
+
+			// now copy it over
+			VkImageCopy copyRegion = {};
+
+			copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			copyRegion.srcSubresource.baseArrayLayer = 0;
+			copyRegion.srcSubresource.mipLevel = 0;
+			copyRegion.srcSubresource.layerCount = 1;
+			copyRegion.srcOffset = { 0, 0, 0 };
+
+			copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			copyRegion.dstSubresource.baseArrayLayer = i;
+			copyRegion.dstSubresource.mipLevel = 0;
+			copyRegion.dstSubresource.layerCount = 1;
+			copyRegion.dstOffset = { 0, 0, 0 };
+
+			copyRegion.extent.width = 1024;
+			copyRegion.extent.height = 1024;
+			copyRegion.extent.depth = 1;
+
+			vkCmdCopyImage(
+				mPrimaryCommandBuffer,
+				environmentMap->texture.memoryResource,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				cubemap.texture.memoryResource,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion);
+
+			// transition framebuffer back to color attachment
+			util::image::transitionImageLayout(
+				mPrimaryCommandBuffer,
+				environmentMap->texture.memoryResource,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+			// transition cubemap face to shader read
+			util::image::transitionImageLayout(
+				mPrimaryCommandBuffer,
+				cubemap.texture.memoryResource,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				1,
+				i);
+
 			vkEndCommandBuffer(mPrimaryCommandBuffer);
 
 			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };

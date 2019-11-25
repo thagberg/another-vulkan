@@ -25,14 +25,12 @@ namespace hvk
 				VkDevice device);
 
 			void transitionImageLayout(
-				VkDevice device,
-				VkCommandPool commandPool,
-				VkQueue graphicsQueue,
+				VkCommandBuffer commandBuffer,
 				VkImage image,
-				VkFormat format,
 				VkImageLayout oldLayout,
 				VkImageLayout newLayout,
-				uint32_t numLayers=1);
+				uint32_t numLayers=1,
+				uint32_t baseLayer=0);
 
 			TextureMap createImageMap(
 				VkDevice device,
@@ -42,7 +40,11 @@ namespace hvk
 				VkFormat imageFormat,
 				uint32_t imageWidth,
 				uint32_t imageHeight,
-				VkImageUsageFlags flags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+				VkImageCreateFlags createFlags = 0,
+				VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+				uint32_t arrayLayers = 1,
+				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+				VkImageViewType viewType=VK_IMAGE_VIEW_TYPE_2D);
 
 			hvk::Resource<VkImage> createTextureImage(
 				VkDevice device,
