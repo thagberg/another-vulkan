@@ -20,6 +20,11 @@ namespace hvk
 				VkCommandPool commandPool, 
 				VkCommandBuffer commandBuffer, 
 				VkQueue queue);
+
+			VkCommandPool createCommandPool(
+				VkDevice device,
+				int queueFamilyIndex,
+				VkCommandPoolCreateFlags flags);
 		}
 	}
 }

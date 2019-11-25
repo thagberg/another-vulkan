@@ -13,6 +13,7 @@
 #include "image-util.h"
 #include "renderpass-util.h"
 #include "framebuffer-util.h"
+#include "signal-util.h"
 
 #include "HvkUtil.h"
 
@@ -79,7 +80,7 @@ namespace hvk {
         mDebugRenderer.reset();
 		mSkyboxRenderer.reset();
 
-		destroyMap(mDevice, mAllocator, *mColorPassMap);
+		util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
 		vkDestroyFramebuffer(mDevice, mColorPassFramebuffer, nullptr);
 
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
@@ -195,8 +196,8 @@ namespace hvk {
 		fenceCreate.pNext = nullptr;
 		fenceCreate.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		mRenderFinished = createSemaphore(mDevice);
-		mFinalRenderFinished = createSemaphore(mDevice);
+		mRenderFinished = util::signal::createSemaphore(mDevice);
+		mFinalRenderFinished = util::signal::createSemaphore(mDevice);
 		assert(vkCreateFence(device.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
 		// Allocate command buffer
@@ -225,7 +226,7 @@ namespace hvk {
             "resources/sky/desertsky_bk.png",
             "resources/sky/desertsky_ft.png"
         };
-        auto skyboxMap = HVK_make_shared<TextureMap>(createCubeMap(
+        auto skyboxMap = HVK_make_shared<TextureMap>(util::image::createCubeMap(
             mDevice,
             mAllocator,
             mCommandPool,
@@ -280,7 +281,7 @@ namespace hvk {
 		mFirstPassCommandBuffers.resize(3);
 		mSecondPassCommandBuffers.resize(2);
 
-        mImageAvailable = createSemaphore(mDevice);
+        mImageAvailable = util::signal::createSemaphore(mDevice);
     }
 
     void VulkanApp::addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node)
@@ -313,7 +314,7 @@ namespace hvk {
 
 		// the color pass map which we render to in the color pass
 		// needs to be recreated at the new size
-		destroyMap(mDevice, mAllocator, *mColorPassMap);
+		util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
 
         if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create Swapchain");
@@ -443,7 +444,7 @@ namespace hvk {
 			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		auto depthAttachment = util::renderpass::createDepthAttachment();
 		std::vector<VkSubpassDependency> colorPassDependencies = {
-			createSubpassDependency(
+			util::renderpass::createSubpassDependency(
 				VK_SUBPASS_EXTERNAL,
 				0,
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -451,7 +452,7 @@ namespace hvk {
 				VK_ACCESS_SHADER_READ_BIT,
 				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT),
-			createSubpassDependency(
+			util::renderpass::createSubpassDependency(
 				0,
 				VK_SUBPASS_EXTERNAL,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -468,7 +469,7 @@ namespace hvk {
 			&depthAttachment);
 
         auto finalColorAttachment = util::renderpass::createColorAttachment(mSwapchain.swapchainImageFormat);
-		std::vector<VkSubpassDependency> finalPassDependencies = { createSubpassDependency() };
+		std::vector<VkSubpassDependency> finalPassDependencies = { util::renderpass::createSubpassDependency() };
         mFinalRenderPass = util::renderpass::createRenderPass(mDevice, mSwapchain.swapchainImageFormat, finalPassDependencies, &finalColorAttachment);
 
         mFinalPassFramebuffers.resize(mFinalPassImageViews.size());
@@ -688,7 +689,7 @@ namespace hvk {
 		// Convert HDR equirectangular map to cubemap
 		int hdrWidth, hdrHeight, hdrBitDepth;
 		float* hdrData = stbi_loadf("resources/Alexs_Apartment/Alexs_Apt_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
-		auto hdrImage = createTextureImage(
+		auto hdrImage = util::image::createTextureImage(
 			mDevice, 
 			mAllocator, 
 			mCommandPool, 
@@ -703,9 +704,9 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT);
 		auto hdrMap = HVK_make_shared<TextureMap>(TextureMap{
 			hdrImage,
-			createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R16G16B16A16_SFLOAT),
-			createTextureSampler(mDevice)});
-		auto environmentMap = HVK_make_shared<TextureMap>(createImageMap(
+			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R16G16B16A16_SFLOAT),
+			util::image::createImageSampler(mDevice)});
+		auto environmentMap = HVK_make_shared<TextureMap>(util::image::createImageMap(
 			mDevice,
 			mAllocator,
 			mCommandPool,
@@ -715,9 +716,12 @@ namespace hvk {
 			1024,
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
 
-		auto colorAttachment = createColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		auto colorAttachment = util::renderpass::createColorAttachment(
+			VK_FORMAT_R16G16B16A16_SFLOAT, 
+			VK_IMAGE_LAYOUT_UNDEFINED, 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		std::vector<VkSubpassDependency> colorPassDependencies = {
-			createSubpassDependency(
+			util::renderpass::createSubpassDependency(
 				VK_SUBPASS_EXTERNAL,
 				0,
 				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -725,7 +729,7 @@ namespace hvk {
 				VK_ACCESS_SHADER_READ_BIT,
 				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT),
-			createSubpassDependency(
+			util::renderpass::createSubpassDependency(
 				0,
 				VK_SUBPASS_EXTERNAL,
 				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
@@ -734,13 +738,23 @@ namespace hvk {
 				VK_ACCESS_SHADER_READ_BIT,
 				VK_DEPENDENCY_BY_REGION_BIT)
 		};
-        auto environmentRenderPass = createRenderPass(mDevice, VK_FORMAT_R16G16B16A16_SFLOAT, colorPassDependencies, &colorAttachment);
+        auto environmentRenderPass = util::renderpass::createRenderPass(
+			mDevice, 
+			VK_FORMAT_R16G16B16A16_SFLOAT, 
+			colorPassDependencies, 
+			&colorAttachment);
 		VkExtent2D environmentExtent = {
 			1024,
 			1024
 		};
 		VkFramebuffer environmentFramebuffer;
-        createFramebuffer(mDevice, environmentRenderPass, environmentExtent, environmentMap->view, nullptr, &environmentFramebuffer);
+        util::framebuffer::createFramebuffer(
+			mDevice, 
+			environmentRenderPass, 
+			environmentExtent, 
+			environmentMap->view, 
+			nullptr, 
+			&environmentFramebuffer);
 
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",

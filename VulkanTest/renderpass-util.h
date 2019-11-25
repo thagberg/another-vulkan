@@ -26,6 +26,15 @@ namespace hvk
 				std::vector<VkSubpassDependency>& subpassDependencies,
 				const VkAttachmentDescription* pColorAttachment, 
 				const VkAttachmentDescription* pDepthAttachment=nullptr);
+
+			VkSubpassDependency createSubpassDependency(
+				uint32_t srcSubpass = VK_SUBPASS_EXTERNAL,
+				uint32_t dstSubpass = 0,
+				VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VkAccessFlags srcAccessMask = 0,
+				VkAccessFlags dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VkDependencyFlags dependencyFlags=0);
 		}
 	}
 }

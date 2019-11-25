@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "command-util.h"
 
+#include <assert.h>
+
 namespace hvk
 {
 	namespace util
@@ -24,6 +26,7 @@ namespace hvk
 				return commandBuffer;
 			}
 
+
 			void endSingleTimeCommand(VkDevice device, VkCommandPool commandPool, VkCommandBuffer commandBuffer, VkQueue queue) {
 				vkEndCommandBuffer(commandBuffer);
 
@@ -34,6 +37,24 @@ namespace hvk
 				vkQueueSubmit(queue, 1, &submitInfo, VK_NULL_HANDLE);
 				vkQueueWaitIdle(queue);
 				vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
+			}
+
+
+			VkCommandPool createCommandPool(
+				VkDevice device, 
+				int queueFamilyIndex, 
+				VkCommandPoolCreateFlags flags) {
+
+				VkCommandPool commandPool;
+
+				VkCommandPoolCreateInfo poolInfo = {};
+				poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+				poolInfo.queueFamilyIndex = queueFamilyIndex;
+				poolInfo.flags = flags;
+
+				assert(vkCreateCommandPool(device, &poolInfo, nullptr, &commandPool) == VK_SUCCESS);
+
+				return commandPool;
 			}
 		}
 	}

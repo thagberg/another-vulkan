@@ -99,6 +99,28 @@ namespace hvk
 
 				return renderPass;
 			}
+
+
+			VkSubpassDependency createSubpassDependency(
+				uint32_t srcSubpass,
+				uint32_t dstSubpass,
+				VkPipelineStageFlags srcStageMask,
+				VkPipelineStageFlags dstStageMask,
+				VkAccessFlags srcAccessMask,
+				VkAccessFlags dstAccessMask,
+				VkDependencyFlags dependencyFlags)
+			{
+				VkSubpassDependency dependency = {};
+				dependency.srcSubpass = srcSubpass;
+				dependency.dstSubpass = dstSubpass;
+				dependency.srcStageMask = srcStageMask;
+				dependency.dstStageMask = dstStageMask;
+				dependency.srcAccessMask = srcAccessMask;
+				dependency.dstAccessMask = dstAccessMask;
+				dependency.dependencyFlags = dependencyFlags;
+
+				return dependency;
+			}
 		}
 	}
 }
