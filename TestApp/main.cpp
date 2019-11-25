@@ -86,6 +86,8 @@ public:
 
         activateCamera(mCamera);
 
+		generateEnvironmentMap();
+
 	}
 
 	virtual ~TestApp() = default;

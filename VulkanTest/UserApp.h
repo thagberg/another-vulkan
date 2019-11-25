@@ -66,4 +66,5 @@ public:
     float getGammaCorrection();
     bool isUseSRGBTex();
     VkDevice getDevice();
+	void generateEnvironmentMap();
 };

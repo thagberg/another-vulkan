@@ -106,5 +106,6 @@ namespace hvk {
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }
         VkDevice getDevice() { return mDevice; }
+		void generateEnvironmentMap();
 	};
 }

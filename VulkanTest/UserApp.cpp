@@ -184,3 +184,8 @@ hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
 {
 	return mApp->getExposureSettings();
 }
+
+void UserApp::generateEnvironmentMap()
+{
+	mApp->generateEnvironmentMap();
+}

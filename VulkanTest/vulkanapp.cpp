@@ -203,6 +203,16 @@ namespace hvk {
 		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		assert(vkAllocateCommandBuffers(mDevice, &bufferAlloc, &mPrimaryCommandBuffer) == VK_SUCCESS);
 
+		// Initialize gamma settings
+		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
+
+		// Initialize PBR weight values
+		mPBRWeight = HVK_make_shared<PBRWeight>(PBRWeight{ 1.f, 1.f });
+
+		// Initialize Exposure settings
+		mExposureSettings = HVK_make_shared<ExposureSettings>(ExposureSettings{ 1.0 });
+
+
         // Create cubemap for skybox and environmental mapping
         std::array<std::string, 6> skyboxFiles = {
             "resources/sky/desertsky_rt.png",
@@ -218,47 +228,6 @@ namespace hvk {
             mCommandPool,
             mGraphicsQueue,
             skyboxFiles));
-
-		// Convert HDR equirectangular map to cubemap
-		int hdrWidth, hdrHeight, hdrBitDepth;
-		float* hdrData = stbi_loadf("resources/Alexs_Apartment/Alexs_Apt_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
-		auto hdrImage = createTextureImage(
-			mDevice, 
-			mAllocator, 
-			mCommandPool, 
-			mGraphicsQueue, 
-			hdrData, 
-			1, 
-			hdrWidth, 
-			hdrHeight, 
-			8,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
-			VK_IMAGE_TYPE_2D, 
-			0, 
-			VK_FORMAT_R16G16B16A16_SFLOAT);
-		auto hdrMap = HVK_make_shared<TextureMap>(TextureMap{
-			hdrImage,
-			createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R16G16B16A16_SFLOAT),
-			createTextureSampler(mDevice)});
-		std::array<std::string, 2> hdrMapShaders = {
-			"shaders/compiled/hdr_to_cubemap_vert.spv",
-			"shaders/compiled/hdr_to_cubemap_frag.spv"};
-		auto hdrToCubemap = CubemapGenerator(
-			device, 
-			mAllocator, 
-			mGraphicsQueue, 
-			mColorRenderPass, 
-			mCommandPool, 
-			hdrMap, 
-			hdrMapShaders);
-
-		// Initialize gamma settings
-		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
-
-		// Initialize PBR weight values
-		mPBRWeight = HVK_make_shared<PBRWeight>(PBRWeight{ 1.f, 1.f });
-
-		// Initialize Exposure settings
-		mExposureSettings = HVK_make_shared<ExposureSettings>(ExposureSettings{ 1.0 });
 
 		// Initialize drawlist generators
         mQuadRenderer = HVK_make_shared<QuadGenerator>(
@@ -691,4 +660,148 @@ namespace hvk {
     {
 		mAmbientLight = ambientLight;
     }
+
+	void VulkanApp::generateEnvironmentMap()
+	{
+		QueueFamilies families = {
+			mGraphicsIndex,
+			mGraphicsIndex
+		};
+		VulkanDevice device = {
+			mPhysicalDevice,
+			mDevice,
+			families
+		};
+		// Convert HDR equirectangular map to cubemap
+		int hdrWidth, hdrHeight, hdrBitDepth;
+		float* hdrData = stbi_loadf("resources/Alexs_Apartment/Alexs_Apt_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
+		auto hdrImage = createTextureImage(
+			mDevice, 
+			mAllocator, 
+			mCommandPool, 
+			mGraphicsQueue, 
+			hdrData, 
+			1, 
+			hdrWidth, 
+			hdrHeight, 
+			8,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
+			VK_IMAGE_TYPE_2D, 
+			0, 
+			VK_FORMAT_R16G16B16A16_SFLOAT);
+		auto hdrMap = HVK_make_shared<TextureMap>(TextureMap{
+			hdrImage,
+			createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R16G16B16A16_SFLOAT),
+			createTextureSampler(mDevice)});
+		auto environmentMap = HVK_make_shared<TextureMap>(createImageMap(
+			mDevice,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			//mSwapchain.swapchainImageFormat,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			1024,
+			1024,
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
+
+		auto colorAttachment = createColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		std::vector<VkSubpassDependency> colorPassDependencies = {
+			createSubpassDependency(
+				VK_SUBPASS_EXTERNAL,
+				0,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT),
+			createSubpassDependency(
+				0,
+				VK_SUBPASS_EXTERNAL,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT)
+		};
+        auto environmentRenderPass = createRenderPass(mDevice, VK_FORMAT_R16G16B16A16_SFLOAT, colorPassDependencies, &colorAttachment);
+		VkExtent2D environmentExtent = {
+			1024,
+			1024
+		};
+		VkFramebuffer environmentFramebuffer;
+        createFramebuffer(mDevice, environmentRenderPass, environmentExtent, environmentMap->view, nullptr, &environmentFramebuffer);
+
+		std::array<std::string, 2> hdrMapShaders = {
+			"shaders/compiled/hdr_to_cubemap_vert.spv",
+			"shaders/compiled/hdr_to_cubemap_frag.spv"};
+		auto hdrToCubemap = CubemapGenerator(
+			device, 
+			mAllocator, 
+			mGraphicsQueue, 
+			environmentRenderPass, 
+			mCommandPool, 
+			hdrMap, 
+			hdrMapShaders);
+
+		VkViewport viewport = {};
+		viewport.x = 0.f;
+		viewport.y = 0.f;
+		viewport.width = 1024.f;
+		viewport.height = 1024.f;
+		viewport.minDepth = 0.f;
+		viewport.maxDepth = 1.f;
+		VkRect2D scissor = {};
+		scissor.offset = { 0, 0 };
+		scissor.extent = environmentExtent;
+		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
+
+		std::array<VkClearValue, 2> clearValues = {};
+		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		commandBegin.pInheritanceInfo = nullptr;
+
+		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		renderBegin.renderPass = environmentRenderPass;
+		renderBegin.framebuffer = environmentFramebuffer;
+		renderBegin.renderArea = scissor;
+		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
+		renderBegin.pClearValues = clearValues.data();
+
+        VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+        inheritanceInfo.pNext = nullptr;
+        inheritanceInfo.renderPass = environmentRenderPass;
+        inheritanceInfo.subpass = 0;
+        inheritanceInfo.framebuffer = environmentFramebuffer;
+        inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+
+		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
+		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+		auto cubemapCommandBuffer = hdrToCubemap.drawFrame(
+			inheritanceInfo, 
+			environmentFramebuffer, 
+			viewport, 
+			scissor, 
+			*mActiveCamera.get(),
+			*mGammaSettings);
+
+		vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &cubemapCommandBuffer);
+		vkCmdEndRenderPass(mPrimaryCommandBuffer);
+
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = &mImageAvailable;
+		submitInfo.pWaitDstStageMask = waitStages;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &mPrimaryCommandBuffer;
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = &mRenderFinished;
+
+		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
+
+	}
 }
