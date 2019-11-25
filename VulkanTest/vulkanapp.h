@@ -17,7 +17,7 @@
 #include "StaticMeshGenerator.h"
 #include "UiDrawGenerator.h"
 #include "DebugDrawGenerator.h"
-#include "SkyboxGenerator.h"
+#include CubemapGenerator.h"
 #include "QuadGenerator.h"
 #include "CameraController.h"
 
@@ -59,7 +59,7 @@ namespace hvk {
 		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
-		HVK_shared<SkyboxGenerator> mSkyboxRenderer;
+		HVK_shared<CubemapGenerator> mSkyboxRenderer;
         HVK_shared<QuadGenerator> mQuadRenderer;
 		HVK_shared<AmbientLight> mAmbientLight;
 

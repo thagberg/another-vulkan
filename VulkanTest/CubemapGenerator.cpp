@@ -1,4 +1,4 @@
-#include "SkyboxGenerator.h"
+#include CubemapGenerator.h"
 
 #include "stb_image.h"
 
@@ -9,7 +9,7 @@
 
 namespace hvk
 {
-	SkyboxGenerator:: SkyboxGenerator(
+	CubemapGenerator:: CubemapGenerator(
 		VulkanDevice device, 
 		VmaAllocator allocator, 
 		VkQueue graphicsQueue, 
@@ -174,25 +174,32 @@ namespace hvk
 		setInitialized(true);
 	}
 
-	void SkyboxGenerator::updateRenderPass(VkRenderPass renderPass)
+	void CubemapGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
 		mColorRenderPass = renderPass;
 		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 
-	SkyboxGenerator::~SkyboxGenerator()
+	CubemapGenerator::~CubemapGenerator()
 	{
-		//destroyMap(mDevice.device, mAllocator, mSkyboxMap);
+		vmaDestroyBuffer(mAllocator, mSkyboxRenderable.vbo.memoryResource, mSkyboxRenderable.vbo.allocation);
+		vmaDestroyBuffer(mAllocator, mSkyboxRenderable.ibo.memoryResource, mSkyboxRenderable.ibo.allocation);
+		vmaDestroyBuffer(mAllocator, mSkyboxRenderable.ubo.memoryResource, mSkyboxRenderable.ubo.allocation);
+		vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+		vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
+		mSkyboxMap.reset();
 	}
 
-	void SkyboxGenerator::invalidate()
+	void CubemapGenerator::invalidate()
 	{
 		setInitialized(false);
 		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
 	}
 
-	VkCommandBuffer& SkyboxGenerator::drawFrame(
+	VkCommandBuffer& CubemapGenerator::drawFrame(
 		const VkCommandBufferInheritanceInfo& inheritance,
 		const VkFramebuffer& framebuffer,
 		const VkViewport& viewport,

@@ -174,7 +174,7 @@
     <ClInclude Include="Inputs.h" />
     <ClInclude Include="QuadGenerator.h" />
     <ClInclude Include="RenderObject.h" />
-    <ClInclude Include="SkyboxGenerator.h" />
+    <ClInclude Include="CubemapGenerator.h" />
     <ClInclude Include="StaticMeshGenerator.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Subscription.h" />
@@ -196,7 +196,7 @@
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="QuadGenerator.cpp" />
     <ClCompile Include="RenderObject.cpp" />
-    <ClCompile Include="SkyboxGenerator.cpp" />
+    <ClCompile Include="CubemapGenerator.cpp" />
     <ClCompile Include="StaticMeshGenerator.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

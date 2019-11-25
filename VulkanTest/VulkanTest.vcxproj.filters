@@ -90,10 +90,10 @@
     <ClInclude Include="UserApp.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="SkyboxGenerator.h">
+    <ClInclude Include="QuadGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="QuadGenerator.h">
+    <ClInclude Include="CubemapGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -140,10 +140,10 @@
     <ClCompile Include="UserApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="SkyboxGenerator.cpp">
+    <ClCompile Include="QuadGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="QuadGenerator.cpp">
+    <ClCompile Include="CubemapGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

@@ -262,7 +262,7 @@ namespace hvk {
             mColorRenderPass, 
             mCommandPool);
 
-		mSkyboxRenderer = HVK_make_shared<SkyboxGenerator>(
+		mSkyboxRenderer = HVK_make_shared<CubemapGenerator>(
 			device,
 			mAllocator,
 			mGraphicsQueue,

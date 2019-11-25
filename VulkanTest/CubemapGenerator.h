@@ -8,7 +8,7 @@
 
 namespace hvk
 {
-	class SkyboxGenerator : public DrawlistGenerator
+	class CubemapGenerator : public DrawlistGenerator
 	{
 	private:
 		struct SkyboxRenderable
@@ -34,14 +34,14 @@ namespace hvk
 		SkyboxRenderable mSkyboxRenderable;
 		
 	public:
-		SkyboxGenerator(
+		CubemapGenerator(
 			VulkanDevice device,
 			VmaAllocator allocator,
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
             HVK_shared<TextureMap> skyboxMap);
-		virtual ~SkyboxGenerator();
+		virtual ~CubemapGenerator();
 		virtual void invalidate() override;
 		VkCommandBuffer& drawFrame(
 			const VkCommandBufferInheritanceInfo& inheritance,
