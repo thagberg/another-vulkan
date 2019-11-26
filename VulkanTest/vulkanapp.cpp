@@ -31,7 +31,6 @@ const std::vector<const char*> deviceExtensions = {
     VK_KHR_SWAPCHAIN_EXTENSION_NAME
 };
 
-
 namespace hvk {
 
     VulkanApp::VulkanApp() :
@@ -745,26 +744,8 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			//VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
-			//VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		std::vector<VkSubpassDependency> colorPassDependencies = {
 			util::renderpass::createSubpassDependency()
-			//util::renderpass::createSubpassDependency(
-			//	VK_SUBPASS_EXTERNAL,
-			//	0,
-			//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			//	VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			//	VK_ACCESS_SHADER_READ_BIT,
-			//	VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			//	VK_DEPENDENCY_BY_REGION_BIT),
-			//util::renderpass::createSubpassDependency(
-			//	0,
-			//	VK_SUBPASS_EXTERNAL,
-			//	VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-			//	VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			//	VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-			//	VK_ACCESS_SHADER_READ_BIT,
-			//	VK_DEPENDENCY_BY_REGION_BIT)
 		};
         auto environmentRenderPass = util::renderpass::createRenderPass(
 			mDevice, 
@@ -857,12 +838,27 @@ namespace hvk {
         inheritanceInfo.framebuffer = environmentFramebuffer;
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
+		//auto cubeCamera = Camera((PI / 2.f), 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
+		auto cubeCamera = Camera(90.f, 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
+		std::array<std::pair<float, float>, 6> rotations = {
+			std::pair<float, float>(0.f, 0.f),
+			std::pair<float, float>(0.f, glm::radians(90.f)),
+			std::pair<float, float>(0.f, glm::radians(90.f)),
+			std::pair<float, float>(0.f, glm::radians(90.f)),
+			std::pair<float, float>(glm::radians(90.f), glm::radians(90.f)),
+			std::pair<float, float>(glm::radians(180.f), glm::radians(90.f))
+		};
+
 		for (uint8_t i = 0; i < 6; ++i)
 		{
 			// Capture offline render via Renderdoc
 			if (rdoc_api) {
 				rdoc_api->StartFrameCapture(nullptr, nullptr);
 			}
+
+			// prepare camera
+			const auto& rotation = rotations[i];
+			cubeCamera.rotate(rotation.first, rotation.second);
 
 			vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
 			vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
@@ -872,7 +868,8 @@ namespace hvk {
 				environmentFramebuffer, 
 				viewport, 
 				scissor, 
-				*mActiveCamera.get(),
+				//*mActiveCamera.get(),
+				cubeCamera,
 				*mGammaSettings);
 
 			vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &cubemapCommandBuffer);
