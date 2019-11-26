@@ -85,9 +85,16 @@ namespace hvk {
         }
     }
 
-	bool InputManager::isPressed(InputID input) {
+	bool InputManager::isDown(InputID input) {
 		if (input <= GLFW_KEY_LAST) {
 			return currentKeysPressed[input];
+		}
+        return false;
+	}
+
+	bool InputManager::wasPressed(InputID input) {
+		if (input <= GLFW_KEY_LAST) {
+			return currentKeysPressed[input] && !previousKeysPressed[input];
 		}
         return false;
 	}

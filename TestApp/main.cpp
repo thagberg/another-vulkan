@@ -109,7 +109,7 @@ protected:
         io.DeltaTime = static_cast<float>(frameTime);
         io.MousePos = ImVec2(static_cast<float>(mouse.x), static_cast<float>(mouse.y));
         io.MouseDown[0] = mouse.leftDown;
-        io.KeyCtrl = hvk::InputManager::isPressed(GLFW_KEY_LEFT_CONTROL);
+        io.KeyCtrl = hvk::InputManager::isDown(GLFW_KEY_LEFT_CONTROL);
 
         bool mouseClicked = mouse.leftDown && !prevMouse.leftDown;
         bool mouseReleased = prevMouse.leftDown && !mouse.leftDown;
@@ -131,42 +131,58 @@ protected:
 
         std::vector<hvk::Command> cameraCommands;
         cameraCommands.reserve(6);
-        if (hvk::InputManager::isPressed(GLFW_KEY_W)) {
+        if (hvk::InputManager::isDown(GLFW_KEY_W)) {
             cameraCommands.push_back(hvk::Command{ 0, "move_forward", -1.0f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_S)) {
+        if (hvk::InputManager::isDown(GLFW_KEY_S)) {
             cameraCommands.push_back(hvk::Command{ 0, "move_forward", 1.0f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_A)) {
+        if (hvk::InputManager::isDown(GLFW_KEY_A)) {
             cameraCommands.push_back(hvk::Command{ 1, "move_right", -1.0f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_D)) {
+        if (hvk::InputManager::isDown(GLFW_KEY_D)) {
             cameraCommands.push_back(hvk::Command{ 1, "move_right", 1.0f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_Q)) {
+        if (hvk::InputManager::isDown(GLFW_KEY_Q)) {
             cameraCommands.push_back(hvk::Command{ 2, "move_up", -1.0f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_E)) {
+        if (hvk::InputManager::isDown(GLFW_KEY_E)) {
             cameraCommands.push_back(hvk::Command{ 2, "move_up", 1.0f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_UP))
+        if (hvk::InputManager::isDown(GLFW_KEY_UP))
         {
             cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", 0.25f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_DOWN))
+        if (hvk::InputManager::isDown(GLFW_KEY_DOWN))
         {
             
             cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", -0.25f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_LEFT))
+        if (hvk::InputManager::isDown(GLFW_KEY_LEFT))
         {
             
             cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", -0.25f });
         }
-        if (hvk::InputManager::isPressed(GLFW_KEY_RIGHT))
+        if (hvk::InputManager::isDown(GLFW_KEY_RIGHT))
         {
             cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
         }
+		if (hvk::InputManager::wasPressed(GLFW_KEY_I))
+		{
+			cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", -90.f });
+		}
+		if (hvk::InputManager::wasPressed(GLFW_KEY_K))
+		{
+			cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", 90.f });
+		}
+		if (hvk::InputManager::wasPressed(GLFW_KEY_J))
+		{
+			cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 90.f });
+		}
+		if (hvk::InputManager::wasPressed(GLFW_KEY_L))
+		{
+			cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", -90.f });
+		}
         if (cameraDrag) {
             if (mouseDeltY != 0.f) {
                 cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", mouseDeltY * sensitivity });

@@ -97,7 +97,8 @@ namespace hvk {
         static void init(std::shared_ptr<GLFWwindow> window);
         static void update();
 
-		static bool isPressed(InputID input);
+		static bool isDown(InputID input);
+		static bool wasPressed(InputID input);
 
 		//static void registerEventCallback(InputType inputType)
 		//static uint32_t registerMouseMoveEventListener();

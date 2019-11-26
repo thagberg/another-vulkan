@@ -840,13 +840,16 @@ namespace hvk {
         inheritanceInfo.framebuffer = environmentFramebuffer;
         inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
-		//auto cubeCamera = Camera((PI / 2.f), 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
+		// Create a camera which we will use to face each wall of the cube which we are rendering to
+		// For each face, we sample the HDR texture in spherical coordinates and map that to the wall
+		// of the cube, which can then be copied from the framebuffer's color attachment and into
+		// an image that we can treat as a texture
 		auto cubeCamera = Camera(90.f, 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
 		std::array<glm::mat4, 6> cameraTransforms = {
 			glm::lookAt(glm::vec3(0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
 			glm::lookAt(glm::vec3(0.f), glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, 1.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, -1.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, 1.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, -1.f)),
 			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f)),
 			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f))
 		};
