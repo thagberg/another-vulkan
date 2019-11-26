@@ -1,3 +1,4 @@
+#include "pch.h"
 #include <vector>
 #include <iostream>
 #include <limits>
@@ -722,7 +723,7 @@ namespace hvk {
 			1, 
 			hdrWidth, 
 			hdrHeight, 
-			hdrBitDepth * 4,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
+			4 * 4,  // hdrBitDepth might be 3, but we are telling stb_image to fake the Alpha channel and floats are 2 bytes
 			VK_IMAGE_TYPE_2D, 
 			0, 
 			VK_FORMAT_R32G32B32A32_SFLOAT);

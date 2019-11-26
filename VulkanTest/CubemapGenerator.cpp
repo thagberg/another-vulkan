@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "CubemapGenerator.h"
 
 #include "stb_image.h"
