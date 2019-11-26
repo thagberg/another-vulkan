@@ -5,6 +5,7 @@
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "stb_image.h"
 #include "stb_image_write.h"
 
@@ -840,25 +841,28 @@ namespace hvk {
 
 		//auto cubeCamera = Camera((PI / 2.f), 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
 		auto cubeCamera = Camera(90.f, 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
-		std::array<std::pair<float, float>, 6> rotations = {
-			std::pair<float, float>(0.f, 0.f),
-			std::pair<float, float>(0.f, glm::radians(90.f)),
-			std::pair<float, float>(0.f, glm::radians(90.f)),
-			std::pair<float, float>(0.f, glm::radians(90.f)),
-			std::pair<float, float>(glm::radians(90.f), glm::radians(90.f)),
-			std::pair<float, float>(glm::radians(180.f), glm::radians(90.f))
+		std::array<glm::mat4, 6> cameraTransforms = {
+			glm::lookAt(glm::vec3(0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, 1.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, -1.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f)),
+			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f))
 		};
 
+		const auto& cameraTransform = cameraTransforms[0];
+		cubeCamera.setLocalTransform(cameraTransform);
 		for (uint8_t i = 0; i < 6; ++i)
 		{
-			// Capture offline render via Renderdoc
+			// Capture offggline render via Renderdoc
 			if (rdoc_api) {
 				rdoc_api->StartFrameCapture(nullptr, nullptr);
 			}
 
 			// prepare camera
-			const auto& rotation = rotations[i];
-			cubeCamera.rotate(rotation.first, rotation.second);
+			const auto& cameraTransform = cameraTransforms[i];
+			cubeCamera.setLocalTransform(cameraTransform);
+
 
 			vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
 			vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
