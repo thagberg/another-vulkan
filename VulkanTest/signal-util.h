@@ -11,6 +11,8 @@ namespace hvk
 		namespace signal
 		{
 			VkSemaphore createSemaphore(VkDevice device);
+
+			VkFence createFence(VkDevice device, VkFenceCreateFlagBits flags = VK_FENCE_CREATE_SIGNALED_BIT);
 		}
 	}
 }

@@ -18,7 +18,7 @@ namespace hvk
 		VkRenderPass renderPass, 
 		VkCommandPool commandPool,
         HVK_shared<TextureMap> skyboxMap,
-		std::array<std::string, 2>& shaderFiles) :
+		std::array<std::string, 2>& shaderFiles):
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -37,7 +37,7 @@ namespace hvk
 			glm::mat4(1.f),
 			cube);
 
-		mCubeRenderable.sRGB = true;
+		mCubeRenderable.sRGB = false;
 
 		auto skyboxMesh = createColoredCube(glm::vec3(0.1f, 4.f, 1.f));
 		auto vertices = skyboxMesh->getVertices();

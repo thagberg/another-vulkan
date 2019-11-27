@@ -3,10 +3,6 @@
 #include <iostream>
 #include <limits>
 
-#define GLM_FORCE_RADIANS
-#define GLM_FORCE_DEPTH_ZERO_TO_ONE
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 #include "stb_image.h"
 #include "stb_image_write.h"
 
@@ -22,6 +18,7 @@
 #include "framebuffer-util.h"
 #include "signal-util.h"
 #include "command-util.h"
+#include "render-util.h"
 
 #include "HvkUtil.h"
 
@@ -731,230 +728,23 @@ namespace hvk {
 			hdrImage,
 			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R32G32B32A32_SFLOAT),
 			util::image::createImageSampler(mDevice)});
-		auto environmentMap = HVK_make_shared<TextureMap>(util::image::createImageMap(
-			mDevice,
-			mAllocator,
-			mCommandPool,
-			mGraphicsQueue,
-			VK_FORMAT_R16G16B16A16_SFLOAT,
-			1024,
-			1024,
-			0,
-			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT));
-
-		auto colorAttachment = util::renderpass::createColorAttachment(
-			VK_FORMAT_R16G16B16A16_SFLOAT,
-			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		std::vector<VkSubpassDependency> colorPassDependencies = {
-			util::renderpass::createSubpassDependency()
-		};
-        auto environmentRenderPass = util::renderpass::createRenderPass(
-			mDevice, 
-			VK_FORMAT_R16G16B16A16_SFLOAT, 
-			//VK_FORMAT_R32G32B32A32_SFLOAT,
-			colorPassDependencies, 
-			&colorAttachment);
-		VkExtent2D environmentExtent = {
-			1024,
-			1024
-		};
-		VkFramebuffer environmentFramebuffer;
-        util::framebuffer::createFramebuffer(
-			mDevice, 
-			environmentRenderPass, 
-			environmentExtent, 
-			environmentMap->view, 
-			nullptr, 
-			&environmentFramebuffer);
 
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/hdr_to_cubemap_frag.spv"};
-		auto hdrToCubemap = CubemapGenerator(
-			device, 
-			mAllocator, 
-			mGraphicsQueue, 
-			environmentRenderPass, 
-			mCommandPool, 
-			hdrMap, 
-			hdrMapShaders);
-
-		// Create cubemap which we will iteratively copy environmentFramebuffer onto
-		auto cubemap = HVK_make_shared<TextureMap>(util::image::createImageMap(
-			mDevice,
+		HVK_shared<TextureMap> cubemap = HVK_make_shared<TextureMap>();
+		util::render::renderCubeMap(
+			device,
 			mAllocator,
 			mCommandPool,
 			mGraphicsQueue,
+			mPrimaryCommandBuffer,
+			hdrMap,
+			1024,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
-			1024,
-			1024,
-			VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-			VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-			6,
-			VK_IMAGE_LAYOUT_UNDEFINED,
-			//VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VK_IMAGE_VIEW_TYPE_CUBE));
-
-		auto onetime = util::command::beginSingleTimeCommand(mDevice, mCommandPool);
-		util::image::transitionImageLayout(
-			onetime,
-			cubemap->texture.memoryResource,
-			VK_IMAGE_LAYOUT_UNDEFINED,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			6,
-			0);
-		util::command::endSingleTimeCommand(mDevice, mCommandPool, onetime, mGraphicsQueue);
-
-		VkViewport viewport = {};
-		viewport.x = 0.f;
-		viewport.y = 0.f;
-		viewport.width = 1024.f;
-		viewport.height = 1024.f;
-		viewport.minDepth = 0.f;
-		viewport.maxDepth = 1.f;
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent = environmentExtent;
-		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
-		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
-
-		std::array<VkClearValue, 1> clearValues = {};
-		clearValues[0].color = { 0.f, 0.f, 0.f, 1.0f };
-
-		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		commandBegin.pInheritanceInfo = nullptr;
-
-		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		renderBegin.renderPass = environmentRenderPass;
-		renderBegin.framebuffer = environmentFramebuffer;
-		renderBegin.renderArea = scissor;
-		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
-		renderBegin.pClearValues = clearValues.data();
-
-        VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-        inheritanceInfo.pNext = nullptr;
-        inheritanceInfo.renderPass = environmentRenderPass;
-        inheritanceInfo.subpass = 0;
-        inheritanceInfo.framebuffer = environmentFramebuffer;
-        inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-
-		// Create a camera which we will use to face each wall of the cube which we are rendering to
-		// For each face, we sample the HDR texture in spherical coordinates and map that to the wall
-		// of the cube, which can then be copied from the framebuffer's color attachment and into
-		// an image that we can treat as a texture
-		auto cubeCamera = Camera(90.f, 1.f, 0.01f, 1000.f, std::string("CubeCamera"), nullptr, glm::mat4(1.f));
-		std::array<glm::mat4, 6> cameraTransforms = {
-			glm::lookAt(glm::vec3(0.f), glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(-1.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, -1.f, 0.f), glm::vec3(0.f, 0.f, 1.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 0.f, -1.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f, 1.f, 0.f)),
-			glm::lookAt(glm::vec3(0.f), glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f, 1.f, 0.f))
-		};
-
-		const auto& cameraTransform = cameraTransforms[0];
-		cubeCamera.setLocalTransform(cameraTransform);
-		for (uint8_t i = 0; i < 6; ++i)
-		{
-			// Capture offggline render via Renderdoc
-			if (rdoc_api) {
-				rdoc_api->StartFrameCapture(nullptr, nullptr);
-			}
-
-			// prepare camera
-			const auto& cameraTransform = cameraTransforms[i];
-			cubeCamera.setLocalTransform(cameraTransform);
-
-
-			vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
-			vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-			auto cubemapCommandBuffer = hdrToCubemap.drawFrame(
-				inheritanceInfo, 
-				environmentFramebuffer, 
-				viewport, 
-				scissor, 
-				//*mActiveCamera.get(),
-				cubeCamera,
-				*mGammaSettings);
-
-			vkCmdExecuteCommands(mPrimaryCommandBuffer, 1, &cubemapCommandBuffer);
-			vkCmdEndRenderPass(mPrimaryCommandBuffer);
-
-			// prepare to copy framebuffer over to cubemap
-			util::image::transitionImageLayout(
-				mPrimaryCommandBuffer,
-				environmentMap->texture.memoryResource,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				1);
-
-			// now copy it over
-			VkImageCopy copyRegion = {};
-
-			copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			copyRegion.srcSubresource.baseArrayLayer = 0;
-			copyRegion.srcSubresource.mipLevel = 0;
-			copyRegion.srcSubresource.layerCount = 1;
-			copyRegion.srcOffset = { 0, 0, 0 };
-
-			copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			copyRegion.dstSubresource.baseArrayLayer = i;
-			copyRegion.dstSubresource.mipLevel = 0;
-			copyRegion.dstSubresource.layerCount = 1;
-			copyRegion.dstOffset = { 0, 0, 0 };
-
-			copyRegion.extent.width = 1024;
-			copyRegion.extent.height = 1024;
-			copyRegion.extent.depth = 1;
-
-			vkCmdCopyImage(
-				mPrimaryCommandBuffer,
-				environmentMap->texture.memoryResource,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				cubemap->texture.memoryResource,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&copyRegion);
-
-			// transition framebuffer back to color attachment
-			util::image::transitionImageLayout(
-				mPrimaryCommandBuffer,
-				environmentMap->texture.memoryResource,
-				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-
-			// transition cubemap face to shader read
-			util::image::transitionImageLayout(
-				mPrimaryCommandBuffer,
-				cubemap->texture.memoryResource,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				1,
-				i);
-
-			vkEndCommandBuffer(mPrimaryCommandBuffer);
-
-			VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-			VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-			submitInfo.waitSemaphoreCount = 0;
-			submitInfo.pWaitSemaphores = nullptr;
-			submitInfo.pWaitDstStageMask = waitStages;
-			submitInfo.commandBufferCount = 1;
-			submitInfo.pCommandBuffers = &mPrimaryCommandBuffer;
-			submitInfo.signalSemaphoreCount = 0;
-			submitInfo.pSignalSemaphores = nullptr;
-
-			assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
-			assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
-			assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
-
-			if (rdoc_api) {
-				rdoc_api->EndFrameCapture(nullptr, nullptr);
-			}
-		}
+			cubemap,
+			hdrMapShaders,
+			*mGammaSettings);
 
 		// Finally, update the skybox
 		mSkyboxRenderer->setCubemap(cubemap);

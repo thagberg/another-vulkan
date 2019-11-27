@@ -19,6 +19,17 @@ namespace hvk
 
 				return semaphore;
 			}
+
+
+			VkFence createFence(VkDevice device, VkFenceCreateFlagBits flags)
+			{
+				VkFence fence = VK_NULL_HANDLE;
+				VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+				fenceCreate.pNext = nullptr;
+				fenceCreate.flags = flags;
+				assert(vkCreateFence(device, &fenceCreate, nullptr, &fence) == VK_SUCCESS);
+				return fence;
+			}
 		}
 	}
 }

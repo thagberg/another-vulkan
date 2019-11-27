@@ -123,6 +123,9 @@
     <ClInclude Include="vulkan-util.h">
       <Filter>Header Files\util</Filter>
     </ClInclude>
+    <ClInclude Include="render-util.h">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RenderObject.cpp">
@@ -196,6 +199,9 @@
     </ClCompile>
     <ClCompile Include="vulkan-util.cpp">
       <Filter>Source Files\util</Filter>
+    </ClCompile>
+    <ClCompile Include="render-util.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

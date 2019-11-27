@@ -180,6 +180,7 @@
     <ClInclude Include="Inputs.h" />
     <ClInclude Include="pipeline-util.h" />
     <ClInclude Include="QuadGenerator.h" />
+    <ClInclude Include="render-util.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="CubemapGenerator.h" />
     <ClInclude Include="renderpass-util.h" />
@@ -209,6 +210,7 @@
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="pipeline-util.cpp" />
     <ClCompile Include="QuadGenerator.cpp" />
+    <ClCompile Include="render-util.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="CubemapGenerator.cpp" />
     <ClCompile Include="renderpass-util.cpp" />
