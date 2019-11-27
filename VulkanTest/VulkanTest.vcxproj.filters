@@ -241,5 +241,11 @@
     <None Include="shaders\hdr_to_cubemap.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\convolution.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\convolution.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

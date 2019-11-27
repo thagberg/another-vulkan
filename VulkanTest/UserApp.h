@@ -67,4 +67,6 @@ public:
     bool isUseSRGBTex();
     VkDevice getDevice();
 	void generateEnvironmentMap();
+	void useEnvironmentMap();
+	void useIrradianceMap();
 };

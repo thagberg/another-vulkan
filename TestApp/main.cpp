@@ -221,6 +221,24 @@ protected:
 		ImGui::SliderFloat("Roughness", &pbrWeight->roughness, 0.f, 1.f);
 		auto exposureSettings = getExposureSettings();
 		ImGui::SliderFloat("Exposure", &exposureSettings->exposure, 0.f, 10.f);
+
+		static int skyChoice = 0;
+		bool skyChanged = false;
+		skyChanged = ImGui::RadioButton("Environment Map", &skyChoice, 1); ImGui::SameLine();
+		skyChanged |= ImGui::RadioButton("Irradiance Map", &skyChoice, 2);
+		if (skyChanged)
+		{
+			switch (skyChoice)
+			{
+			case 1:
+				useEnvironmentMap();
+				break;
+			case 2:
+				useIrradianceMap();
+				break;
+			}
+		}
+
         ImGui::End();
 		
 		ImGui::Begin("Status");

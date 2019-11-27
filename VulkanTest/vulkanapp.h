@@ -72,6 +72,9 @@ namespace hvk {
 		HVK_shared<PBRWeight> mPBRWeight;
 		HVK_shared<ExposureSettings> mExposureSettings;
 
+		HVK_shared<TextureMap> mEnvironmentMap;
+		HVK_shared<TextureMap> mIrradianceMap;
+
 		void enableVulkanValidationLayers();
 		void initializeDevice();
 		void initializeRenderer();
@@ -107,5 +110,7 @@ namespace hvk {
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }
         VkDevice getDevice() { return mDevice; }
 		void generateEnvironmentMap();
+		void useEnvironmentMap() { mSkyboxRenderer->setCubemap(mEnvironmentMap); }
+		void useIrradianceMap() { mSkyboxRenderer->setCubemap(mIrradianceMap); }
 	};
 }

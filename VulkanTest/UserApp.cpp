@@ -189,3 +189,13 @@ void UserApp::generateEnvironmentMap()
 {
 	mApp->generateEnvironmentMap();
 }
+
+void UserApp::useEnvironmentMap()
+{
+	mApp->useEnvironmentMap();
+}
+
+void UserApp::useIrradianceMap()
+{
+	mApp->useIrradianceMap();
+}

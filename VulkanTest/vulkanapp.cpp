@@ -69,7 +69,9 @@ namespace hvk {
 		mSecondPassCommandBuffers(),
 		mGammaSettings(nullptr),
 		mPBRWeight(nullptr),
-		mExposureSettings(nullptr)
+		mExposureSettings(nullptr),
+		mEnvironmentMap(nullptr),
+		mIrradianceMap(nullptr)
     {
 
     }
@@ -732,7 +734,7 @@ namespace hvk {
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/hdr_to_cubemap_frag.spv"};
-		HVK_shared<TextureMap> cubemap = HVK_make_shared<TextureMap>();
+		mEnvironmentMap = HVK_make_shared<TextureMap>();
 		util::render::renderCubeMap(
 			device,
 			mAllocator,
@@ -742,11 +744,31 @@ namespace hvk {
 			hdrMap,
 			1024,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
-			cubemap,
+			mEnvironmentMap,
 			hdrMapShaders,
 			*mGammaSettings);
 
 		// Finally, update the skybox
-		mSkyboxRenderer->setCubemap(cubemap);
+		//mSkyboxRenderer->setCubemap(cubemap);
+
+		std::array<std::string, 2> irradianceMapShaders = {
+			"shaders/compiled/hdr_to_cubemap_vert.spv",
+			"shaders/compiled/convolution_frag.spv"
+		};
+		mIrradianceMap = HVK_make_shared<TextureMap>();
+		util::render::renderCubeMap(
+			device,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			mPrimaryCommandBuffer,
+			mEnvironmentMap,
+			64,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			mIrradianceMap,
+			irradianceMapShaders,
+			*mGammaSettings);
+
+		//mSkyboxRenderer->setCubemap(irradianceMap);
 	}
 }
