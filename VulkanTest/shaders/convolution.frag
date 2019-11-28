@@ -44,6 +44,9 @@ vec3 convolution(vec3 normal)
 void main()
 {
 	vec3 normal = normalize(localPosition);
+	// account for coordinate system
+	normal.y *= -1.0;
+	normal.x *= -1.0;
 	vec3 irradiance = convolution(normal);
 
 	outColor = vec4(irradiance, 1.0);

@@ -44,6 +44,7 @@ namespace hvk
 		HVK_vector<HVK_shared<Light>> mLights;
 
         HVK_shared<TextureMap> mEnvironmentMap;
+		HVK_shared<TextureMap> mIrradianceMap;
 
         float mGammaCorrection;
         bool mUseSRGBTex;
@@ -57,7 +58,8 @@ namespace hvk
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
-            HVK_shared<TextureMap> environmentMap);
+            HVK_shared<TextureMap> environmentMap,
+			HVK_shared<TextureMap> irradianceMap);
 		virtual ~StaticMeshGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);

@@ -34,6 +34,7 @@ layout(set = 1, binding = 1) uniform sampler2D diffuseSampler;
 layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessSampler;
 layout(set = 1, binding = 3) uniform sampler2D normalSampler;
 layout(set = 1, binding = 4) uniform samplerCube environmentSampler;
+layout(set = 1, binding = 5) uniform samplerCube irradianceSampler;
 
 layout (push_constant) uniform PushConstant {
 	float gamma;
@@ -47,7 +48,11 @@ layout(location = 0) out vec4 outColor;
 const float PI = 3.14159265359;
 
 vec3 getSchlickFresnel(float dotP, vec3 F0) {
-	return F0 + (1.0f - F0) * pow(1.0 - dotP, 5);
+	return F0 + (1.0f - F0) * pow(1.0 - dotP, 5.0);
+}
+
+vec3 getSchlickFresnelRoughness(float dotP, vec3 F0, float roughness) {
+	return F0 + (max(vec3(1.0f - roughness), F0) - F0) * pow(1.0 - dotP, 5.0);
 }
 
 /*
@@ -126,11 +131,26 @@ void main() {
 	float glossiness = 1.0 - roughness;
 	int numSamples = max(int(16.0 * roughness), 1);
 
+	//vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
+	vec3 imageIrradiance = texture(irradianceSampler, surfaceNormal).rgb;
 	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
 
     vec3 environmentReflect = reflect(viewDir, surfaceNormal);
     vec3 environmentColor = texture(environmentSampler, environmentReflect).rgb;
+
+	// surface reflection at zero incidence
+	vec3 F0 = vec3(0.04);
+	F0 = mix(F0, albedo.rgb, metallic);
+
+	// calculate lighting from IBL
+	vec3 imageRadiance = vec3(0.0);
+	vec3 ikS = getSchlickFresnelRoughness(max(dot(surfaceNormal, viewDir), 0.0), F0, roughness);
+	vec3 ikD = vec3(1.0) - ikS;
+	vec3 iDiffuse = imageIrradiance * albedo.rgb;
+	vec3 iAmbient = ikD * iDiffuse; // TODO: multiply by ambient occlusion
+	imageRadiance += iAmbient;
     
+	// calculate lighting from analytic light sources
     vec3 dynamicRadiance = vec3(0.0);
     for (int i = 0; i < lbo.numLights; i++)
     {
@@ -141,9 +161,6 @@ void main() {
         vec3 lightRadiance = thisLight.color * thisLight.intensity;
 		vec3 halfVec = normalize(lightDir + viewDir);
 
-        // surface reflection at zero incidence
-        vec3 F0 = vec3(0.04);
-        F0 = mix(F0, albedo.rgb, metallic);
         vec3 F = getSchlickFresnel(max(dot(halfVec, viewDir), 0.0), F0);
 
         float NDF = getDistributionGGX(surfaceNormal, halfVec, roughness);
@@ -167,5 +184,5 @@ void main() {
     }
 
     vec4 ambientColor = albedo * vec4(ambientLight, 1.0);
-    outColor = ambientColor + vec4(dynamicRadiance, 1.0);
+    outColor = ambientColor + vec4(imageRadiance, 0.0) + vec4(dynamicRadiance, 0.0);
 }

@@ -246,6 +246,11 @@ namespace hvk {
             mGraphicsQueue,
             skyboxFiles));
 
+		// Initialize lighting maps
+		mEnvironmentMap = HVK_make_shared<TextureMap>();
+		mIrradianceMap = HVK_make_shared<TextureMap>();
+		generateEnvironmentMap();
+
 		// Initialize drawlist generators
         mQuadRenderer = HVK_make_shared<QuadGenerator>(
             device,
@@ -261,7 +266,8 @@ namespace hvk {
             mGraphicsQueue, 
             mColorRenderPass, 
             mCommandPool,
-            skyboxMap);
+            mEnvironmentMap,
+			mIrradianceMap);
 
 		mUiRenderer = std::make_shared<UiDrawGenerator>(
             device, 
@@ -713,6 +719,7 @@ namespace hvk {
 		// Convert HDR equirectangular map to cubemap
 		int hdrWidth, hdrHeight, hdrBitDepth;
 		float* hdrData = stbi_loadf("resources/Alexs_Apartment/Alexs_Apt_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
+		//float* hdrData = stbi_loadf("resources/MonValley_Lookout/MonValley_A_LookoutPoint_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
 		auto hdrImage = util::image::createTextureImage(
 			mDevice, 
 			mAllocator, 
@@ -734,7 +741,6 @@ namespace hvk {
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/hdr_to_cubemap_frag.spv"};
-		mEnvironmentMap = HVK_make_shared<TextureMap>();
 		util::render::renderCubeMap(
 			device,
 			mAllocator,
@@ -755,7 +761,6 @@ namespace hvk {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/convolution_frag.spv"
 		};
-		mIrradianceMap = HVK_make_shared<TextureMap>();
 		util::render::renderCubeMap(
 			device,
 			mAllocator,
@@ -763,7 +768,7 @@ namespace hvk {
 			mGraphicsQueue,
 			mPrimaryCommandBuffer,
 			mEnvironmentMap,
-			64,
+			32,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			mIrradianceMap,
 			irradianceMapShaders,

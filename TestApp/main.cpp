@@ -86,7 +86,7 @@ public:
 
         activateCamera(mCamera);
 
-		generateEnvironmentMap();
+		//generateEnvironmentMap();
 
 	}
 

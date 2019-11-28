@@ -13,7 +13,8 @@ namespace hvk
 		VkQueue graphicsQueue, 
 		VkRenderPass renderPass,
 		VkCommandPool commandPool,
-        HVK_shared<TextureMap> environmentMap) :
+        HVK_shared<TextureMap> environmentMap,
+		HVK_shared<TextureMap> irradianceMap) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -26,6 +27,7 @@ namespace hvk
 		mRenderables(),
 		mLights(),
         mEnvironmentMap(environmentMap),
+		mIrradianceMap(irradianceMap),
         mGammaCorrection(2.2f),
         mUseSRGBTex(false)
 	{
@@ -40,13 +42,15 @@ namespace hvk
 		VkDescriptorSetLayoutBinding metalRoughSamplerBinding = util::descriptor::generateSamplerLayoutBinding(2, 1);
 		VkDescriptorSetLayoutBinding normalSamplerBinding = util::descriptor::generateSamplerLayoutBinding(3, 1);
         VkDescriptorSetLayoutBinding environmentSamplerBinding = util::descriptor::generateSamplerLayoutBinding(4, 1);
+		VkDescriptorSetLayoutBinding irradianceSamplerBinding = util::descriptor::generateSamplerLayoutBinding(5, 1);
 
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {
             uboLayoutBinding, 
             diffuseSamplerBinding,
             metalRoughSamplerBinding,
             normalSamplerBinding,
-            environmentSamplerBinding
+            environmentSamplerBinding,
+			irradianceSamplerBinding
         };
 		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
@@ -122,6 +126,8 @@ namespace hvk
 			util::image::destroyMap(mDevice.device, mAllocator, renderable.metallicRoughnessMap);
 			util::image::destroyMap(mDevice.device, mAllocator, renderable.normalMap);
         }
+
+		// TODO: need to make sure environment map and irradiance map are being cleaned up
 
         vmaDestroyBuffer(mAllocator, mLightsUbo.memoryResource, mLightsUbo.allocation);
         vkDestroyDescriptorSetLayout(mDevice.device, mLightsDescriptorSetLayout, nullptr);
@@ -379,12 +385,23 @@ namespace hvk
                 newRenderable.descriptorSet, 
                 4);
 
-			std::array<VkWriteDescriptorSet, 5> descriptorWrites = {
+			std::vector<VkDescriptorImageInfo> irradianceImageInfos = {
+				VkDescriptorImageInfo{
+					mIrradianceMap->sampler,
+					mIrradianceMap->view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }};
+			auto irradianceDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+				irradianceImageInfos,
+				newRenderable.descriptorSet,
+				5);
+
+			std::array<VkWriteDescriptorSet, 6> descriptorWrites = {
 				descriptorWrite,
 				imageDescriptorWrite,
 				mtlRoughDescriptorWrite,
 				normalDescriptorWrite,
-                environmentDescriptorWrite
+                environmentDescriptorWrite,
+				irradianceDescriptorWrite
 			};
 
 			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
