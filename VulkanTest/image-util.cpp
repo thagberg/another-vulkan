@@ -22,7 +22,8 @@ namespace hvk
 				VkFormat format, 
 				VkImageAspectFlags aspectFlags,
 				uint32_t numLayers,
-				VkImageViewType viewType)
+				VkImageViewType viewType,
+				uint32_t mipLevels)
 			{
 				VkImageView imageView;
 
@@ -32,7 +33,7 @@ namespace hvk
 				createInfo.format = format;
 				createInfo.subresourceRange.aspectMask = aspectFlags;
 				createInfo.subresourceRange.baseMipLevel = 0;
-				createInfo.subresourceRange.levelCount = 1;
+				createInfo.subresourceRange.levelCount = mipLevels;
 				createInfo.subresourceRange.baseArrayLayer = 0;
 				createInfo.subresourceRange.layerCount = numLayers;
 
@@ -43,7 +44,8 @@ namespace hvk
 
 
 			VkSampler createImageSampler(
-				VkDevice device)
+				VkDevice device,
+				float maxLod)
 			{
 				VkSampler sampler;
 				VkSamplerCreateInfo createInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
@@ -57,7 +59,7 @@ namespace hvk
 				createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
 				createInfo.mipLodBias = 0.f;
 				createInfo.minLod = 0.f;
-				createInfo.maxLod = 0.f;
+				createInfo.maxLod = maxLod;
 				createInfo.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
 				assert(vkCreateSampler(device, &createInfo, nullptr, &sampler) == VK_SUCCESS);
 
@@ -315,7 +317,8 @@ namespace hvk
 				VkImageUsageFlags usageFlags,
 				uint32_t arrayLayers,
 				VkImageLayout initialLayout,
-				VkImageViewType viewType)
+				VkImageViewType viewType,
+				uint32_t mipLevels)
 			{
 				TextureMap imageMap;
 				uint32_t bitDepth = 4;
@@ -329,7 +332,7 @@ namespace hvk
 				image.extent.width = imageWidth;
 				image.extent.height = imageHeight;
 				image.extent.depth = 1;
-				image.mipLevels = 1;
+				image.mipLevels = mipLevels;
 				image.arrayLayers = arrayLayers;
 				image.samples = VK_SAMPLE_COUNT_1_BIT;
 				image.tiling = VK_IMAGE_TILING_OPTIMAL;
@@ -356,7 +359,7 @@ namespace hvk
 					arrayLayers,
 					viewType);
 
-				imageMap.sampler = createImageSampler(device);
+				imageMap.sampler = createImageSampler(device, static_cast<float>(mipLevels));
 
 				return imageMap;
 			}
@@ -367,8 +370,9 @@ namespace hvk
 				VkImage image,
 				VkImageLayout oldLayout,
 				VkImageLayout newLayout,
-				uint32_t numLayers,
-				uint32_t baseLayer) {
+				uint32_t numLayers /* 1 */,
+				uint32_t baseLayer /* 0 */,
+				uint32_t mipLevels /* 1 */) {
 
 				VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 				barrier.oldLayout = oldLayout;
@@ -385,7 +389,7 @@ namespace hvk
 				}
 
 				barrier.subresourceRange.baseMipLevel = 0;
-				barrier.subresourceRange.levelCount = 1;
+				barrier.subresourceRange.levelCount = mipLevels;
 				barrier.subresourceRange.baseArrayLayer = baseLayer;
 				barrier.subresourceRange.layerCount = numLayers;
 

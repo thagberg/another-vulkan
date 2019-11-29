@@ -71,7 +71,8 @@ namespace hvk {
 		mPBRWeight(nullptr),
 		mExposureSettings(nullptr),
 		mEnvironmentMap(nullptr),
-		mIrradianceMap(nullptr)
+		mIrradianceMap(nullptr),
+		mPrefilteredMap(nullptr)
     {
 
     }
@@ -249,6 +250,7 @@ namespace hvk {
 		// Initialize lighting maps
 		mEnvironmentMap = HVK_make_shared<TextureMap>();
 		mIrradianceMap = HVK_make_shared<TextureMap>();
+		mPrefilteredMap = HVK_make_shared<TextureMap>();
 		generateEnvironmentMap();
 
 		// Initialize drawlist generators

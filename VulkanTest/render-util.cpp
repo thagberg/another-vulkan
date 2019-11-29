@@ -26,7 +26,8 @@ namespace hvk
 				VkFormat outFormat,
 				HVK_shared<TextureMap> outMap,
 				std::array<std::string, 2>& shaderFiles,
-				const GammaSettings& gammaSettings)
+				const GammaSettings& gammaSettings,
+				uint32_t mipLevels /* 1 */)
 			{
 				auto cubeMap = HVK_make_shared<TextureMap>(image::createImageMap(
 					device.device,
@@ -155,88 +156,91 @@ namespace hvk
 					const auto& cameraTransform = cameraTransforms[i];
 					cubeCamera.setLocalTransform(cameraTransform);
 
+					for (uint32_t j = 0; j < mipLevels; ++j)
+					{
+						vkBeginCommandBuffer(commandBuffer, &commandBegin);
+						vkCmdBeginRenderPass(commandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
-					vkBeginCommandBuffer(commandBuffer, &commandBegin);
-					vkCmdBeginRenderPass(commandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+						auto cubemapCommandBuffer = cubeRenderer.drawFrame(
+							inheritanceInfo, 
+							cubeFrameBuffer, 
+							viewport, 
+							scissor, 
+							cubeCamera,
+							gammaSettings);
 
-					auto cubemapCommandBuffer = cubeRenderer.drawFrame(
-						inheritanceInfo, 
-						cubeFrameBuffer, 
-						viewport, 
-						scissor, 
-						cubeCamera,
-						gammaSettings);
+						vkCmdExecuteCommands(commandBuffer, 1, &cubemapCommandBuffer);
+						vkCmdEndRenderPass(commandBuffer);
 
-					vkCmdExecuteCommands(commandBuffer, 1, &cubemapCommandBuffer);
-					vkCmdEndRenderPass(commandBuffer);
+						// prepare to copy framebuffer over to cubemap
+						image::transitionImageLayout(
+							commandBuffer,
+							cubeMap->texture.memoryResource,
+							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							1);
 
-					// prepare to copy framebuffer over to cubemap
-					image::transitionImageLayout(
-						commandBuffer,
-						cubeMap->texture.memoryResource,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						1);
+						// now copy it over
+						VkImageCopy copyRegion = {};
 
-					// now copy it over
-					VkImageCopy copyRegion = {};
+						copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						copyRegion.srcSubresource.baseArrayLayer = 0;
+						copyRegion.srcSubresource.mipLevel = 0;
+						copyRegion.srcSubresource.layerCount = 1;
+						copyRegion.srcOffset = { 0, 0, 0 };
 
-					copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					copyRegion.srcSubresource.baseArrayLayer = 0;
-					copyRegion.srcSubresource.mipLevel = 0;
-					copyRegion.srcSubresource.layerCount = 1;
-					copyRegion.srcOffset = { 0, 0, 0 };
+						copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+						copyRegion.dstSubresource.baseArrayLayer = i;
+						copyRegion.dstSubresource.mipLevel = j;
+						copyRegion.dstSubresource.layerCount = 1;
+						copyRegion.dstOffset = { 0, 0, 0 };
 
-					copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-					copyRegion.dstSubresource.baseArrayLayer = i;
-					copyRegion.dstSubresource.mipLevel = 0;
-					copyRegion.dstSubresource.layerCount = 1;
-					copyRegion.dstOffset = { 0, 0, 0 };
+						copyRegion.extent.width = outResolution;
+						copyRegion.extent.height = outResolution;
+						copyRegion.extent.depth = 1;
 
-					copyRegion.extent.width = outResolution;
-					copyRegion.extent.height = outResolution;
-					copyRegion.extent.depth = 1;
+						vkCmdCopyImage(
+							commandBuffer,
+							cubeMap->texture.memoryResource,
+							VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							outMap->texture.memoryResource,
+							VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							1,
+							&copyRegion);
 
-					vkCmdCopyImage(
-						commandBuffer,
-						cubeMap->texture.memoryResource,
-						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						outMap->texture.memoryResource,
-						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						1,
-						&copyRegion);
+						// transition framebuffer back to color attachment
+						image::transitionImageLayout(
+							commandBuffer,
+							cubeMap->texture.memoryResource,
+							VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
-					// transition framebuffer back to color attachment
-					image::transitionImageLayout(
-						commandBuffer,
-						cubeMap->texture.memoryResource,
-						VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+						// transition outMap face to shader read
+						image::transitionImageLayout(
+							commandBuffer,
+							outMap->texture.memoryResource,
+							VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+							VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							1,
+							i,
+							j);
 
-					// transition outMap face to shader read
-					image::transitionImageLayout(
-						commandBuffer,
-						outMap->texture.memoryResource,
-						VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-						VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-						1,
-						i);
+						vkEndCommandBuffer(commandBuffer);
 
-					vkEndCommandBuffer(commandBuffer);
+						VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+						VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+						submitInfo.waitSemaphoreCount = 0;
+						submitInfo.pWaitSemaphores = nullptr;
+						submitInfo.pWaitDstStageMask = waitStages;
+						submitInfo.commandBufferCount = 1;
+						submitInfo.pCommandBuffers = &commandBuffer;
+						submitInfo.signalSemaphoreCount = 0;
+						submitInfo.pSignalSemaphores = nullptr;
 
-					VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-					VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-					submitInfo.waitSemaphoreCount = 0;
-					submitInfo.pWaitSemaphores = nullptr;
-					submitInfo.pWaitDstStageMask = waitStages;
-					submitInfo.commandBufferCount = 1;
-					submitInfo.pCommandBuffers = &commandBuffer;
-					submitInfo.signalSemaphoreCount = 0;
-					submitInfo.pSignalSemaphores = nullptr;
-
-					assert(vkResetFences(device.device, 1, &renderFence) == VK_SUCCESS);
-					assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, renderFence) == VK_SUCCESS);
-					assert(vkWaitForFences(device.device, 1, &renderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+						assert(vkResetFences(device.device, 1, &renderFence) == VK_SUCCESS);
+						assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, renderFence) == VK_SUCCESS);
+						assert(vkWaitForFences(device.device, 1, &renderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+					}
 				}
 
 				return renderFence;

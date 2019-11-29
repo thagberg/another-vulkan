@@ -25,7 +25,8 @@ namespace hvk
 				VkFormat outFormat,
 				HVK_shared<TextureMap> outMap,
 				std::array<std::string, 2>& shaderFiles,
-				const GammaSettings& gammaSettings);
+				const GammaSettings& gammaSettings,
+				uint32_t mipLevels=1);
 		}
 	}
 }
