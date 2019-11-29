@@ -235,6 +235,7 @@
     <None Include="shaders\hdr_to_cubemap.vert" />
     <None Include="shaders\normal.frag" />
     <None Include="shaders\normal.vert" />
+    <None Include="shaders\prefiltered-environment.frag" />
     <None Include="shaders\quad.frag" />
     <None Include="shaders\quad.vert" />
     <None Include="shaders\shader.frag" />

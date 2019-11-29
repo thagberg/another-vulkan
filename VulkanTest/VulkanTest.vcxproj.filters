@@ -247,5 +247,8 @@
     <None Include="shaders\convolution.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\prefiltered-environment.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -64,7 +64,7 @@ vec3 getSchlickFresnelRoughness(float dotP, vec3 F0, float roughness) {
 	Where:
 		a = roughness
 		n = surfaceNormal
-		h = halfVec between surfaceNormal and light direction
+		h = halfVec between view and light directions
 */
 float getDistributionGGX(vec3 surfaceNormal, vec3 halfVec, float roughness)
 {
