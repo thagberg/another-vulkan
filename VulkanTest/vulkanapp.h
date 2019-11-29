@@ -46,7 +46,7 @@ namespace hvk {
 		VkImageView mDepthView;
 		FrameBuffers mFinalPassFramebuffers;
         VkFramebuffer mColorPassFramebuffer;
-		hvk::Swapchain mSwapchain;
+		Swapchain mSwapchain;
 
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
@@ -59,7 +59,7 @@ namespace hvk {
 		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
-		HVK_shared<CubemapGenerator> mSkyboxRenderer;
+		HVK_shared<CubemapGenerator<GammaSettings>> mSkyboxRenderer;
         HVK_shared<QuadGenerator> mQuadRenderer;
 		HVK_shared<AmbientLight> mAmbientLight;
 

@@ -50,7 +50,7 @@ namespace hvk
 				VkImageViewType viewType=VK_IMAGE_VIEW_TYPE_2D,
 				uint32_t mipLevels = 1);
 
-			hvk::Resource<VkImage> createTextureImage(
+			Resource<VkImage> createTextureImage(
 				VkDevice device,
 				VmaAllocator allocator,
 				VkCommandPool commandPool,

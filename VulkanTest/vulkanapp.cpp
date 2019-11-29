@@ -290,7 +290,7 @@ namespace hvk {
 		std::array<std::string, 2> skyboxShaders = {
 			"shaders/compiled/sky_vert.spv",
 			"shaders/compiled/sky_frag.spv"};
-		mSkyboxRenderer = HVK_make_shared<CubemapGenerator>(
+		mSkyboxRenderer = HVK_make_shared<CubemapGenerator<GammaSettings>>(
 			device,
 			mAllocator,
 			mGraphicsQueue,
@@ -743,7 +743,7 @@ namespace hvk {
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/hdr_to_cubemap_frag.spv"};
-		util::render::renderCubeMap(
+		util::render::renderCubeMap<GammaSettings>(
 			device,
 			mAllocator,
 			mCommandPool,
@@ -763,7 +763,7 @@ namespace hvk {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/convolution_frag.spv"
 		};
-		util::render::renderCubeMap(
+		util::render::renderCubeMap<GammaSettings>(
 			device,
 			mAllocator,
 			mCommandPool,
@@ -777,5 +777,34 @@ namespace hvk {
 			*mGammaSettings);
 
 		//mSkyboxRenderer->setCubemap(irradianceMap);
+		
+		if (rdoc_api)
+		{
+			rdoc_api->StartFrameCapture(nullptr, nullptr);
+		}
+
+		auto roughnessSettings = RoughnessSettings{ 1.f };
+		std::array<std::string, 2> prefilterMapShaders = {
+			"shaders/compiled/hdr_to_cubemap_vert.spv",
+			"shaders/compiled/prefiltered-environment_frag.spv"
+		};
+		util::render::renderCubeMap<RoughnessSettings>(
+			device,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			mPrimaryCommandBuffer,
+			mEnvironmentMap,
+			256,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			mPrefilteredMap,
+			prefilterMapShaders,
+			roughnessSettings,
+			4);
+
+		if (rdoc_api)
+		{
+			rdoc_api->EndFrameCapture(nullptr, nullptr);
+		}
 	}
 }

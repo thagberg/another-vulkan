@@ -170,16 +170,10 @@
     <ClCompile Include="QuadGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="CubemapGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="image-util.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
     <ClCompile Include="command-util.cpp">
-      <Filter>Source Files\util</Filter>
-    </ClCompile>
-    <ClCompile Include="renderpass-util.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
     <ClCompile Include="framebuffer-util.cpp">
@@ -200,8 +194,8 @@
     <ClCompile Include="vulkan-util.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
-    <ClCompile Include="render-util.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="renderpass-util.cpp">
+      <Filter>Source Files\util</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

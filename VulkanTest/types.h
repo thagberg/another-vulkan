@@ -117,6 +117,10 @@ namespace hvk {
 		float exposure;
 	};
 
+	struct RoughnessSettings {
+		float roughness;
+	};
+
 	struct VertexInfo 
 	{
 		VkVertexInputBindingDescription bindingDescription;

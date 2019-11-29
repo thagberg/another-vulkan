@@ -210,9 +210,7 @@
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="pipeline-util.cpp" />
     <ClCompile Include="QuadGenerator.cpp" />
-    <ClCompile Include="render-util.cpp" />
     <ClCompile Include="RenderObject.cpp" />
-    <ClCompile Include="CubemapGenerator.cpp" />
     <ClCompile Include="renderpass-util.cpp" />
     <ClCompile Include="signal-util.cpp" />
     <ClCompile Include="StaticMeshGenerator.cpp" />
