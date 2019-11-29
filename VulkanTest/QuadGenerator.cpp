@@ -12,7 +12,8 @@ namespace hvk
 		VkQueue graphicsQueue,
 		VkRenderPass renderPass,
 		VkCommandPool commandPool,
-		HVK_shared<TextureMap> offscreenMap) :
+		HVK_shared<TextureMap> offscreenMap,
+		std::array<std::string, 2>& shaderFiles) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -59,30 +60,34 @@ namespace hvk
 			&mRenderable.ibo.allocationInfo);
 		memcpy(mRenderable.ibo.allocationInfo.pMappedData, quadIndices.data(), indexMemorySize);
 
-		// Create descriptor pool
-		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1);
-		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
+		std::vector<VkDescriptorSetLayout> layouts;
+		if (mOffscreenMap != nullptr)
+		{
+			// Create descriptor pool
+			auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1);
+			util::descriptor::createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
 
-		// Create descriptor set layout
-		auto quadSamplerBinding = util::descriptor::generateSamplerLayoutBinding(0, 1);
-		std::vector<decltype(quadSamplerBinding)> bindings = { quadSamplerBinding };
-		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+			// Create descriptor set layout
+			auto quadSamplerBinding = util::descriptor::generateSamplerLayoutBinding(0, 1);
+			std::vector<decltype(quadSamplerBinding)> bindings = { quadSamplerBinding };
+			util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
-		// Create descriptor set
-		std::vector<VkDescriptorSetLayout> layouts = { mDescriptorSetLayout };
-		util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
+			// Create descriptor set
+			layouts.push_back(mDescriptorSetLayout);
+			util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
 
-		// Update descriptor set
-		VkDescriptorImageInfo imageInfo = {
-			mOffscreenMap->sampler,
-			mOffscreenMap->view,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		};
-		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
-		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
+			// Update descriptor set
+			VkDescriptorImageInfo imageInfo = {
+				mOffscreenMap->sampler,
+				mOffscreenMap->view,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			};
+			std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
+			auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
-		std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+			std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
+			util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+		}
 
 		// Prepare pipeline
 		VkPushConstantRange pushRange = {};
@@ -105,8 +110,8 @@ namespace hvk
 
 		mPipelineInfo.blendAttachments = { blendAttachment };
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-		mPipelineInfo.vertShaderFile = "shaders/compiled/quad_vert.spv";
-		mPipelineInfo.fragShaderFile = "shaders/compiled/quad_frag.spv";
+		mPipelineInfo.vertShaderFile = shaderFiles[0];
+		mPipelineInfo.fragShaderFile = shaderFiles[1];
 		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState(false, false);
@@ -131,18 +136,21 @@ namespace hvk
 	{
         mColorRenderPass = renderPass;
 
-		// need to re-apply the color attachment since it was destroyed
-		// when the resolution changed
-		VkDescriptorImageInfo imageInfo = {
-			mOffscreenMap->sampler,
-			mOffscreenMap->view,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		};
-		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
-		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
+		if (mOffscreenMap != nullptr)
+		{
+			// need to re-apply the color attachment since it was destroyed
+			// when the resolution changed
+			VkDescriptorImageInfo imageInfo = {
+				mOffscreenMap->sampler,
+				mOffscreenMap->view,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+			};
+			std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
+			auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
-		std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+			std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
+			util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+		}
         mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
@@ -171,15 +179,18 @@ namespace hvk
 
         vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mRenderable.vbo.memoryResource, offsets);
         vkCmdBindIndexBuffer(mCommandBuffer, mRenderable.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
-        vkCmdBindDescriptorSets(
-            mCommandBuffer,
-            VK_PIPELINE_BIND_POINT_GRAPHICS,
-            mPipelineInfo.pipelineLayout,
-            0,
-            1,
-            &mDescriptorSet,
-            0,
-            nullptr);
+		if (mOffscreenMap != nullptr)
+		{
+			vkCmdBindDescriptorSets(
+				mCommandBuffer,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
+				mPipelineInfo.pipelineLayout,
+				0,
+				1,
+				&mDescriptorSet,
+				0,
+				nullptr);
+		}
 
 		vkCmdPushConstants(
 			mCommandBuffer, 

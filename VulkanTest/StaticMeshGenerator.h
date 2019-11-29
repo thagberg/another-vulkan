@@ -45,6 +45,7 @@ namespace hvk
 
         HVK_shared<TextureMap> mEnvironmentMap;
 		HVK_shared<TextureMap> mIrradianceMap;
+		HVK_shared<TextureMap> mBrdfLutMap;
 
         float mGammaCorrection;
         bool mUseSRGBTex;
@@ -59,7 +60,8 @@ namespace hvk
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
             HVK_shared<TextureMap> environmentMap,
-			HVK_shared<TextureMap> irradianceMap);
+			HVK_shared<TextureMap> irradianceMap,
+			HVK_shared<TextureMap> brdfLutMap);
 		virtual ~StaticMeshGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);

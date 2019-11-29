@@ -11,4 +11,7 @@ C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/quad_frag.
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/hdr_to_cubemap_vert.spv -V shaders/hdr_to_cubemap.vert
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/hdr_to_cubemap_frag.spv -V shaders/hdr_to_cubemap.frag
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/convolution_frag.spv -V shaders/convolution.frag
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/convolution_vert.spv -V shaders/convolution.vert
 C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/prefiltered-environment_frag.spv -V shaders/prefiltered-environment.frag
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/prefiltered-environment_vert.spv -V shaders/prefiltered-environment.vert
+C:/VulkanSDK/1.1.106.0/Bin32/glslangValidator.exe -o shaders/compiled/brdfLUT_frag.spv -V shaders/brdfLUT.frag

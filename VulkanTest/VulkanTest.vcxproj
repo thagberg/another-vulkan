@@ -227,6 +227,7 @@
     <ClCompile Include="vulkanapp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="shaders\brdfLUT.frag" />
     <None Include="shaders\convolution.frag" />
     <None Include="shaders\convolution.vert" />
     <None Include="shaders\hdr_to_cubemap.frag" />
@@ -234,6 +235,7 @@
     <None Include="shaders\normal.frag" />
     <None Include="shaders\normal.vert" />
     <None Include="shaders\prefiltered-environment.frag" />
+    <None Include="shaders\prefiltered-environment.vert" />
     <None Include="shaders\quad.frag" />
     <None Include="shaders\quad.vert" />
     <None Include="shaders\shader.frag" />

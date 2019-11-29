@@ -8,6 +8,7 @@
 
 #include "types.h"
 #include "Camera.h"
+#include "QuadGenerator.h"
 #include "CubemapGenerator.h"
 
 namespace hvk
@@ -16,6 +17,206 @@ namespace hvk
 	{
 		namespace render
 		{
+			VkFence renderImageMap(
+				VulkanDevice& device,
+				VmaAllocator allocator,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
+				VkCommandBuffer commandBuffer,
+				uint32_t outResolution,
+				VkFormat outFormat,
+				HVK_shared<TextureMap> outMap,
+				std::array<std::string, 2>& shaderFiles)
+			{
+				auto fbMap = HVK_make_shared<TextureMap>(image::createImageMap(
+					device.device,
+					allocator,
+					commandPool,
+					graphicsQueue,
+					outFormat,
+					outResolution,
+					outResolution,
+					0,
+					VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT));
+				auto fbColorAttachment = renderpass::createColorAttachment(
+					outFormat,
+					VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				std::vector<VkSubpassDependency> fbColorPassDependencies = {
+					renderpass::createSubpassDependency()
+				};
+				auto fbRenderPass = renderpass::createRenderPass(
+					device.device,
+					outFormat,
+					fbColorPassDependencies, 
+					&fbColorAttachment);
+				VkExtent2D fbExtent = {
+					outResolution,
+					outResolution,
+				};
+				VkFramebuffer framebuffer;
+				framebuffer::createFramebuffer(
+					device.device,
+					fbRenderPass,
+					fbExtent,
+					fbMap->view, 
+					nullptr, 
+					&framebuffer);
+
+				auto quadRenderer = QuadGenerator(
+					device,
+					allocator,
+					graphicsQueue,
+					fbRenderPass,
+					commandPool,
+					nullptr,
+					shaderFiles);
+
+				// Create cubemap which we will iteratively copy environmentFramebuffer onto
+				*outMap = image::createImageMap(
+					device.device,
+					allocator,
+					commandPool,
+					graphicsQueue,
+					outFormat,
+					outResolution,
+					outResolution,
+					0,
+					VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+				// map needs to be transitioned to a transfer destination
+				auto onetime = command::beginSingleTimeCommand(device.device, commandPool);
+				util::image::transitionImageLayout(
+					onetime,
+					outMap->texture.memoryResource,
+					VK_IMAGE_LAYOUT_UNDEFINED,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				command::endSingleTimeCommand(device.device, commandPool, onetime, graphicsQueue);
+
+				// Start getting ready for the renders
+				VkFence renderFence = signal::createFence(device.device);
+
+				std::array<VkClearValue, 1> clearValues = {};
+				clearValues[0].color = { 0.f, 0.f, 0.f, 1.0f };
+
+				VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+				commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+				commandBegin.pInheritanceInfo = nullptr;
+
+				VkExtent2D quadExtent = {
+					outResolution,
+					outResolution };
+
+				VkViewport viewport = {};
+				viewport.x = 0.f;
+				viewport.y = 0.f;
+				viewport.width = static_cast<float>(outResolution);
+				viewport.height = static_cast<float>(outResolution);
+				viewport.minDepth = 0.f;
+				viewport.maxDepth = 1.f;
+
+				VkRect2D scissor = {};
+				scissor.offset = { 0, 0 };
+				scissor.extent = quadExtent;
+
+				VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+				renderBegin.renderPass = fbRenderPass;
+				renderBegin.framebuffer = framebuffer;
+				renderBegin.renderArea = scissor;
+				renderBegin.clearValueCount = static_cast<float>(clearValues.size());
+				renderBegin.pClearValues = clearValues.data();
+
+				VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+				inheritanceInfo.pNext = nullptr;
+				inheritanceInfo.renderPass = fbRenderPass;
+				inheritanceInfo.subpass = 0;
+				inheritanceInfo.framebuffer = framebuffer;
+				inheritanceInfo.occlusionQueryEnable = VK_FALSE;
+
+				vkBeginCommandBuffer(commandBuffer, &commandBegin);
+				vkCmdBeginRenderPass(commandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+				ExposureSettings exposure = {
+					1.f };
+				auto quadCommandBuffer = quadRenderer.drawFrame(
+					inheritanceInfo,
+					framebuffer,
+					viewport,
+					scissor,
+					exposure);
+
+				vkCmdExecuteCommands(commandBuffer, 1, &quadCommandBuffer);
+				vkCmdEndRenderPass(commandBuffer);
+
+				// prepare to copy framebuffer over to cubemap
+				image::transitionImageLayout(
+					commandBuffer,
+					fbMap->texture.memoryResource,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
+
+				// now copy it over
+				VkImageCopy copyRegion = {};
+
+				copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				copyRegion.srcSubresource.baseArrayLayer = 0;
+				copyRegion.srcSubresource.mipLevel = 0;
+				copyRegion.srcSubresource.layerCount = 1;
+				copyRegion.srcOffset = { 0, 0, 0 };
+
+				copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				copyRegion.dstSubresource.baseArrayLayer = 0;
+				copyRegion.dstSubresource.mipLevel = 0;
+				copyRegion.dstSubresource.layerCount = 1;
+				copyRegion.dstOffset = { 0, 0, 0 };
+
+				copyRegion.extent.width = outResolution;
+				copyRegion.extent.height = outResolution;
+				copyRegion.extent.depth = 1;
+
+				vkCmdCopyImage(
+					commandBuffer,
+					fbMap->texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					outMap->texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1,
+					&copyRegion);
+
+				// transition framebuffer back to color attachment
+				image::transitionImageLayout(
+					commandBuffer,
+					fbMap->texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+
+				// transition outMap face to shader read
+				// TODO: add support to transitionImageLayout for setting the
+				// base mip level
+				image::transitionImageLayout(
+					commandBuffer,
+					outMap->texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+				vkEndCommandBuffer(commandBuffer);
+
+				VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+				VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+				submitInfo.waitSemaphoreCount = 0;
+				submitInfo.pWaitSemaphores = nullptr;
+				submitInfo.pWaitDstStageMask = waitStages;
+				submitInfo.commandBufferCount = 1;
+				submitInfo.pCommandBuffers = &commandBuffer;
+				submitInfo.signalSemaphoreCount = 0;
+				submitInfo.pSignalSemaphores = nullptr;
+
+				assert(vkResetFences(device.device, 1, &renderFence) == VK_SUCCESS);
+				assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, renderFence) == VK_SUCCESS);
+
+				return renderFence;
+			}
+
 			template <typename PushT>
 			VkFence renderCubeMap(
 				VulkanDevice& device,
@@ -243,8 +444,6 @@ namespace hvk
 							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 						// transition outMap face to shader read
-						// TODO: add support to transitionImageLayout for setting the
-						// base mip level
 						image::transitionImageLayout(
 							commandBuffer,
 							outMap->texture.memoryResource,

@@ -76,7 +76,8 @@ namespace hvk
 			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
-			HVK_shared<TextureMap> offscreenMap);
+			HVK_shared<TextureMap> offscreenMap,
+			std::array<std::string, 2>& shaderFiles);
 		virtual ~QuadGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);

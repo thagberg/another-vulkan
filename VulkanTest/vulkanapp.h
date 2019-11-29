@@ -76,6 +76,7 @@ namespace hvk {
 		HVK_shared<TextureMap> mEnvironmentMap;
 		HVK_shared<TextureMap> mIrradianceMap;
 		HVK_shared<TextureMap> mPrefilteredMap;
+		HVK_shared<TextureMap> mBdrfLutMap;
 
 		void enableVulkanValidationLayers();
 		void initializeDevice();

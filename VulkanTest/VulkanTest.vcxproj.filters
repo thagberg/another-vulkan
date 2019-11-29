@@ -244,5 +244,11 @@
     <None Include="shaders\prefiltered-environment.frag">
       <Filter>Source Files\shaders</Filter>
     </None>
+    <None Include="shaders\prefiltered-environment.vert">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\brdfLUT.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>

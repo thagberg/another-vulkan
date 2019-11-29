@@ -73,7 +73,8 @@ namespace hvk {
 		mSkySettings(nullptr),
 		mEnvironmentMap(nullptr),
 		mIrradianceMap(nullptr),
-		mPrefilteredMap(nullptr)
+		mPrefilteredMap(nullptr),
+		mBdrfLutMap(nullptr)
     {
 
     }
@@ -255,16 +256,21 @@ namespace hvk {
 		mEnvironmentMap = HVK_make_shared<TextureMap>();
 		mIrradianceMap = HVK_make_shared<TextureMap>();
 		mPrefilteredMap = HVK_make_shared<TextureMap>();
+		mBdrfLutMap = HVK_make_shared<TextureMap>();
 		generateEnvironmentMap();
 
 		// Initialize drawlist generators
+		std::array<std::string, 2> quadShaderFiles = {
+			"shaders/compiled/quad_vert.spv",
+			"shaders/compiled/quad_frag.spv" };
         mQuadRenderer = HVK_make_shared<QuadGenerator>(
             device,
             mAllocator,
             mGraphicsQueue,
             mFinalRenderPass,
             mCommandPool,
-            mColorPassMap);
+            mColorPassMap,
+			quadShaderFiles);
 
 		mMeshRenderer = std::make_shared<StaticMeshGenerator>(
             device, 
@@ -272,8 +278,10 @@ namespace hvk {
             mGraphicsQueue, 
             mColorRenderPass, 
             mCommandPool,
-            mEnvironmentMap,
-			mIrradianceMap);
+            //mEnvironmentMap,
+			mPrefilteredMap,
+			mIrradianceMap,
+			mBdrfLutMap);
 
 		mUiRenderer = std::make_shared<UiDrawGenerator>(
             device, 
@@ -770,7 +778,7 @@ namespace hvk {
 		//mSkyboxRenderer->setCubemap(cubemap);
 
 		std::array<std::string, 2> irradianceMapShaders = {
-			"shaders/compiled/hdr_to_cubemap_vert.spv",
+			"shaders/compiled/convolution_vert.spv",
 			"shaders/compiled/convolution_frag.spv"
 		};
 		util::render::renderCubeMap<GammaSettings>(
@@ -788,11 +796,6 @@ namespace hvk {
 
 		//mSkyboxRenderer->setCubemap(irradianceMap);
 		
-		if (rdoc_api)
-		{
-			//rdoc_api->StartFrameCapture(nullptr, nullptr);
-		}
-
 		uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(256.f))) + 1;
 		std::vector<RoughnessSettings> roughnessSettings;
 		roughnessSettings.reserve(numMips);
@@ -801,7 +804,7 @@ namespace hvk {
 			roughnessSettings.push_back(RoughnessSettings{ static_cast<float>(i) / numMips });
 		}
 		std::array<std::string, 2> prefilterMapShaders = {
-			"shaders/compiled/hdr_to_cubemap_vert.spv",
+			"shaders/compiled/prefiltered-environment_vert.spv",
 			"shaders/compiled/prefiltered-environment_frag.spv"
 		};
 		util::render::renderCubeMap<RoughnessSettings>(
@@ -820,7 +823,26 @@ namespace hvk {
 
 		if (rdoc_api)
 		{
-			//rdoc_api->EndFrameCapture(nullptr, nullptr);
+			rdoc_api->StartFrameCapture(nullptr, nullptr);
+		}
+		std::array<std::string, 2> brdfLutShaders = {
+			"shaders/compiled/quad_vert.spv",
+			"shaders/compiled/brdfLUT_frag.spv" };
+		auto brdfFence = util::render::renderImageMap(
+			device,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			mPrimaryCommandBuffer,
+			512,
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			mBdrfLutMap,
+			brdfLutShaders);
+		assert(vkWaitForFences(mDevice, 1, &brdfFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+
+		if (rdoc_api)
+		{
+			rdoc_api->EndFrameCapture(nullptr, nullptr);
 		}
 	}
 }

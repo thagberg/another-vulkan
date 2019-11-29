@@ -14,7 +14,8 @@ namespace hvk
 		VkRenderPass renderPass,
 		VkCommandPool commandPool,
         HVK_shared<TextureMap> environmentMap,
-		HVK_shared<TextureMap> irradianceMap) :
+		HVK_shared<TextureMap> irradianceMap,
+		HVK_shared<TextureMap> brdfLutMap) :
 
 		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
@@ -28,6 +29,7 @@ namespace hvk
 		mLights(),
         mEnvironmentMap(environmentMap),
 		mIrradianceMap(irradianceMap),
+		mBrdfLutMap(brdfLutMap),
         mGammaCorrection(2.2f),
         mUseSRGBTex(false)
 	{
@@ -43,6 +45,7 @@ namespace hvk
 		VkDescriptorSetLayoutBinding normalSamplerBinding = util::descriptor::generateSamplerLayoutBinding(3, 1);
         VkDescriptorSetLayoutBinding environmentSamplerBinding = util::descriptor::generateSamplerLayoutBinding(4, 1);
 		VkDescriptorSetLayoutBinding irradianceSamplerBinding = util::descriptor::generateSamplerLayoutBinding(5, 1);
+		VkDescriptorSetLayoutBinding brdfSamplerBinding = util::descriptor::generateSamplerLayoutBinding(6, 1);
 
 		std::vector<VkDescriptorSetLayoutBinding> bindings = {
             uboLayoutBinding, 
@@ -50,7 +53,8 @@ namespace hvk
             metalRoughSamplerBinding,
             normalSamplerBinding,
             environmentSamplerBinding,
-			irradianceSamplerBinding
+			irradianceSamplerBinding,
+			brdfSamplerBinding
         };
 		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
 
@@ -395,13 +399,24 @@ namespace hvk
 				newRenderable.descriptorSet,
 				5);
 
-			std::array<VkWriteDescriptorSet, 6> descriptorWrites = {
+			std::vector<VkDescriptorImageInfo> brdfImageInfos = {
+				VkDescriptorImageInfo{
+					mBrdfLutMap->sampler,
+					mBrdfLutMap->view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }};
+			auto brdfDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+				brdfImageInfos,
+				newRenderable.descriptorSet,
+				6);
+
+			std::array<VkWriteDescriptorSet, 7> descriptorWrites = {
 				descriptorWrite,
 				imageDescriptorWrite,
 				mtlRoughDescriptorWrite,
 				normalDescriptorWrite,
                 environmentDescriptorWrite,
-				irradianceDescriptorWrite
+				irradianceDescriptorWrite,
+				brdfDescriptorWrite
 			};
 
 			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);

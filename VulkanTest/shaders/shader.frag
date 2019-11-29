@@ -35,6 +35,7 @@ layout(set = 1, binding = 2) uniform sampler2D metallicRoughnessSampler;
 layout(set = 1, binding = 3) uniform sampler2D normalSampler;
 layout(set = 1, binding = 4) uniform samplerCube environmentSampler;
 layout(set = 1, binding = 5) uniform samplerCube irradianceSampler;
+layout(set = 1, binding = 6) uniform sampler2D bdrfLutSampler;
 
 layout (push_constant) uniform PushConstant {
 	float gamma;
@@ -46,6 +47,7 @@ layout (push_constant) uniform PushConstant {
 layout(location = 0) out vec4 outColor;
 
 const float PI = 3.14159265359;
+const float MAX_REFLECTION_LOD = 9.0;
 
 vec3 getSchlickFresnel(float dotP, vec3 F0) {
 	return F0 + (1.0f - F0) * pow(1.0 - dotP, 5.0);
@@ -135,19 +137,25 @@ void main() {
 	vec3 imageIrradiance = texture(irradianceSampler, surfaceNormal).rgb;
 	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
 
-    vec3 environmentReflect = reflect(viewDir, surfaceNormal);
-    vec3 environmentColor = texture(environmentSampler, environmentReflect).rgb;
+    vec3 environmentReflect = reflect(-viewDir, surfaceNormal);
+    vec3 environmentColor = textureLod(environmentSampler, environmentReflect, roughness * MAX_REFLECTION_LOD).rgb;
 
 	// surface reflection at zero incidence
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo.rgb, metallic);
 
 	// calculate lighting from IBL
-	vec3 imageRadiance = vec3(0.0);
-	vec3 ikS = getSchlickFresnelRoughness(max(dot(surfaceNormal, viewDir), 0.0), F0, roughness);
+	float NdotV = max(dot(surfaceNormal, viewDir), 0.0);
+	vec3 ikS = getSchlickFresnelRoughness(NdotV, F0, roughness);
 	vec3 ikD = vec3(1.0) - ikS;
+	ikD *= 1.0 - metallic;
+
+	vec3 imageRadiance = vec3(0.0);
+
+	vec2 envBRDF = texture(bdrfLutSampler, vec2(NdotV, roughness)).rg;
+	vec3 iSpecular = environmentColor * (ikS * envBRDF.x + envBRDF.y);
 	vec3 iDiffuse = imageIrradiance * albedo.rgb;
-	vec3 iAmbient = ikD * iDiffuse; // TODO: multiply by ambient occlusion
+	vec3 iAmbient = ikD * iDiffuse + iSpecular; // TODO: multiply by ambient occlusion
 	imageRadiance += iAmbient;
     
 	// calculate lighting from analytic light sources
