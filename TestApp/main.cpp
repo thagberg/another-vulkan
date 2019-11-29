@@ -222,10 +222,17 @@ protected:
 		auto exposureSettings = getExposureSettings();
 		ImGui::SliderFloat("Exposure", &exposureSettings->exposure, 0.f, 10.f);
 
+		auto skySettings = getSkySettings();
 		static int skyChoice = 0;
+		static float skyLod = 0.f;
 		bool skyChanged = false;
 		skyChanged = ImGui::RadioButton("Environment Map", &skyChoice, 1); ImGui::SameLine();
 		skyChanged |= ImGui::RadioButton("Irradiance Map", &skyChoice, 2);
+		skyChanged |= ImGui::RadioButton("Prefiltered Map", &skyChoice, 3);
+		if (skyChoice == 3)
+		{
+			ImGui::SliderFloat("LOD", &skySettings->lod, 0.f, 9.f);
+		}
 		if (skyChanged)
 		{
 			switch (skyChoice)
@@ -236,6 +243,8 @@ protected:
 			case 2:
 				useIrradianceMap();
 				break;
+			case 3:
+				usePrefilteredMap(skyLod);
 			}
 		}
 

@@ -26,6 +26,7 @@ namespace hvk
 	struct GammaSettings;
 	struct PBRWeight;
 	struct ExposureSettings;
+	struct SkySettings;
 }
 
 class UserApp
@@ -61,6 +62,7 @@ public:
 	hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
 	hvk::HVK_shared<hvk::PBRWeight> getPBRWeight();
 	hvk::HVK_shared<hvk::ExposureSettings> getExposureSettings();
+	hvk::HVK_shared<hvk::SkySettings> getSkySettings();
     void setUseSRGBTex(bool useSRGBTex);
 	hvk::HVK_shared<hvk::AmbientLight> getAmbientLight();
     float getGammaCorrection();
@@ -69,4 +71,5 @@ public:
 	void generateEnvironmentMap();
 	void useEnvironmentMap();
 	void useIrradianceMap();
+	void usePrefilteredMap(float lod);
 };

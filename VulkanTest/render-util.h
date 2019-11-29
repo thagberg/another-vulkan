@@ -28,7 +28,7 @@ namespace hvk
 				VkFormat outFormat,
 				HVK_shared<TextureMap> outMap,
 				std::array<std::string, 2>& shaderFiles,
-				const PushT& pushSettings,
+				const std::vector<PushT>& pushSettings,
 				uint32_t mipLevels=1)
 			{
 				auto cubeMap = HVK_make_shared<TextureMap>(image::createImageMap(
@@ -88,7 +88,8 @@ namespace hvk
 					VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 					6,
 					VK_IMAGE_LAYOUT_UNDEFINED,
-					VK_IMAGE_VIEW_TYPE_CUBE);
+					VK_IMAGE_VIEW_TYPE_CUBE,
+					mipLevels);
 
 				// map needs to be transitioned to a transfer destination
 				auto onetime = command::beginSingleTimeCommand(device.device, commandPool);
@@ -98,22 +99,12 @@ namespace hvk
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					6,
-					0);
+					0,
+					mipLevels);
 				command::endSingleTimeCommand(device.device, commandPool, onetime, graphicsQueue);
 
 				// Start getting ready for the renders
 				VkFence renderFence = signal::createFence(device.device);
-
-				VkViewport viewport = {};
-				viewport.x = 0.f;
-				viewport.y = 0.f;
-				viewport.width = static_cast<float>(outResolution);
-				viewport.height = static_cast<float>(outResolution);
-				viewport.minDepth = 0.f;
-				viewport.maxDepth = 1.f;
-				VkRect2D scissor = {};
-				scissor.offset = { 0, 0 };
-				scissor.extent = cubeExtent;
 
 				std::array<VkClearValue, 1> clearValues = {};
 				clearValues[0].color = { 0.f, 0.f, 0.f, 1.0f };
@@ -121,20 +112,6 @@ namespace hvk
 				VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 				commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 				commandBegin.pInheritanceInfo = nullptr;
-
-				VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-				renderBegin.renderPass = cubeRenderPass;
-				renderBegin.framebuffer = cubeFrameBuffer;
-				renderBegin.renderArea = scissor;
-				renderBegin.clearValueCount = static_cast<float>(clearValues.size());
-				renderBegin.pClearValues = clearValues.data();
-
-				VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-				inheritanceInfo.pNext = nullptr;
-				inheritanceInfo.renderPass = cubeRenderPass;
-				inheritanceInfo.subpass = 0;
-				inheritanceInfo.framebuffer = cubeFrameBuffer;
-				inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
 				// Create a camera which we will use to face each wall of the cube which we are rendering to
 				// For each face, we sample the HDR texture in spherical coordinates and map that to the wall
@@ -158,9 +135,55 @@ namespace hvk
 					const auto& cameraTransform = cameraTransforms[i];
 					cubeCamera.setLocalTransform(cameraTransform);
 
+					if (mipLevels > 1)
+					{
+
+					}
+
+					//uint32_t mipResolution = outResolution * 2;
 					for (uint32_t j = 0; j < mipLevels; ++j)
 					{
-						uint32_t mipResolution = outResolution / (j+1);
+						//uint32_t mipResolution = outResolution / (j+1);
+						uint32_t mipResolution = outResolution >> j;
+						//mipResolution /= 2;
+
+						cubeExtent = {
+							mipResolution,
+							mipResolution
+						};
+						framebuffer::createFramebuffer(
+							device.device,
+							cubeRenderPass,
+							cubeExtent,
+							cubeMap->view, 
+							nullptr, 
+							&cubeFrameBuffer);
+
+						VkViewport viewport = {};
+						viewport.x = 0.f;
+						viewport.y = 0.f;
+						viewport.width = static_cast<float>(mipResolution);
+						viewport.height = static_cast<float>(mipResolution);
+						viewport.minDepth = 0.f;
+						viewport.maxDepth = 1.f;
+
+						VkRect2D scissor = {};
+						scissor.offset = { 0, 0 };
+						scissor.extent = cubeExtent;
+
+						VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+						renderBegin.renderPass = cubeRenderPass;
+						renderBegin.framebuffer = cubeFrameBuffer;
+						renderBegin.renderArea = scissor;
+						renderBegin.clearValueCount = static_cast<float>(clearValues.size());
+						renderBegin.pClearValues = clearValues.data();
+
+						VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+						inheritanceInfo.pNext = nullptr;
+						inheritanceInfo.renderPass = cubeRenderPass;
+						inheritanceInfo.subpass = 0;
+						inheritanceInfo.framebuffer = cubeFrameBuffer;
+						inheritanceInfo.occlusionQueryEnable = VK_FALSE;
 
 						vkBeginCommandBuffer(commandBuffer, &commandBegin);
 						vkCmdBeginRenderPass(commandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
@@ -171,7 +194,7 @@ namespace hvk
 							viewport, 
 							scissor, 
 							cubeCamera,
-							pushSettings);
+							pushSettings[j]);
 
 						vkCmdExecuteCommands(commandBuffer, 1, &cubemapCommandBuffer);
 						vkCmdEndRenderPass(commandBuffer);
@@ -220,6 +243,8 @@ namespace hvk
 							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 
 						// transition outMap face to shader read
+						// TODO: add support to transitionImageLayout for setting the
+						// base mip level
 						image::transitionImageLayout(
 							commandBuffer,
 							outMap->texture.memoryResource,
@@ -227,7 +252,9 @@ namespace hvk
 							VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 							1,
 							i,
-							j+1);
+							1,
+							j);
+							//j+1);
 
 						vkEndCommandBuffer(commandBuffer);
 

@@ -41,6 +41,8 @@ namespace hvk
 		HVK_shared<TextureMap> mCubeMap;
 		CubemapRenderable mCubeRenderable;
 
+		bool mDescriptorSetDirty;
+
 		void updateDescriptorSet();
 		
 	public:
@@ -83,7 +85,8 @@ namespace hvk
 		mPipeline(VK_NULL_HANDLE),
 		mPipelineInfo(),
 		mCubeMap(skyboxMap),
-		mCubeRenderable()
+		mCubeRenderable(),
+		mDescriptorSetDirty(false)
 	{
 		//auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
         auto cube = createEnvironmentCube();
@@ -266,7 +269,8 @@ namespace hvk
 	{
 		mCubeMap.reset();
 		mCubeMap = cubeMap;
-		updateDescriptorSet();
+		//updateDescriptorSet();
+		mDescriptorSetDirty = true;
 	}
 
 	template <typename PushT>
@@ -306,6 +310,13 @@ namespace hvk
 		const Camera& camera,
 		const PushT& pushSettings)
 	{
+		// If cubemap was updated we need to update the descriptor set
+		if (mDescriptorSetDirty)
+		{
+			mDescriptorSetDirty = false;
+			updateDescriptorSet();
+		}
+
 		// Update UBO
 		UniformBufferObject ubo = {};
 		ubo.model = camera.getWorldTransform();

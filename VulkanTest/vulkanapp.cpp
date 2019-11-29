@@ -70,6 +70,7 @@ namespace hvk {
 		mGammaSettings(nullptr),
 		mPBRWeight(nullptr),
 		mExposureSettings(nullptr),
+		mSkySettings(nullptr),
 		mEnvironmentMap(nullptr),
 		mIrradianceMap(nullptr),
 		mPrefilteredMap(nullptr)
@@ -230,6 +231,9 @@ namespace hvk {
 		// Initialize Exposure settings
 		mExposureSettings = HVK_make_shared<ExposureSettings>(ExposureSettings{ 1.0 });
 
+		// TEST: Initialize sky settings
+		mSkySettings = HVK_make_shared<SkySettings>(SkySettings{ 2.2f, 2.f });
+
 
         // Create cubemap for skybox and environmental mapping
         std::array<std::string, 6> skyboxFiles = {
@@ -290,7 +294,7 @@ namespace hvk {
 		std::array<std::string, 2> skyboxShaders = {
 			"shaders/compiled/sky_vert.spv",
 			"shaders/compiled/sky_frag.spv"};
-		mSkyboxRenderer = HVK_make_shared<CubemapGenerator<GammaSettings>>(
+		mSkyboxRenderer = HVK_make_shared<CubemapGenerator<SkySettings>>(
 			device,
 			mAllocator,
 			mGraphicsQueue,
@@ -613,13 +617,17 @@ namespace hvk {
 			scissor,
 			*mActiveCamera.get());
 
+		SkySettings tempSkySettings{
+			mGammaSettings->gamma,
+			mSkySettings->lod
+		};
 		mFirstPassCommandBuffers[2] = mSkyboxRenderer->drawFrame(
 			inheritanceInfo,
 			mColorPassFramebuffer,
 			viewport,
 			scissor,
 			*mActiveCamera,
-			*mGammaSettings);
+			tempSkySettings);
 
 		vkCmdExecuteCommands(
 			mPrimaryCommandBuffer, 
@@ -740,6 +748,8 @@ namespace hvk {
 			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R32G32B32A32_SFLOAT),
 			util::image::createImageSampler(mDevice)});
 
+		std::vector<GammaSettings> gammaSettings = { *mGammaSettings };
+
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/hdr_to_cubemap_frag.spv"};
@@ -754,7 +764,7 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			mEnvironmentMap,
 			hdrMapShaders,
-			*mGammaSettings);
+			gammaSettings);
 
 		// Finally, update the skybox
 		//mSkyboxRenderer->setCubemap(cubemap);
@@ -774,16 +784,22 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			mIrradianceMap,
 			irradianceMapShaders,
-			*mGammaSettings);
+			gammaSettings);
 
 		//mSkyboxRenderer->setCubemap(irradianceMap);
 		
 		if (rdoc_api)
 		{
-			rdoc_api->StartFrameCapture(nullptr, nullptr);
+			//rdoc_api->StartFrameCapture(nullptr, nullptr);
 		}
 
-		auto roughnessSettings = RoughnessSettings{ 1.f };
+		uint32_t numMips = static_cast<uint32_t>(std::floor(std::log2(256.f))) + 1;
+		std::vector<RoughnessSettings> roughnessSettings;
+		roughnessSettings.reserve(numMips);
+		for (uint32_t i = 0; i < numMips; ++i)
+		{
+			roughnessSettings.push_back(RoughnessSettings{ static_cast<float>(i) / numMips });
+		}
 		std::array<std::string, 2> prefilterMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
 			"shaders/compiled/prefiltered-environment_frag.spv"
@@ -800,11 +816,11 @@ namespace hvk {
 			mPrefilteredMap,
 			prefilterMapShaders,
 			roughnessSettings,
-			4);
+			numMips);
 
 		if (rdoc_api)
 		{
-			rdoc_api->EndFrameCapture(nullptr, nullptr);
+			//rdoc_api->EndFrameCapture(nullptr, nullptr);
 		}
 	}
 }

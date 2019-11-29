@@ -33,7 +33,8 @@ namespace hvk
 				VkImageLayout newLayout,
 				uint32_t numLayers=1,
 				uint32_t baseLayer=0,
-				uint32_t mipLevels=1);
+				uint32_t mipLevels=1,
+				uint32_t baseMipLevel=0);
 
 			TextureMap createImageMap(
 				VkDevice device,

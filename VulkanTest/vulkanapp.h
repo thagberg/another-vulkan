@@ -59,7 +59,7 @@ namespace hvk {
 		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
-		HVK_shared<CubemapGenerator<GammaSettings>> mSkyboxRenderer;
+		HVK_shared<CubemapGenerator<SkySettings>> mSkyboxRenderer;
         HVK_shared<QuadGenerator> mQuadRenderer;
 		HVK_shared<AmbientLight> mAmbientLight;
 
@@ -71,6 +71,7 @@ namespace hvk {
 		HVK_shared<GammaSettings> mGammaSettings;
 		HVK_shared<PBRWeight> mPBRWeight;
 		HVK_shared<ExposureSettings> mExposureSettings;
+		HVK_shared<SkySettings> mSkySettings;
 
 		HVK_shared<TextureMap> mEnvironmentMap;
 		HVK_shared<TextureMap> mIrradianceMap;
@@ -106,6 +107,7 @@ namespace hvk {
 		HVK_shared<GammaSettings> getGammaSettings() { return mGammaSettings; }
 		HVK_shared<PBRWeight> getPBRWeight() { return mPBRWeight; }
 		HVK_shared<ExposureSettings> getExposureSettings() { return mExposureSettings; }
+		HVK_shared<SkySettings> getSkySettings() { return mSkySettings; }
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }
@@ -113,5 +115,10 @@ namespace hvk {
 		void generateEnvironmentMap();
 		void useEnvironmentMap() { mSkyboxRenderer->setCubemap(mEnvironmentMap); }
 		void useIrradianceMap() { mSkyboxRenderer->setCubemap(mIrradianceMap); }
+		void usePrefilteredMap(float lod) 
+		{ 
+			//mSkySettings->lod = lod;
+			mSkyboxRenderer->setCubemap(mPrefilteredMap); 
+		}
 	};
 }

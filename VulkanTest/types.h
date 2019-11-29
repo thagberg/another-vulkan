@@ -121,6 +121,11 @@ namespace hvk {
 		float roughness;
 	};
 
+	struct SkySettings {
+		float gamma;
+		float lod;
+	};
+
 	struct VertexInfo 
 	{
 		VkVertexInputBindingDescription bindingDescription;

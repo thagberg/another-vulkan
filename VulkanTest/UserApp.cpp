@@ -185,6 +185,11 @@ hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
 	return mApp->getExposureSettings();
 }
 
+hvk::HVK_shared<hvk::SkySettings> UserApp::getSkySettings()
+{
+	return mApp->getSkySettings();
+}
+
 void UserApp::generateEnvironmentMap()
 {
 	mApp->generateEnvironmentMap();
@@ -198,4 +203,9 @@ void UserApp::useEnvironmentMap()
 void UserApp::useIrradianceMap()
 {
 	mApp->useIrradianceMap();
+}
+
+void UserApp::usePrefilteredMap(float lod)
+{
+	mApp->usePrefilteredMap(lod);
 }

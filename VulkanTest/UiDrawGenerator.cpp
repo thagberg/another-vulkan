@@ -220,10 +220,67 @@ namespace hvk
 		const VkRect2D& scissor)
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		//ImGui::NewFrame();
-		//ImGui::ShowDemoWindow();
-		//ImGui::EndFrame();
 		ImGui::Render();
+		ImDrawData* imDrawData = ImGui::GetDrawData();
+		// Create vertex buffer
+		uint32_t vertexMemorySize = sizeof(ImDrawVert) * imDrawData->TotalVtxCount;
+		uint32_t indexMemorySize = sizeof(ImDrawIdx) * imDrawData->TotalIdxCount;
+		if (vertexMemorySize && indexMemorySize) {
+			if (mVbo.allocationInfo.size < vertexMemorySize) {
+				if (mVbo.allocationInfo.pMappedData != nullptr) {
+					vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
+				}
+				VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+				bufferInfo.size = vertexMemorySize;
+				bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+				VmaAllocationCreateInfo allocCreateInfo = {};
+				allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+				allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+				vmaCreateBuffer(
+					mAllocator,
+					&bufferInfo,
+					&allocCreateInfo,
+					&mVbo.memoryResource,
+					&mVbo.allocation,
+					&mVbo.allocationInfo);
+
+			}
+
+			if (mIbo.allocationInfo.size < indexMemorySize) {
+				if (mIbo.allocationInfo.pMappedData != nullptr) {
+					vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
+				}
+				VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+				iboInfo.size = indexMemorySize;
+				iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+				VmaAllocationCreateInfo indexAllocCreateInfo = {};
+				indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+				indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+				vmaCreateBuffer(
+					mAllocator,
+					&iboInfo,
+					&indexAllocCreateInfo,
+					&mIbo.memoryResource,
+					&mIbo.allocation,
+					&mIbo.allocationInfo);
+
+			}
+
+			ImDrawVert* vertDst = static_cast<ImDrawVert*>(mVbo.allocationInfo.pMappedData);
+			ImDrawIdx* indexDst = static_cast<ImDrawIdx*>(mIbo.allocationInfo.pMappedData);
+
+			for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
+				const ImDrawList* cmdList = imDrawData->CmdLists[i];
+				size_t vertexCopySize = cmdList->VtxBuffer.size_in_bytes();
+				size_t indexCopySize = cmdList->IdxBuffer.size_in_bytes();
+				memcpy(vertDst, cmdList->VtxBuffer.Data, vertexCopySize);
+				memcpy(indexDst, cmdList->IdxBuffer.Data, indexCopySize);
+				vertDst += cmdList->VtxBuffer.Size;
+				indexDst += cmdList->IdxBuffer.Size;
+			}
+		}
 
 		std::array<VkClearValue, 2> clearValues = {};
 		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
@@ -242,7 +299,6 @@ namespace hvk
 
 		VkDeviceSize offsets[] = { 0 };
 
-		ImDrawData* imDrawData = ImGui::GetDrawData();
 		if (imDrawData->CmdListsCount > 0) {
 			vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 			vkCmdBindDescriptorSets(
@@ -260,77 +316,19 @@ namespace hvk
 			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UiPushConstant), &push);
 			VkDeviceSize offsets[1] = { 0 };
 
-			// Create vertex buffer
-			uint32_t vertexMemorySize = sizeof(ImDrawVert) * imDrawData->TotalVtxCount;
-			uint32_t indexMemorySize = sizeof(ImDrawIdx) * imDrawData->TotalIdxCount;
-			if (vertexMemorySize && indexMemorySize) {
-				if (mVbo.allocationInfo.size < vertexMemorySize) {
-					if (mVbo.allocationInfo.pMappedData != nullptr) {
-						vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
-					}
-					VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO }; 
-					bufferInfo.size = vertexMemorySize;
-					bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mVbo.memoryResource, offsets);
+			vkCmdBindIndexBuffer(mCommandBuffer, mIbo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
 
-					VmaAllocationCreateInfo allocCreateInfo = {};
-					allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-					allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-					vmaCreateBuffer(
-						mAllocator,
-						&bufferInfo,
-						&allocCreateInfo,
-						&mVbo.memoryResource,
-						&mVbo.allocation,
-						&mVbo.allocationInfo);
-
+			int vertexOffset = 0;
+			int indexOffset = 0;
+			for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
+				const ImDrawList* cmdList = imDrawData->CmdLists[i];
+				for (int j = 0; j < cmdList->CmdBuffer.Size; ++j) {
+					const ImDrawCmd* cmd = &cmdList->CmdBuffer[j];
+					vkCmdDrawIndexed(mCommandBuffer, cmd->ElemCount, 1, indexOffset, vertexOffset, 0);
+					indexOffset += cmd->ElemCount;
 				}
-
-				if (mIbo.allocationInfo.size < indexMemorySize) {
-					if (mIbo.allocationInfo.pMappedData != nullptr) {
-						vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
-					}
-					VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-					iboInfo.size = indexMemorySize;
-					iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-
-					VmaAllocationCreateInfo indexAllocCreateInfo = {};
-					indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-					indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-					vmaCreateBuffer(
-						mAllocator,
-						&iboInfo,
-						&indexAllocCreateInfo,
-						&mIbo.memoryResource,
-						&mIbo.allocation,
-						&mIbo.allocationInfo);
-
-				}
-
-				ImDrawVert* vertDst = static_cast<ImDrawVert*>(mVbo.allocationInfo.pMappedData);
-				ImDrawIdx* indexDst = static_cast<ImDrawIdx*>(mIbo.allocationInfo.pMappedData);
-
-				for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
-					const ImDrawList* cmdList = imDrawData->CmdLists[i];
-					memcpy(vertDst, cmdList->VtxBuffer.Data, cmdList->VtxBuffer.Size * sizeof(ImDrawVert));
-					memcpy(indexDst, cmdList->IdxBuffer.Data, cmdList->IdxBuffer.Size * sizeof(ImDrawIdx));
-					vertDst += cmdList->VtxBuffer.Size;
-					indexDst += cmdList->IdxBuffer.Size;
-				}
-
-				vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mVbo.memoryResource, offsets);
-				vkCmdBindIndexBuffer(mCommandBuffer, mIbo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
-
-				int vertexOffset = 0;
-				int indexOffset = 0;
-				for (int i = 0; i < imDrawData->CmdListsCount; ++i) {
-					const ImDrawList* cmdList = imDrawData->CmdLists[i];
-					for (int j = 0; j < cmdList->CmdBuffer.Size; ++j) {
-						const ImDrawCmd* cmd = &cmdList->CmdBuffer[j];
-						vkCmdDrawIndexed(mCommandBuffer, cmd->ElemCount, 1, indexOffset, vertexOffset, 0);
-						indexOffset += cmd->ElemCount;
-					}
-					vertexOffset += cmdList->VtxBuffer.Size;
-				}
+				vertexOffset += cmdList->VtxBuffer.Size;
 			}
 		}
 

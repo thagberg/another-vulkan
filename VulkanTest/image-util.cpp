@@ -357,9 +357,10 @@ namespace hvk
 					imageFormat,
 					VK_IMAGE_ASPECT_COLOR_BIT,
 					arrayLayers,
-					viewType);
+					viewType,
+					mipLevels);
 
-				imageMap.sampler = createImageSampler(device, static_cast<float>(mipLevels));
+				imageMap.sampler = createImageSampler(device, static_cast<float>(mipLevels-1));
 
 				return imageMap;
 			}
@@ -372,7 +373,8 @@ namespace hvk
 				VkImageLayout newLayout,
 				uint32_t numLayers /* 1 */,
 				uint32_t baseLayer /* 0 */,
-				uint32_t mipLevels /* 1 */) {
+				uint32_t mipLevels /* 1 */,
+				uint32_t baseMipLevel /* 0 */) {
 
 				VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 				barrier.oldLayout = oldLayout;
@@ -388,7 +390,7 @@ namespace hvk
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				}
 
-				barrier.subresourceRange.baseMipLevel = 0;
+				barrier.subresourceRange.baseMipLevel = baseMipLevel;
 				barrier.subresourceRange.levelCount = mipLevels;
 				barrier.subresourceRange.baseArrayLayer = baseLayer;
 				barrier.subresourceRange.layerCount = numLayers;
