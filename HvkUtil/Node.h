@@ -10,9 +10,12 @@ namespace hvk {
 
     class Node {
     private:
+		uint64_t mId;
 		std::string mName;
         HVK_shared<Node> mParent;
         HVK_vector<HVK_shared<Node>> mChildren;
+
+		static uint64_t sNextId;
 
     protected:
         HVK_shared<Transform> mTransform;

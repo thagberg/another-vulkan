@@ -1,10 +1,16 @@
 #include "pch.h"
 #include "Node.h"
+#include <iostream>
 #include "glm/gtc/matrix_transform.hpp"
+#include "imgui/imgui_stdlib.h"
 
+const glm::vec3 zeroVec = glm::vec3(0.f);
 
 namespace hvk {
+	uint64_t Node::sNextId = 0;
+
     Node::Node(std::string name, HVK_shared<Node> parent, HVK_shared<Transform> transform) :
+		mId(sNextId++),
 		mName(name),
         mParent(parent),
         mTransform(transform),
@@ -14,6 +20,7 @@ namespace hvk {
     }
 
     Node::Node(std::string name, HVK_shared<Node> parent, glm::mat4 transform) :
+		mId(sNextId++),
 		mName(name),
         mParent(parent),
 		mChildren()
@@ -63,15 +70,19 @@ namespace hvk {
 #ifdef HVK_TOOLS
 	void Node::showGui()
 	{
+		bool nameChanged = ImGui::InputText("Name", &mName);
 		glm::vec3 position = getLocalPosition();
-		ImGui::DragFloat3("Position", &position.x, 0.1f);
-		glm::vec3 delta = position - getLocalPosition();
-		translateLocal(delta);
+		bool moved = ImGui::DragFloat3("Position", &position.x, 0.1f);
+		if (moved)
+		{
+			glm::vec3 delta = position - getLocalPosition();
+			translateLocal(delta);
+		}
 	}
 
 	void Node::displayGui()
     {
-		if (ImGui::TreeNode(mName.c_str()))
+		if (ImGui::TreeNode(&mId, mName.c_str()))
 		{
 			showGui();
 			for (auto child : mChildren)

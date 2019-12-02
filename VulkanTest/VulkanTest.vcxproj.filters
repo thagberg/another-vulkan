@@ -197,6 +197,9 @@
     <ClCompile Include="renderpass-util.cpp">
       <Filter>Source Files\util</Filter>
     </ClCompile>
+    <ClCompile Include="include\imgui\imgui_stdlib.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.vert">
