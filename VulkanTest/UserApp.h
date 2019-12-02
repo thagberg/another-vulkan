@@ -42,6 +42,7 @@ private:
     hvk::Clock mClock;
 
     static void handleWindowResize(GLFWwindow* window, int width, int height);
+	static void handleCharInput(GLFWwindow* window, uint32_t character);
 
 protected:
 	virtual bool run(double frameTime) = 0;

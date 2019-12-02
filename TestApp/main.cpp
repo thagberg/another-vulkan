@@ -46,6 +46,7 @@ public:
 	{
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
+        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
         //duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
@@ -131,57 +132,62 @@ protected:
 
         std::vector<hvk::Command> cameraCommands;
         cameraCommands.reserve(6);
-        if (hvk::InputManager::isDown(GLFW_KEY_W)) {
-            cameraCommands.push_back(hvk::Command{ 0, "move_forward", -1.0f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_S)) {
-            cameraCommands.push_back(hvk::Command{ 0, "move_forward", 1.0f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_A)) {
-            cameraCommands.push_back(hvk::Command{ 1, "move_right", -1.0f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_D)) {
-            cameraCommands.push_back(hvk::Command{ 1, "move_right", 1.0f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_Q)) {
-            cameraCommands.push_back(hvk::Command{ 2, "move_up", -1.0f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_E)) {
-            cameraCommands.push_back(hvk::Command{ 2, "move_up", 1.0f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_UP))
-        {
-            cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", 0.25f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_DOWN))
-        {
-            
-            cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", -0.25f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_LEFT))
-        {
-            
-            cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", -0.25f });
-        }
-        if (hvk::InputManager::isDown(GLFW_KEY_RIGHT))
-        {
-            cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
-        }
-		if (hvk::InputManager::wasPressed(GLFW_KEY_I))
+
+		// Don't allow keyboard inputs if the UI is capturing them
+		if (!io.WantCaptureKeyboard)
 		{
-			cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", -90.f });
-		}
-		if (hvk::InputManager::wasPressed(GLFW_KEY_K))
-		{
-			cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", 90.f });
-		}
-		if (hvk::InputManager::wasPressed(GLFW_KEY_J))
-		{
-			cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 90.f });
-		}
-		if (hvk::InputManager::wasPressed(GLFW_KEY_L))
-		{
-			cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", -90.f });
+			if (hvk::InputManager::isDown(GLFW_KEY_W)) {
+				cameraCommands.push_back(hvk::Command{ 0, "move_forward", -1.0f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_S)) {
+				cameraCommands.push_back(hvk::Command{ 0, "move_forward", 1.0f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_A)) {
+				cameraCommands.push_back(hvk::Command{ 1, "move_right", -1.0f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_D)) {
+				cameraCommands.push_back(hvk::Command{ 1, "move_right", 1.0f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_Q)) {
+				cameraCommands.push_back(hvk::Command{ 2, "move_up", -1.0f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_E)) {
+				cameraCommands.push_back(hvk::Command{ 2, "move_up", 1.0f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_UP))
+			{
+				cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", 0.25f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_DOWN))
+			{
+
+				cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", -0.25f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_LEFT))
+			{
+
+				cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", -0.25f });
+			}
+			if (hvk::InputManager::isDown(GLFW_KEY_RIGHT))
+			{
+				cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 0.25f });
+			}
+			if (hvk::InputManager::wasPressed(GLFW_KEY_I))
+			{
+				cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", -90.f });
+			}
+			if (hvk::InputManager::wasPressed(GLFW_KEY_K))
+			{
+				cameraCommands.push_back(hvk::Command{ 3, "camera_pitch", 90.f });
+			}
+			if (hvk::InputManager::wasPressed(GLFW_KEY_J))
+			{
+				cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", 90.f });
+			}
+			if (hvk::InputManager::wasPressed(GLFW_KEY_L))
+			{
+				cameraCommands.push_back(hvk::Command{ 4, "camera_yaw", -90.f });
+			}
 		}
         if (cameraDrag) {
             if (mouseDeltY != 0.f) {

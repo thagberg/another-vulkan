@@ -69,9 +69,10 @@ UserApp::UserApp(uint32_t windowWidth, uint32_t windowHeight, const char* window
 
     glfwSetWindowUserPointer(mWindow.get(), this);
     glfwSetFramebufferSizeCallback(mWindow.get(), UserApp::handleWindowResize);
-    hvk::InputManager::init(mWindow);
-
+	glfwSetCharCallback(mWindow.get(), UserApp::handleCharInput);
     ImGui::CreateContext();
+	// must init InputManager after we've created an ImGui context
+    hvk::InputManager::init(mWindow);
 
 	mApp->init(mWindowWidth, mWindowHeight, mVulkanInstance, mWindowSurface);
 }
@@ -84,11 +85,18 @@ UserApp::~UserApp()
     vkDestroyInstance(mVulkanInstance, nullptr);
 }
 
-void UserApp::handleWindowResize(GLFWwindow* window, int width, int height) {
+void UserApp::handleWindowResize(GLFWwindow* window, int width, int height) 
+{
     UserApp* thisApp = reinterpret_cast<UserApp*>(glfwGetWindowUserPointer(window));
     thisApp->mWindowWidth = width;
     thisApp->mWindowHeight = height;
     thisApp->mApp->recreateSwapchain(thisApp->mWindowWidth, thisApp->mWindowHeight);
+}
+
+void UserApp::handleCharInput(GLFWwindow* window, uint32_t character)
+{
+	ImGuiIO& io = ImGui::GetIO();
+	io.AddInputCharacter(character);
 }
 
 void UserApp::runApp()
