@@ -16,7 +16,6 @@ namespace hvk {
         mTransform(transform),
 		mChildren()
 	{
-
     }
 
     Node::Node(std::string name, HVK_shared<Node> parent, glm::mat4 transform) :

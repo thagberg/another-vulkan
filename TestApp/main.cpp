@@ -29,6 +29,7 @@ const uint32_t WIDTH = 1024;
 class TestApp : public UserApp
 {
 private:
+	HVK_shared<Node> mScene;
     HVK_shared<StaticMeshRenderObject> mDuck;
     HVK_shared<Light> mDynamicLight;
     HVK_shared<DebugMeshRenderObject> mLightBox;
@@ -38,12 +39,14 @@ private:
 public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
 		UserApp(windowWidth, windowHeight, windowTitle),
+		mScene(nullptr),
         mDuck(nullptr),
         mDynamicLight(nullptr),
         mLightBox(nullptr),
         mCamera(nullptr),
         mCameraController(nullptr)
 	{
+		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
@@ -52,7 +55,7 @@ public:
         //duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
         mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
 			"Bottle",
-            nullptr, 
+			mScene,
             duckTransform, 
             duckMesh);
         addStaticMeshInstance(mDuck);
@@ -60,20 +63,23 @@ public:
         glm::mat4 lightTransform = glm::mat4(1.f);
         lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
         lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
-        mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
-			"Dynamic Light",
-            nullptr, 
-            lightTransform, 
-            glm::vec3(1.f, 1.f, 1.f), 0.3f);
-        addDynamicLight(mDynamicLight);
-
 		HVK_shared<DebugMesh> debugMesh = createColoredCube(glm::vec3(1.f, 1.f, 1.f));
 		mLightBox = HVK_make_shared<DebugMeshRenderObject>(
 			"Dynamic Light Box",
-			nullptr,
-			mDynamicLight->getTransform(), 
+			mScene,
+			//mDynamicLight->getTransform(), 
+			lightTransform,
 			debugMesh);
 		addDebugMeshInstance(mLightBox);
+
+        mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
+			"Dynamic Light",
+			mLightBox,
+            glm::mat4(1.f), 
+            glm::vec3(1.f, 1.f, 1.f), 0.3f);
+        addDynamicLight(mDynamicLight);
+		mLightBox->addChild(mDynamicLight);
+
 
         mCamera = HVK_make_shared<Camera>(
             90.f,
@@ -81,9 +87,14 @@ public:
             0.001f,
             1000.f,
 			"Main Camera",
-            nullptr,
+			mScene,
             glm::mat4(1.f));
         mCameraController = CameraController(mCamera);
+
+		mScene->addChild(mDuck);
+		//mScene->addChild(mDynamicLight);
+		mScene->addChild(mLightBox);
+		mScene->addChild(mCamera);
 
         activateCamera(mCamera);
 
@@ -204,8 +215,9 @@ protected:
         ImGui::NewFrame();
 
 		ImGui::Begin("Objects");
-		mDuck->displayGui();
-		mDynamicLight->displayGui();
+		//mDuck->displayGui();
+		//mDynamicLight->displayGui();
+		mScene->displayGui();
 		ImGui::End();
 
         ImGui::Begin("Rendering");
