@@ -184,6 +184,41 @@ namespace hvk
 			}
 
 
+			TextureMap createTextureMap(
+				VkDevice device,
+				VmaAllocator allocator,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
+				std::string&& filename)
+			{
+				TextureMap map;
+
+				int width, height, numChannels;
+				unsigned char* data = stbi_load(filename.c_str(), &width, &height, &numChannels, 0);
+
+				map.texture = createTextureImage(
+					device,
+					allocator,
+					commandPool,
+					graphicsQueue,
+					data,
+					1,
+					width,
+					height,
+					numChannels);
+				map.view = createImageView(
+					device,
+					map.texture.memoryResource,
+					VK_FORMAT_R8G8B8A8_UNORM,
+					VK_IMAGE_ASPECT_COLOR_BIT,
+					1);
+				map.sampler = createImageSampler(device);
+
+				stbi_image_free(data);
+				return map;
+			}
+
+
 			TextureMap createCubeMap(
 				VkDevice device, 
 				VmaAllocator allocator, 

@@ -128,6 +128,7 @@ void main() {
     surfaceNormal = normalize(surfaceNormal * 2.0 - 1.0);
     surfaceNormal = normalize(inTBN * surfaceNormal);
 
+	float occlusion = metallicRoughness.r;
 	float metallic = metallicRoughness.b * push.metallic;
 	float roughness = metallicRoughness.g * push.roughness;
 	float glossiness = 1.0 - roughness;
@@ -192,5 +193,5 @@ void main() {
     }
 
     vec4 ambientColor = albedo * vec4(ambientLight, 1.0);
-    outColor = ambientColor + vec4(imageRadiance, 0.0) + vec4(dynamicRadiance, 0.0);
+    outColor = occlusion * ambientColor + vec4(imageRadiance, 0.0) + vec4(dynamicRadiance, 0.0);
 }

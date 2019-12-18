@@ -72,6 +72,13 @@ namespace hvk
 				VkQueue graphicsQueue,
 				std::array<std::string, 6>& fileNames);
 
+			TextureMap createTextureMap(
+				VkDevice device,
+				VmaAllocator allocator,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
+				std::string&& filename);
+
 			// TODO: Maybe move to a memory util instead?
 			void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map);
 

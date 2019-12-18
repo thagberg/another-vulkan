@@ -38,8 +38,8 @@ namespace hvk {
 	struct TextureMap
 	{
 		Resource<VkImage> texture;
-		VkImageView view;
-		VkSampler sampler;
+		VkImageView view = VK_NULL_HANDLE;
+		VkSampler sampler = VK_NULL_HANDLE;
 	};
 
 	struct QueueFamilies {

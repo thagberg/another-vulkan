@@ -30,11 +30,20 @@ namespace hvk
         mEnvironmentMap(environmentMap),
 		mIrradianceMap(irradianceMap),
 		mBrdfLutMap(brdfLutMap),
+		mDummyMap(nullptr),
         mGammaCorrection(2.2f),
         mUseSRGBTex(false)
 	{
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
 		mLights.reserve(NUM_INITIAL_LIGHTS);
+
+		// create dummy texture map
+		mDummyMap = HVK_make_shared<TextureMap>(util::image::createTextureMap(
+			mDevice.device, 
+			mAllocator, 
+			mCommandPool, 
+			mGraphicsQueue, 
+			std::string("resources/dummy-white.png")));
 
 		/***************
 		 Create descriptor set layout and descriptor pool
@@ -256,24 +265,23 @@ namespace hvk
 
 		// create texture view and sampler
 		std::shared_ptr<Material> mat = object->getMaterial();
-		if (mat->diffuseProp.texture != nullptr) {
-			const tinygltf::Image& diffuseTex = *mat->diffuseProp.texture;
-			newRenderable.diffuseMap.texture = util::image::createTextureImage(
-				mDevice.device,
-				mAllocator,
-				mCommandPool,
-				mGraphicsQueue,
-				diffuseTex.image.data(),
-				1,
-				diffuseTex.width,
-				diffuseTex.height,
-				diffuseTex.component * (diffuseTex.bits / 8));
-			newRenderable.diffuseMap.view = util::image::createImageView(
-                mDevice.device, 
-                newRenderable.diffuseMap.texture.memoryResource, 
-                VK_FORMAT_R8G8B8A8_UNORM);
-			newRenderable.diffuseMap.sampler = util::image::createImageSampler(mDevice.device);
-		}
+		assert(mat->diffuseProp.texture != nullptr);
+		const tinygltf::Image& diffuseTex = *mat->diffuseProp.texture;
+		newRenderable.diffuseMap.texture = util::image::createTextureImage(
+			mDevice.device,
+			mAllocator,
+			mCommandPool,
+			mGraphicsQueue,
+			diffuseTex.image.data(),
+			1,
+			diffuseTex.width,
+			diffuseTex.height,
+			diffuseTex.component * (diffuseTex.bits / 8));
+		newRenderable.diffuseMap.view = util::image::createImageView(
+			mDevice.device, 
+			newRenderable.diffuseMap.texture.memoryResource, 
+			VK_FORMAT_R8G8B8A8_UNORM);
+		newRenderable.diffuseMap.sampler = util::image::createImageSampler(mDevice.device);
 
         if (mat->metallicRoughnessProp.texture != nullptr)
         {
@@ -294,6 +302,10 @@ namespace hvk
                 VK_FORMAT_R8G8B8A8_UNORM);
 			newRenderable.metallicRoughnessMap.sampler = util::image::createImageSampler(mDevice.device);
         }
+		else
+		{
+			newRenderable.metallicRoughnessMap = *mDummyMap;
+		}
 
         if (mat->normalProp.texture != nullptr)
         {
@@ -314,9 +326,14 @@ namespace hvk
                 VK_FORMAT_R8G8B8A8_UNORM);
 			newRenderable.normalMap.sampler = util::image::createImageSampler(mDevice.device);
         }
+		else
+		{
+			newRenderable.normalMap = *mDummyMap;
+		}
 
 		// TODO: pre-allocate a number of descriptor sets for renderables
 		// create descriptor set
+		VkDescriptorSetLayout* thisLayout;
 		VkDescriptorSetAllocateInfo dsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 		dsAlloc.descriptorPool = mDescriptorPool;
 		dsAlloc.descriptorSetCount = 1;
@@ -326,58 +343,45 @@ namespace hvk
 
 		// Update descriptor set
 		{
-			VkDescriptorBufferInfo bufferInfo = {};
-			bufferInfo.buffer = newRenderable.ubo.memoryResource;
-			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(hvk::UniformBufferObject);
+			std::vector<VkWriteDescriptorSet> descriptorWrites;
+			descriptorWrites.reserve(7);
 
-			VkDescriptorImageInfo imageInfo = {};
-			imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imageInfo.imageView = newRenderable.diffuseMap.view;
-			imageInfo.sampler = newRenderable.diffuseMap.sampler;
+			std::vector<VkDescriptorBufferInfo> bufferInfos = {
+				VkDescriptorBufferInfo {
+					newRenderable.ubo.memoryResource,
+					0,
+					sizeof(hvk::UniformBufferObject) } };
 
-			VkDescriptorImageInfo metallicRoughnessInfo = {};
-			metallicRoughnessInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			metallicRoughnessInfo.imageView = newRenderable.metallicRoughnessMap.view;
-			metallicRoughnessInfo.sampler = newRenderable.metallicRoughnessMap.sampler;
+			auto bufferDescriptorWrite = util::descriptor::createDescriptorBufferWrite(bufferInfos, newRenderable.descriptorSet, 0);
+			descriptorWrites.push_back(bufferDescriptorWrite);
 
-			VkDescriptorImageInfo normalInfo = {};
-			normalInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			normalInfo.imageView = newRenderable.normalMap.view;
-			normalInfo.sampler = newRenderable.normalMap.sampler;
+			std::vector<VkDescriptorImageInfo> albedoImageInfos = {
+				VkDescriptorImageInfo{
+					newRenderable.diffuseMap.sampler,
+					newRenderable.diffuseMap.view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL } };
 
+			auto albedoDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+				albedoImageInfos,
+				newRenderable.descriptorSet,
+				1);
+			descriptorWrites.push_back(albedoDescriptorWrite);
 
-			VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-			descriptorWrite.dstSet = newRenderable.descriptorSet;
-			descriptorWrite.dstBinding = 0;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &bufferInfo;
+			std::vector<VkDescriptorImageInfo> mtlRoughImageInfos = {
+				VkDescriptorImageInfo{
+				newRenderable.metallicRoughnessMap.sampler,
+				newRenderable.metallicRoughnessMap.view,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL } };
+			auto mtlRoughDescriptorWrite = util::descriptor::createDescriptorImageWrite(mtlRoughImageInfos, newRenderable.descriptorSet, 2);
+			descriptorWrites.push_back(mtlRoughDescriptorWrite);
 
-			VkWriteDescriptorSet imageDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-			imageDescriptorWrite.dstSet = newRenderable.descriptorSet;
-			imageDescriptorWrite.dstBinding = 1;
-			imageDescriptorWrite.dstArrayElement = 0;
-			imageDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			imageDescriptorWrite.descriptorCount = 1;
-			imageDescriptorWrite.pImageInfo = &imageInfo;
-
-			VkWriteDescriptorSet mtlRoughDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-			mtlRoughDescriptorWrite.dstSet = newRenderable.descriptorSet;
-			mtlRoughDescriptorWrite.dstBinding = 2;
-			mtlRoughDescriptorWrite.dstArrayElement = 0;
-			mtlRoughDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			mtlRoughDescriptorWrite.descriptorCount = 1;
-			mtlRoughDescriptorWrite.pImageInfo = &metallicRoughnessInfo;
-
-			VkWriteDescriptorSet normalDescriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-			normalDescriptorWrite.dstSet = newRenderable.descriptorSet;
-			normalDescriptorWrite.dstBinding = 3;
-			normalDescriptorWrite.dstArrayElement = 0;
-			normalDescriptorWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			normalDescriptorWrite.descriptorCount = 1;
-			normalDescriptorWrite.pImageInfo = &normalInfo;
+			std::vector<VkDescriptorImageInfo> normalImageInfos = {
+				VkDescriptorImageInfo{
+				newRenderable.normalMap.sampler,
+				newRenderable.normalMap.view,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL } };
+			auto normalDescriptorWrite = util::descriptor::createDescriptorImageWrite(normalImageInfos, newRenderable.descriptorSet, 3);
+			descriptorWrites.push_back(normalDescriptorWrite);
 
             std::vector<VkDescriptorImageInfo> environmentImageInfos = {
                 VkDescriptorImageInfo{
@@ -388,6 +392,7 @@ namespace hvk
                 environmentImageInfos, 
                 newRenderable.descriptorSet, 
                 4);
+			descriptorWrites.push_back(environmentDescriptorWrite);
 
 			std::vector<VkDescriptorImageInfo> irradianceImageInfos = {
 				VkDescriptorImageInfo{
@@ -398,6 +403,7 @@ namespace hvk
 				irradianceImageInfos,
 				newRenderable.descriptorSet,
 				5);
+			descriptorWrites.push_back(irradianceDescriptorWrite);
 
 			std::vector<VkDescriptorImageInfo> brdfImageInfos = {
 				VkDescriptorImageInfo{
@@ -408,16 +414,7 @@ namespace hvk
 				brdfImageInfos,
 				newRenderable.descriptorSet,
 				6);
-
-			std::array<VkWriteDescriptorSet, 7> descriptorWrites = {
-				descriptorWrite,
-				imageDescriptorWrite,
-				mtlRoughDescriptorWrite,
-				normalDescriptorWrite,
-                environmentDescriptorWrite,
-				irradianceDescriptorWrite,
-				brdfDescriptorWrite
-			};
+			descriptorWrites.push_back(brdfDescriptorWrite);
 
 			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 		}
@@ -431,7 +428,7 @@ namespace hvk
 	}
 
 	VkCommandBuffer& StaticMeshGenerator::drawFrame(
-        const VkCommandBufferInheritanceInfo& inheritance,
+		const VkCommandBufferInheritanceInfo& inheritance,
 		const VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
@@ -443,13 +440,17 @@ namespace hvk
 		/****************
 		 update MVP uniform for renderables
 		****************/
+		auto viewProj = camera.getProjection() * camera.getViewTransform();
+		UniformBufferObject ubo = {
+			glm::mat4(1.f),
+			camera.getViewTransform(),
+			viewProj,
+			camera.getWorldPosition()
+		};
 		for (const auto& renderable : mRenderables) {
-			UniformBufferObject ubo = {};
 			ubo.model = renderable.renderObject->getWorldTransform();
 			ubo.model[1][1] *= -1; // flipping Y coord for Vulkan
-			ubo.view = camera.getViewTransform();
-			ubo.modelViewProj = camera.getProjection() * ubo.view * ubo.model;
-			ubo.cameraPos = camera.getWorldPosition();
+			ubo.modelViewProj = viewProj * ubo.model;
 			memcpy(renderable.ubo.allocationInfo.pMappedData, &ubo, sizeof(ubo));
 		}
 
