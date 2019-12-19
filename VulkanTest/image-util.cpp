@@ -69,9 +69,12 @@ namespace hvk
 
 			void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map)
 			{
-				vkDestroySampler(device, map.sampler, nullptr);
-				vkDestroyImageView(device, map.view, nullptr);
-				vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
+                if (map.texture.allocationInfo.pMappedData != nullptr)
+                {
+                    vkDestroySampler(device, map.sampler, nullptr);
+                    vkDestroyImageView(device, map.view, nullptr);
+                    vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
+                }
 			}
 
 
@@ -195,6 +198,8 @@ namespace hvk
 
 				int width, height, numChannels;
 				unsigned char* data = stbi_load(filename.c_str(), &width, &height, &numChannels, 0);
+
+                assert(data != nullptr);
 
 				map.texture = createTextureImage(
 					device,

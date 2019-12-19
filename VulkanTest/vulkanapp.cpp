@@ -81,8 +81,6 @@ namespace hvk {
 
     VulkanApp::~VulkanApp() {
         vkDeviceWaitIdle(mDevice);
-        vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
-        vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
 
 		cleanupSwapchain();
@@ -773,6 +771,9 @@ namespace hvk {
 			mEnvironmentMap,
 			hdrMapShaders,
 			gammaSettings);
+
+        // clean up
+        vmaDestroyImage(mAllocator, hdrImage.memoryResource, hdrImage.allocation);
 
 		// Finally, update the skybox
 		//mSkyboxRenderer->setCubemap(cubemap);

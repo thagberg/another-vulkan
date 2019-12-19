@@ -34,6 +34,7 @@ namespace hvk
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mDescriptorSet(VK_NULL_HANDLE),
+        mFontImage(),
 		mFontView(VK_NULL_HANDLE),
 		mFontSampler(VK_NULL_HANDLE),
 		mVbo(),
@@ -50,7 +51,7 @@ namespace hvk
 		io.Fonts->GetTexDataAsRGBA32(&fontTextureData, &fontTextWidth, &fontTextHeight, &bytesPerPixel);
         setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));
 
-        Resource<VkImage> uiFont = util::image::createTextureImage(
+        mFontImage = util::image::createTextureImage(
 			mDevice.device, 
 			mAllocator, 
 			mCommandPool, 
@@ -68,7 +69,7 @@ namespace hvk
 		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		VkDescriptorSetLayout uiDescriptorSetLayout;
-		mFontView = util::image::createImageView(mDevice.device, uiFont.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+		mFontView = util::image::createImageView(mDevice.device, mFontImage.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
 		mFontSampler = util::image::createImageSampler(mDevice.device);
 
 		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
@@ -184,6 +185,7 @@ namespace hvk
 	{
         vkDestroySampler(mDevice.device, mFontSampler, nullptr);
         vkDestroyImageView(mDevice.device, mFontView, nullptr);
+        vmaDestroyImage(mAllocator, mFontImage.memoryResource, mFontImage.allocation);
 
         vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
         vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
@@ -227,9 +229,7 @@ namespace hvk
 		uint32_t indexMemorySize = sizeof(ImDrawIdx) * imDrawData->TotalIdxCount;
 		if (vertexMemorySize && indexMemorySize) {
 			if (mVbo.allocationInfo.size < vertexMemorySize) {
-				if (mVbo.allocationInfo.pMappedData != nullptr) {
-					vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
-				}
+                vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
 				VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 				bufferInfo.size = vertexMemorySize;
 				bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -248,9 +248,7 @@ namespace hvk
 			}
 
 			if (mIbo.allocationInfo.size < indexMemorySize) {
-				if (mIbo.allocationInfo.pMappedData != nullptr) {
-					vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
-				}
+                vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
 				VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 				iboInfo.size = indexMemorySize;
 				iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;

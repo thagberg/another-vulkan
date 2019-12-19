@@ -123,7 +123,8 @@ namespace hvk
 
 	QuadGenerator::~QuadGenerator()
 	{
-
+        vmaDestroyBuffer(mAllocator, mRenderable.vbo.memoryResource, mRenderable.vbo.allocation);
+        vmaDestroyBuffer(mAllocator, mRenderable.ibo.memoryResource, mRenderable.ibo.allocation);
 	}
 
 	void QuadGenerator::invalidate()
