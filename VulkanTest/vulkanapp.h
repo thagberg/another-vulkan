@@ -20,6 +20,7 @@
 #include "CubemapGenerator.h"
 #include "QuadGenerator.h"
 #include "CameraController.h"
+#include "ModelPipeline.h"
 
 namespace hvk {
 
@@ -38,6 +39,8 @@ namespace hvk {
         VkRenderPass mFinalRenderPass;
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mPrimaryCommandBuffer;
+
+        ModelPipeline mModelPipeline;
 
 		SwapchainImageViews mFinalPassImageViews;
 		SwapchainImages mFinalPassSwapchainImages;
@@ -97,6 +100,8 @@ namespace hvk {
             VkInstance vulkanInstance,
             VkSurfaceKHR surface);
         bool update(double frameTime);
+
+        ModelPipeline& getModelPipeline() { return mModelPipeline; }
 
         void addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node);
         void addDynamicLight(HVK_shared<Light> light);

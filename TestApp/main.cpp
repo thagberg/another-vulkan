@@ -21,6 +21,7 @@
 #include "gltf.h"
 #include "vulkan-util.h"
 #include "shapes.h"
+#include "ModelPipeline.h"
 
 using namespace hvk;
 
@@ -54,6 +55,11 @@ public:
 
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
+        PBRMesh duckPbrMesh;
+        PBRMaterial duckPbrMaterial;
+        getModelPipeline().loadAndFetchModel(duckMesh, "Duck", &duckPbrMesh, &duckPbrMaterial);
+        mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
+        mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
 		duckMesh->setUsingSRGMat(true);

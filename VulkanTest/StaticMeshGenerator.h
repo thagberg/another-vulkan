@@ -46,7 +46,6 @@ namespace hvk
         HVK_shared<TextureMap> mEnvironmentMap;
 		HVK_shared<TextureMap> mIrradianceMap;
 		HVK_shared<TextureMap> mBrdfLutMap;
-		HVK_shared<TextureMap> mDummyMap;
 
         float mGammaCorrection;
         bool mUseSRGBTex;

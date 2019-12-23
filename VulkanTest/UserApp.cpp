@@ -217,3 +217,8 @@ void UserApp::usePrefilteredMap(float lod)
 {
 	mApp->usePrefilteredMap(lod);
 }
+
+hvk::ModelPipeline& UserApp::getModelPipeline()
+{
+    return mApp->getModelPipeline();
+}

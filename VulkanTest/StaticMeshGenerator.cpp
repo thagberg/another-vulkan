@@ -30,20 +30,11 @@ namespace hvk
         mEnvironmentMap(environmentMap),
 		mIrradianceMap(irradianceMap),
 		mBrdfLutMap(brdfLutMap),
-		mDummyMap(nullptr),
         mGammaCorrection(2.2f),
         mUseSRGBTex(false)
 	{
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
 		mLights.reserve(NUM_INITIAL_LIGHTS);
-
-		// create dummy texture map
-		mDummyMap = HVK_make_shared<TextureMap>(util::image::createTextureMap(
-			mDevice.device, 
-			mAllocator, 
-			mCommandPool, 
-			mGraphicsQueue, 
-			std::string("resources/dummy-white.png")));
 
 		/***************
 		 Create descriptor set layout and descriptor pool
@@ -200,6 +191,7 @@ namespace hvk
 
 	void StaticMeshGenerator::addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object)
 	{
+#if 0
 		StaticMeshRenderable newRenderable;
 		newRenderable.renderObject = object;
 
@@ -420,6 +412,7 @@ namespace hvk
 		}
 
 		mRenderables.push_back(newRenderable);
+#endif
 	}
 
 	void StaticMeshGenerator::addLight(std::shared_ptr<Light> light)

@@ -46,6 +46,7 @@ namespace hvk {
         mFinalRenderPass(VK_NULL_HANDLE),
         mCommandPool(VK_NULL_HANDLE),
         mPrimaryCommandBuffer(VK_NULL_HANDLE),
+        mModelPipeline(),
         mFinalPassImageViews(),
         mFinalPassSwapchainImages(),
         mColorPassMap(nullptr),
@@ -407,6 +408,7 @@ namespace hvk {
         }
 
 		GpuManager::init(mDevice, mCommandPool, mGraphicsQueue, mAllocator);
+        mModelPipeline.init();
     }
 
 	void VulkanApp::initFramebuffers() {

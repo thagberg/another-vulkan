@@ -22,6 +22,7 @@ namespace hvk
 	class Light;
 	class DebugMeshRenderObject;
 	class Camera;
+    class ModelPipeline;
 	struct AmbientLight;
 	struct GammaSettings;
 	struct PBRWeight;
@@ -73,4 +74,5 @@ public:
 	void useEnvironmentMap();
 	void useIrradianceMap();
 	void usePrefilteredMap(float lod);
+    hvk::ModelPipeline& getModelPipeline();
 };
