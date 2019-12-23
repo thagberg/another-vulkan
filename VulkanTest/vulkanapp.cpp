@@ -19,6 +19,7 @@
 #include "signal-util.h"
 #include "command-util.h"
 #include "render-util.h"
+#include "GpuManager.h"
 
 #include "HvkUtil.h"
 
@@ -404,6 +405,8 @@ namespace hvk {
         catch (const std::runtime_error& error) {
             std::cout << "Error during initialization: " << error.what() << std::endl;
         }
+
+		GpuManager::init(mDevice, mCommandPool, mGraphicsQueue, mAllocator);
     }
 
 	void VulkanApp::initFramebuffers() {

@@ -186,8 +186,44 @@ namespace hvk
 				return textureResource;
 			}
 
-
 			TextureMap createTextureMap(
+				VkDevice device,
+				VmaAllocator allocator,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
+				const void* imageData,
+				int imageWidth,
+				int imageHeight,
+				int bitDepth,
+				VkImageType imageType = VK_IMAGE_TYPE_2D,
+				VkImageCreateFlags flags = 0,
+				VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM)
+			{
+				TextureMap map;
+
+				map.texture = createTextureImage(
+					device,
+					allocator,
+					commandPool,
+					graphicsQueue,
+					imageData,
+					1,
+					imageWidth,
+					imageHeight,
+					bitDepth);
+				map.view = createImageView(
+					device,
+					map.texture.memoryResource,
+					VK_FORMAT_R8G8B8A8_UNORM,
+					VK_IMAGE_ASPECT_COLOR_BIT,
+					1);
+				map.sampler = createImageSampler(device);
+
+				return map;
+			}
+
+
+			TextureMap createTextureMapFromFile(
 				VkDevice device,
 				VmaAllocator allocator,
 				VkCommandPool commandPool,
@@ -201,23 +237,15 @@ namespace hvk
 
                 assert(data != nullptr);
 
-				map.texture = createTextureImage(
+				map = createTextureMap(
 					device,
 					allocator,
 					commandPool,
 					graphicsQueue,
 					data,
-					1,
 					width,
 					height,
 					numChannels);
-				map.view = createImageView(
-					device,
-					map.texture.memoryResource,
-					VK_FORMAT_R8G8B8A8_UNORM,
-					VK_IMAGE_ASPECT_COLOR_BIT,
-					1);
-				map.sampler = createImageSampler(device);
 
 				stbi_image_free(data);
 				return map;

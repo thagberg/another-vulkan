@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "stb_image.h"
+#include "entt/entt.hpp"
 
 #include "Node.h"
 #include "UserApp.h"
@@ -35,6 +36,7 @@ private:
     HVK_shared<DebugMeshRenderObject> mLightBox;
     HVK_shared<Camera> mCamera;
     CameraController mCameraController;
+	entt::registry mRegistry;
 
 public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
@@ -44,8 +46,12 @@ public:
         mDynamicLight(nullptr),
         mLightBox(nullptr),
         mCamera(nullptr),
-        mCameraController(nullptr)
+        mCameraController(nullptr),
+		mRegistry()
 	{
+		// ENTT experiments
+		entt::entity modelEntity = mRegistry.create();
+
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));

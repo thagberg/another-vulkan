@@ -28,6 +28,12 @@ namespace hvk {
 
 
 	template <class T>
+	struct RuntimeResource {
+		T memoryResource;
+		VmaAllocation allocation;
+	};
+
+	template <class T>
 	struct Resource {
 		T memoryResource;
 		VmaAllocation allocation;

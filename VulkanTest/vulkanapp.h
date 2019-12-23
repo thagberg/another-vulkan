@@ -78,6 +78,8 @@ namespace hvk {
 		HVK_shared<TextureMap> mPrefilteredMap;
 		HVK_shared<TextureMap> mBdrfLutMap;
 
+	private:
+
 		void enableVulkanValidationLayers();
 		void initializeDevice();
 		void initializeRenderer();

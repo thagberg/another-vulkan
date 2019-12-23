@@ -77,6 +77,19 @@ namespace hvk
 				VmaAllocator allocator,
 				VkCommandPool commandPool,
 				VkQueue graphicsQueue,
+				const void* imageData,
+				int imageWidth,
+				int imageHeight,
+				int bitDepth,
+				VkImageType imageType = VK_IMAGE_TYPE_2D,
+				VkImageCreateFlags flags = 0,
+				VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM);
+
+			TextureMap createTextureMapFromFile(
+				VkDevice device,
+				VmaAllocator allocator,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
 				std::string&& filename);
 
 			// TODO: Maybe move to a memory util instead?
