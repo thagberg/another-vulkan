@@ -189,6 +189,117 @@ namespace hvk
 		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
 	}
 
+	PBRBinding StaticMeshGenerator::createPBRBinding(const PBRMaterial& material)
+	{
+		PBRBinding newBinding;
+
+		//const auto& comp = registry.get<PBRMaterial>(pbrEntity);
+
+		// Create UBO
+        uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
+        VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        uboInfo.size = uboMemorySize;
+        uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		VmaAllocationCreateInfo uniformAllocCreateInfo = {};
+		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		vmaCreateBuffer(
+			mAllocator,
+			&uboInfo,
+			&uniformAllocCreateInfo,
+			&newBinding.ubo.memoryResource,
+			&newBinding.ubo.allocation,
+			nullptr);
+
+		VkDescriptorSetAllocateInfo dsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		dsAlloc.descriptorPool = mDescriptorPool;
+		dsAlloc.descriptorSetCount = 1;
+		dsAlloc.pSetLayouts = &mDescriptorSetLayout;
+
+		assert(vkAllocateDescriptorSets(mDevice.device, &dsAlloc, &newBinding.descriptorSet) == VK_SUCCESS);
+
+		// Update descriptor set
+		{
+			std::vector<VkWriteDescriptorSet> descriptorWrites;
+			descriptorWrites.reserve(7);
+
+			std::vector<VkDescriptorBufferInfo> bufferInfos = {
+				VkDescriptorBufferInfo {
+					newBinding.ubo.memoryResource,
+					0,
+					sizeof(hvk::UniformBufferObject) } };
+
+			auto bufferDescriptorWrite = util::descriptor::createDescriptorBufferWrite(bufferInfos, newBinding.descriptorSet, 0);
+			descriptorWrites.push_back(bufferDescriptorWrite);
+
+			std::vector<VkDescriptorImageInfo> albedoImageInfos = {
+				VkDescriptorImageInfo{
+					material.albedo.sampler,
+					material.albedo.view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL } };
+
+			auto albedoDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+				albedoImageInfos,
+				newBinding.descriptorSet,
+				1);
+			descriptorWrites.push_back(albedoDescriptorWrite);
+
+			std::vector<VkDescriptorImageInfo> mtlRoughImageInfos = {
+				VkDescriptorImageInfo{
+				material.metallicRoughness.sampler,
+				material.metallicRoughness.view,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL } };
+			auto mtlRoughDescriptorWrite = util::descriptor::createDescriptorImageWrite(mtlRoughImageInfos, newBinding.descriptorSet, 2);
+			descriptorWrites.push_back(mtlRoughDescriptorWrite);
+
+			std::vector<VkDescriptorImageInfo> normalImageInfos = {
+				VkDescriptorImageInfo{
+				material.normal.sampler,
+				material.normal.view,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL } };
+			auto normalDescriptorWrite = util::descriptor::createDescriptorImageWrite(normalImageInfos, newBinding.descriptorSet, 3);
+			descriptorWrites.push_back(normalDescriptorWrite);
+
+            std::vector<VkDescriptorImageInfo> environmentImageInfos = {
+                VkDescriptorImageInfo{
+                    mEnvironmentMap->sampler,
+                    mEnvironmentMap->view,
+                    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL} };
+            auto environmentDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+                environmentImageInfos, 
+                newBinding.descriptorSet, 
+                4);
+			descriptorWrites.push_back(environmentDescriptorWrite);
+
+			std::vector<VkDescriptorImageInfo> irradianceImageInfos = {
+				VkDescriptorImageInfo{
+					mIrradianceMap->sampler,
+					mIrradianceMap->view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }};
+			auto irradianceDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+				irradianceImageInfos,
+				newBinding.descriptorSet,
+				5);
+			descriptorWrites.push_back(irradianceDescriptorWrite);
+
+			std::vector<VkDescriptorImageInfo> brdfImageInfos = {
+				VkDescriptorImageInfo{
+					mBrdfLutMap->sampler,
+					mBrdfLutMap->view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL }};
+			auto brdfDescriptorWrite = util::descriptor::createDescriptorImageWrite(
+				brdfImageInfos,
+				newBinding.descriptorSet,
+				6);
+			descriptorWrites.push_back(brdfDescriptorWrite);
+
+			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+		}
+
+		return newBinding;
+	}
+
 	void StaticMeshGenerator::addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object)
 	{
 #if 0

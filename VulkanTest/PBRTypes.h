@@ -17,4 +17,10 @@ namespace hvk
         TextureMap metallicRoughness;
         TextureMap normal;
     };
+
+	struct PBRBinding
+	{
+		RuntimeResource<VkBuffer> ubo; // should we make this a Resource<T> and store the allocation info?  Adds at least 24 bytes to the field.
+		VkDescriptorSet descriptorSet;
+	};
 }

@@ -22,6 +22,8 @@
 #include "vulkan-util.h"
 #include "shapes.h"
 #include "ModelPipeline.h"
+#include "SceneTypes.h"
+#include "StaticMeshGenerator.h"
 
 using namespace hvk;
 
@@ -50,18 +52,8 @@ public:
         mCameraController(nullptr),
 		mRegistry()
 	{
-		// ENTT experiments
-		entt::entity modelEntity = mRegistry.create();
-
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
-        PBRMesh duckPbrMesh;
-        PBRMaterial duckPbrMaterial;
-        getModelPipeline().loadAndFetchModel(duckMesh, "Duck", &duckPbrMesh, &duckPbrMaterial);
-        mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
-        mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
-        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
-        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
         duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
@@ -71,6 +63,32 @@ public:
             duckTransform, 
             duckMesh);
         addStaticMeshInstance(mDuck);
+
+		// ENTT experiments
+		entt::entity modelEntity = mRegistry.create();
+
+        PBRMesh duckPbrMesh;
+        PBRMaterial duckPbrMaterial;
+        getModelPipeline().loadAndFetchModel(duckMesh, "Duck", &duckPbrMesh, &duckPbrMaterial);
+        mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
+        mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
+
+		mRegistry.assign<NodeTransform>(modelEntity, entt::null, duckTransform);
+
+		//auto comp = mRegistry.get<PBRMaterial, PBRMesh>(modelEntity);
+		//getMeshRenderer()->preparePBREntity(mRegistry, modelEntity);
+		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
+		mRegistry.assign<PBRBinding>(modelEntity, getMeshRenderer()->createPBRBinding(materialComp));
+
+		auto renderGroup = mRegistry.group<PBRMesh, NodeTransform>();
+		for (const auto& entity : renderGroup)
+		{
+			const auto& mesh = renderGroup.get<PBRMesh>(entity);
+			const auto& transform = renderGroup.get<NodeTransform>(entity);
+		}
+
+        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
+        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
 
         glm::mat4 lightTransform = glm::mat4(1.f);
         lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));

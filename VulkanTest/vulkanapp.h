@@ -128,5 +128,11 @@ namespace hvk {
 			//mSkySettings->lod = lod;
 			mSkyboxRenderer->setCubemap(mPrefilteredMap); 
 		}
+
+		// ugly stuff... get rid of this ASAP
+		std::shared_ptr<StaticMeshGenerator> getMeshRenderer()
+		{
+			return mMeshRenderer;
+		}
 	};
 }

@@ -2,12 +2,15 @@
 
 #include <memory>
 
+#include "entt/entt.hpp"
+
 #include "DrawlistGenerator.h"
 #include "types.h"
 #include "RenderObject.h"
 #include "ResourceManager.h"
 #include "Light.h"
 #include "Camera.h"
+#include "PBRTypes.h"
 
 namespace hvk
 {
@@ -66,6 +69,7 @@ namespace hvk
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);
 		void addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object);
+		PBRBinding createPBRBinding(const PBRMaterial& material);
 		void addLight(std::shared_ptr<Light> light);
 		VkCommandBuffer& drawFrame(
             const VkCommandBufferInheritanceInfo& inheritance,
