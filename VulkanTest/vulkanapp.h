@@ -134,5 +134,13 @@ namespace hvk {
 		{
 			return mMeshRenderer;
 		}
+
+		// new render paradigm
+		uint32_t renderPrepare();
+		VkCommandBufferInheritanceInfo renderpassBegin(const VkRenderPassBeginInfo& renderBegin);
+		void renderpassExecuteAndClose(std::vector<VkCommandBuffer>& secondaryBuffers);
+		void renderFinish();
+		void renderSubmit();
+		void renderPresent(uint32_t swapIndex);
 	};
 }

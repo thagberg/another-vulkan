@@ -65,6 +65,8 @@ namespace hvk
 		const StaticMesh::Vertices vertices = model->getVertices();
 		const StaticMesh::Indices indices = model->getIndices();
 
+		mesh.numIndices = indices->size();
+
         // Create vertex buffer
         size_t vertexMemorySize = sizeof(Vertex) * vertices->size();
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };

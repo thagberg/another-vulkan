@@ -30,6 +30,20 @@ using namespace hvk;
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
 
+template <typename GroupType>
+void TestGroup(GroupType& elements)
+{
+	std::cout << "Testing group reference" << std::endl;
+	elements.each([](
+		auto entity, 
+		const hvk::NodeTransform& transform, 
+		const hvk::PBRMesh& mesh, 
+		const hvk::PBRBinding& binding) {
+
+		std::cout << "Iterating over each element in group" << std::endl;
+	});
+}
+
 class TestApp : public UserApp
 {
 private:
@@ -80,7 +94,8 @@ public:
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
 		mRegistry.assign<PBRBinding>(modelEntity, getMeshRenderer()->createPBRBinding(materialComp));
 
-		auto renderGroup = mRegistry.group<PBRMesh, NodeTransform>();
+		auto renderGroup = mRegistry.group<NodeTransform, PBRMesh, PBRBinding>();
+		TestGroup(renderGroup);
 		for (const auto& entity : renderGroup)
 		{
 			const auto& mesh = renderGroup.get<PBRMesh>(entity);

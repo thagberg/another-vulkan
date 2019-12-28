@@ -9,6 +9,7 @@ namespace hvk
     {
         RuntimeResource<VkBuffer> vbo;
         RuntimeResource<VkBuffer> ibo;
+		uint32_t numIndices;
     };
 
     struct PBRMaterial

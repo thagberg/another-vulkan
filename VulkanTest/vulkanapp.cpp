@@ -552,7 +552,9 @@ namespace hvk {
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 	}
 
-    void VulkanApp::drawFrame() {
+	uint32_t VulkanApp::renderPrepare()
+	{
+		// Wait for an image on the swapchain to become available
         uint32_t imageIndex;
         vkAcquireNextImageKHR(
             mDevice,
@@ -562,119 +564,48 @@ namespace hvk {
             VK_NULL_HANDLE,
             &imageIndex);
 
-		//mRenderFinished = mRenderer.drawFrame(mFramebuffers[imageIndex], &mImageAvailable, 1);
-		//mRenderer.updateRenderPass(mRenderPass, mSwapchain.swapchainExtent);
-		VkViewport viewport = {};
-		viewport.x = 0.f;
-		viewport.y = 0.f;
-		viewport.width = (float)mSwapchain.swapchainExtent.width;
-		viewport.height = (float)mSwapchain.swapchainExtent.height;
-		viewport.minDepth = 0.f;
-		viewport.maxDepth = 1.f;
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent = mSwapchain.swapchainExtent;
+		// Wait for render fence to free
 		assert(vkWaitForFences(mDevice, 1, &mRenderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 		assert(vkResetFences(mDevice, 1, &mRenderFence) == VK_SUCCESS);
-
-		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
-		clearValues[1].depthStencil = { 1.0f, 0 };
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         commandBegin.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		commandBegin.pInheritanceInfo = nullptr;
+		assert(vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin) == VK_SUCCESS);
 
-		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		renderBegin.renderPass = mColorRenderPass;
-		renderBegin.framebuffer = mColorPassFramebuffer;
-		renderBegin.renderArea = scissor;
-		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
-		renderBegin.pClearValues = clearValues.data();
+		return imageIndex;
+	}
 
-		VkRenderPassBeginInfo finalRenderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		finalRenderBegin.renderPass = mFinalRenderPass;
-		finalRenderBegin.framebuffer = mFinalPassFramebuffers[imageIndex];
-		finalRenderBegin.renderArea = scissor;
-		finalRenderBegin.clearValueCount = static_cast<float>(clearValues.size());
-		finalRenderBegin.pClearValues = clearValues.data();
-
-        VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-        inheritanceInfo.pNext = nullptr;
-        inheritanceInfo.renderPass = mColorRenderPass;
-        inheritanceInfo.subpass = 0;
-        inheritanceInfo.framebuffer = mColorPassFramebuffer;
-        inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-
-		vkBeginCommandBuffer(mPrimaryCommandBuffer, &commandBegin);
-
-		// Color pass
-		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-		mFirstPassCommandBuffers[0] = mMeshRenderer->drawFrame(
-            inheritanceInfo,
-			mColorPassFramebuffer,
-			viewport,
-			scissor,
-			*mActiveCamera.get(),
-			*mAmbientLight,
-			*mGammaSettings,
-			*mPBRWeight);
-
-		mFirstPassCommandBuffers[1] = mDebugRenderer->drawFrame(
-			inheritanceInfo, 
-			mColorPassFramebuffer, 
-			viewport, 
-			scissor,
-			*mActiveCamera.get());
-
-		SkySettings tempSkySettings{
-			mGammaSettings->gamma,
-			mSkySettings->lod
+	VkCommandBufferInheritanceInfo VulkanApp::renderpassBegin(const VkRenderPassBeginInfo& renderBegin)
+	{
+		VkCommandBufferInheritanceInfo inheritanceInfo = 
+		{ 
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			nullptr,					// pNext
+			renderBegin.renderPass,		// renderpass
+			0,							// subpass
+			renderBegin.framebuffer,	// framebuffer
+			VK_FALSE,					// occlusionQueryEnable
+			0,							// queryFlags
+			0,							// pipelineStatistics
 		};
-		mFirstPassCommandBuffers[2] = mSkyboxRenderer->drawFrame(
-			inheritanceInfo,
-			mColorPassFramebuffer,
-			viewport,
-			scissor,
-			*mActiveCamera,
-			tempSkySettings);
+		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &renderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+		return inheritanceInfo;
+	}
 
-		vkCmdExecuteCommands(
-			mPrimaryCommandBuffer, 
-			static_cast<float>(mFirstPassCommandBuffers.size()), 
-			mFirstPassCommandBuffers.data());
+	void VulkanApp::renderpassExecuteAndClose(std::vector<VkCommandBuffer>& secondaryBuffers)
+	{
+		vkCmdExecuteCommands(mPrimaryCommandBuffer, static_cast<uint32_t>(secondaryBuffers.size()), secondaryBuffers.data());
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
+	}
 
-		inheritanceInfo.renderPass = mFinalRenderPass;
-		inheritanceInfo.framebuffer = mFinalPassFramebuffers[imageIndex];
+	void VulkanApp::renderFinish()
+	{
+		assert(vkEndCommandBuffer(mPrimaryCommandBuffer) == VK_SUCCESS);
+	}
 
-		// Final pass -- renders previous color attachment to quad
-		vkCmdBeginRenderPass(mPrimaryCommandBuffer, &finalRenderBegin, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-        mSecondPassCommandBuffers[0] = mQuadRenderer->drawFrame(
-            inheritanceInfo,
-            mFinalPassFramebuffers[imageIndex],
-            viewport,
-            scissor,
-			*mExposureSettings);
-
-		mSecondPassCommandBuffers[1] = mUiRenderer->drawFrame(
-            inheritanceInfo,
-			//mColorPassFramebuffer,
-			mFinalPassFramebuffers[imageIndex],
-			viewport,
-			scissor);
-
-
-        vkCmdExecuteCommands(mPrimaryCommandBuffer, mSecondPassCommandBuffers.size(), mSecondPassCommandBuffers.data());
-		vkCmdEndRenderPass(mPrimaryCommandBuffer);
-
-		vkEndCommandBuffer(mPrimaryCommandBuffer);
-
-		/**************
-		 submit to graphics queue
-		 *************/
+	void VulkanApp::renderSubmit()
+	{
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 		submitInfo.waitSemaphoreCount = 1;
@@ -686,7 +617,10 @@ namespace hvk {
 		submitInfo.pSignalSemaphores = &mRenderFinished;
 
 		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
+	}
 
+	void VulkanApp::renderPresent(uint32_t swapIndex)
+	{
         VkSwapchainKHR swapchains[] = { mSwapchain.swapchain };
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -694,10 +628,98 @@ namespace hvk {
         presentInfo.pWaitSemaphores = &mRenderFinished;
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = swapchains;
-        presentInfo.pImageIndices = &imageIndex;
+        presentInfo.pImageIndices = &swapIndex;
         presentInfo.pResults = nullptr;
 
         vkQueuePresentKHR(mGraphicsQueue, &presentInfo);
+	}
+
+    void VulkanApp::drawFrame() {
+
+		VkViewport viewport = {};
+		viewport.x = 0.f;
+		viewport.y = 0.f;
+		viewport.width = (float)mSwapchain.swapchainExtent.width;
+		viewport.height = (float)mSwapchain.swapchainExtent.height;
+		viewport.minDepth = 0.f;
+		viewport.maxDepth = 1.f;
+
+		VkRect2D scissor = {};
+		scissor.offset = { 0, 0 };
+		scissor.extent = mSwapchain.swapchainExtent;
+
+		std::array<VkClearValue, 2> clearValues = {};
+		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		uint32_t swapIndex = renderPrepare();
+
+		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
+		renderBegin.renderPass = mColorRenderPass;
+		renderBegin.framebuffer = mColorPassFramebuffer;
+		renderBegin.renderArea = scissor;
+		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
+		renderBegin.pClearValues = clearValues.data();
+
+		auto inheritanceInfo = renderpassBegin(renderBegin);
+
+		std::vector<VkCommandBuffer> colorpassCommandBuffers;
+		colorpassCommandBuffers.push_back(mMeshRenderer->drawFrame(
+            inheritanceInfo,
+			mColorPassFramebuffer,
+			viewport,
+			scissor,
+			*mActiveCamera.get(),
+			*mAmbientLight,
+			*mGammaSettings,
+			*mPBRWeight));
+
+		colorpassCommandBuffers.push_back(mDebugRenderer->drawFrame(
+			inheritanceInfo, 
+			mColorPassFramebuffer, 
+			viewport, 
+			scissor,
+			*mActiveCamera.get()));
+
+		SkySettings tempSkySettings{
+			mGammaSettings->gamma,
+			mSkySettings->lod
+		};
+		colorpassCommandBuffers.push_back(mSkyboxRenderer->drawFrame(
+			inheritanceInfo,
+			mColorPassFramebuffer,
+			viewport,
+			scissor,
+			*mActiveCamera,
+			tempSkySettings));
+
+		renderpassExecuteAndClose(colorpassCommandBuffers);
+
+		renderBegin.renderPass = mFinalRenderPass;
+		renderBegin.framebuffer = mFinalPassFramebuffers[swapIndex];
+		inheritanceInfo = renderpassBegin(renderBegin);
+
+		std::vector<VkCommandBuffer> finalpassCommandBuffers;
+        finalpassCommandBuffers.push_back(mQuadRenderer->drawFrame(
+            inheritanceInfo,
+            mFinalPassFramebuffers[swapIndex],
+            viewport,
+            scissor,
+			*mExposureSettings));
+
+		finalpassCommandBuffers.push_back(mUiRenderer->drawFrame(
+            inheritanceInfo,
+			//mColorPassFramebuffer,
+			mFinalPassFramebuffers[swapIndex],
+			viewport,
+			scissor));
+
+		renderpassExecuteAndClose(finalpassCommandBuffers);
+
+		// end primary command buffer, execute commands, and then present to screen
+		renderFinish();
+		renderSubmit();
+		renderPresent(swapIndex);
     }
 
     bool VulkanApp::update(double frameTime)

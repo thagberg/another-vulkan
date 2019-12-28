@@ -14,6 +14,8 @@
 
 namespace hvk
 {
+	class NodeTransform;
+
 	class StaticMeshGenerator : public DrawlistGenerator
 	{
 	private:
@@ -84,5 +86,111 @@ namespace hvk
         void setUseSRGBTex(bool useSRGBTex);
         float getGammaCorrection() { return mGammaCorrection; }
         bool isUseSRGBTex() { return mUseSRGBTex; }
+
+		template <typename PBRGroupType>
+		VkCommandBuffer& drawElements(
+			const VkCommandBufferInheritanceInfo& inheritance,
+			const VkViewport& viewport,
+			const VkRect2D& scissor,
+			const Camera& camera,
+			const AmbientLight& ambientLight,
+			const GammaSettings& gammaSettings,
+			const PBRWeight& pbrWeight,
+			PBRGroupType& elements);
 	};
+
+
+	template <typename PBRGroupType>
+	VkCommandBuffer& StaticMeshGenerator::drawElements(
+		const VkCommandBufferInheritanceInfo& inheritance,
+		const VkViewport& viewport,
+		const VkRect2D& scissor,
+		const Camera& camera,
+		const AmbientLight& ambientLight,
+		const GammaSettings& gammaSettings,
+		const PBRWeight& pbrWeight,
+		PBRGroupType& elements)
+	{
+		 // update lights
+		int memOffset = 0;
+		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
+		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
+		uboLights.numLights = static_cast<uint32_t>(mLights.size());
+        uboLights.ambient = ambientLight;
+		for (size_t i = 0; i < mLights.size(); ++i) {
+			HVK_shared<Light> light = mLights[i];
+			UniformLight ubo = {};
+			ubo.lightPos = light->getWorldPosition();
+			ubo.lightColor = light->getColor();
+			ubo.lightIntensity = light->getIntensity();
+			uboLights.lights[i] = ubo;
+		}
+		memcpy(copyaddr, &uboLights, sizeof(uboLights));
+
+		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+		commandBegin.pInheritanceInfo = &inheritance;
+
+		assert(vkBeginCommandBuffer(mCommandBuffer, &commandBegin) == VK_SUCCESS);
+		vkCmdBindPipeline(mCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+
+		// bind viewport and scissor
+		vkCmdSetViewport(mCommandBuffer, 0, 1, &viewport);
+		vkCmdSetScissor(mCommandBuffer, 0, 1, &scissor);
+
+		VkDeviceSize offsets[] = { 0 };
+
+		// bind lights descriptor set to set 0
+		vkCmdBindDescriptorSets(
+			mCommandBuffer,
+			VK_PIPELINE_BIND_POINT_GRAPHICS,
+			mPipelineInfo.pipelineLayout,
+			0,
+			1,
+			&mLightsDescriptorSet,
+			0,
+			nullptr);
+
+		auto viewProj = camera.getProjection() * camera.getViewTransform();
+		UniformBufferObject ubo = {
+			glm::mat4(1.f),
+			camera.getViewTransform(),
+			viewProj,
+			camera.getWorldPosition()
+		};
+
+		// Prepare and draw PBR elements
+		PushConstant push = {};
+		VmaAllocationInfo allocInfo;
+		elements.each([](auto entity, auto transform, const auto& mesh, const auto& binding) {
+			// update UBO
+			auto allocInfo = vmaGetAllocationInfo(mAllocator, binding.ubo.allocation, , &allocInfo);
+			ubo.model = transform.localTransform;
+			ubo.model[1][1] *= -1;
+			ubo.modelViewProj = viewProj * ubo.model;
+			memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));
+
+			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, binding.vbo.memoryResource, offsets);
+			vkCmdBindIndexBuffer(mCommandBuffer, binding.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+			vkCmdBindDescriptorSets(
+				mCommandBuffer,
+				VK_PIPELINE_BIND_POINT_GRAHPICS,
+				mPipelineInfo.pipelineLayout,
+				1,
+				1,
+				&binding.descriptorSet,
+				0,
+				nullptr);
+
+			push.gamma = gammaSettings.gamma;
+			push.sRGBTextures = true;
+			push.pbrWeight = pbrWeight;
+			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
+			vkCmdDrawIndexed(mCommandBuffer, mesh.numIndices, 1, 0, 0, 0);
+		});
+
+		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);
+
+		return mCommandBuffer;
+	}
 }
