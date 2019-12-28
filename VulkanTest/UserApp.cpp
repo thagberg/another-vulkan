@@ -217,3 +217,13 @@ void UserApp::usePrefilteredMap(float lod)
 {
 	mApp->usePrefilteredMap(lod);
 }
+
+hvk::ModelPipeline& UserApp::getModelPipeline()
+{
+    return mApp->getModelPipeline();
+}
+
+std::shared_ptr<hvk::StaticMeshGenerator> UserApp::getMeshRenderer()
+{
+	return mApp->getMeshRenderer();
+}

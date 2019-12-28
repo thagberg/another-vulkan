@@ -168,6 +168,7 @@
     <ClInclude Include="Node.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ResourceManager.h" />
+    <ClInclude Include="SceneTypes.h" />
     <ClInclude Include="shapes.h" />
     <ClInclude Include="StaticMesh.h" />
     <ClInclude Include="Transform.h" />

@@ -11,7 +11,7 @@ namespace hvk
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorPool mDescriptorPool;
 		VkDescriptorSet mDescriptorSet;
-        Resource<VkImage> mFontImage;
+        RuntimeResource<VkImage> mFontImage;
 		VkImageView mFontView;
 		VkSampler mFontSampler;
 		Resource<VkBuffer> mVbo;

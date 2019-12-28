@@ -43,7 +43,7 @@ namespace hvk {
 
 	struct TextureMap
 	{
-		Resource<VkImage> texture;
+		RuntimeResource<VkImage> texture;
 		VkImageView view = VK_NULL_HANDLE;
 		VkSampler sampler = VK_NULL_HANDLE;
 	};

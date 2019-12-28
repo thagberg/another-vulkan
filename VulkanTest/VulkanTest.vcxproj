@@ -170,6 +170,7 @@
     <ClInclude Include="descriptor-util.h" />
     <ClInclude Include="DrawlistGenerator.h" />
     <ClInclude Include="framebuffer-util.h" />
+    <ClInclude Include="GpuManager.h" />
     <ClInclude Include="image-util.h" />
     <ClInclude Include="include\imgui\imconfig.h" />
     <ClInclude Include="include\imgui\imgui.h" />
@@ -178,6 +179,8 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="Inputs.h" />
+    <ClInclude Include="ModelPipeline.h" />
+    <ClInclude Include="PBRTypes.h" />
     <ClInclude Include="pipeline-util.h" />
     <ClInclude Include="QuadGenerator.h" />
     <ClInclude Include="render-util.h" />
@@ -203,12 +206,14 @@
     <ClCompile Include="descriptor-util.cpp" />
     <ClCompile Include="DrawlistGenerator.cpp" />
     <ClCompile Include="framebuffer-util.cpp" />
+    <ClCompile Include="GpuManager.cpp" />
     <ClCompile Include="image-util.cpp" />
     <ClCompile Include="include\imgui\imgui.cpp" />
     <ClCompile Include="include\imgui\imgui_demo.cpp" />
     <ClCompile Include="include\imgui\imgui_draw.cpp" />
     <ClCompile Include="include\imgui\imgui_stdlib.cpp" />
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="ModelPipeline.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="pipeline-util.cpp" />
     <ClCompile Include="QuadGenerator.cpp" />

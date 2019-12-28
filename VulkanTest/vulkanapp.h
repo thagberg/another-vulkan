@@ -20,6 +20,7 @@
 #include "CubemapGenerator.h"
 #include "QuadGenerator.h"
 #include "CameraController.h"
+#include "ModelPipeline.h"
 
 namespace hvk {
 
@@ -38,6 +39,8 @@ namespace hvk {
         VkRenderPass mFinalRenderPass;
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mPrimaryCommandBuffer;
+
+        ModelPipeline mModelPipeline;
 
 		SwapchainImageViews mFinalPassImageViews;
 		SwapchainImages mFinalPassSwapchainImages;
@@ -98,6 +101,8 @@ namespace hvk {
             VkSurfaceKHR surface);
         bool update(double frameTime);
 
+        ModelPipeline& getModelPipeline() { return mModelPipeline; }
+
         void addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node);
         void addDynamicLight(HVK_shared<Light> light);
         void addDebugMeshInstance(HVK_shared<DebugMeshRenderObject> node);
@@ -123,5 +128,19 @@ namespace hvk {
 			//mSkySettings->lod = lod;
 			mSkyboxRenderer->setCubemap(mPrefilteredMap); 
 		}
+
+		// ugly stuff... get rid of this ASAP
+		std::shared_ptr<StaticMeshGenerator> getMeshRenderer()
+		{
+			return mMeshRenderer;
+		}
+
+		// new render paradigm
+		uint32_t renderPrepare();
+		VkCommandBufferInheritanceInfo renderpassBegin(const VkRenderPassBeginInfo& renderBegin);
+		void renderpassExecuteAndClose(std::vector<VkCommandBuffer>& secondaryBuffers);
+		void renderFinish();
+		void renderSubmit();
+		void renderPresent(uint32_t swapIndex);
 	};
 }

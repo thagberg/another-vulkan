@@ -69,16 +69,13 @@ namespace hvk
 
 			void destroyMap(VkDevice device, VmaAllocator allocator, TextureMap& map)
 			{
-                if (map.texture.allocationInfo.pMappedData != nullptr)
-                {
-                    vkDestroySampler(device, map.sampler, nullptr);
-                    vkDestroyImageView(device, map.view, nullptr);
-                    vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
-                }
+                vkDestroySampler(device, map.sampler, nullptr);
+                vkDestroyImageView(device, map.view, nullptr);
+                vmaDestroyImage(allocator, map.texture.memoryResource, map.texture.allocation);
 			}
 
 
-			hvk::Resource<VkImage> createTextureImage(
+			hvk::RuntimeResource<VkImage> createTextureImage(
 				VkDevice device,
 				VmaAllocator allocator,
 				VkCommandPool commandPool,
@@ -92,7 +89,7 @@ namespace hvk
 				VkImageCreateFlags flags,
 				VkFormat imageFormat) {
 
-				hvk::Resource<VkImage> textureResource;
+				hvk::RuntimeResource<VkImage> textureResource;
 
 				//VkDeviceSize imageSize = imageWidth * imageHeight * components * bitDepth;
 				VkDeviceSize singleImageSize = imageWidth * imageHeight * bitDepth;
@@ -148,7 +145,7 @@ namespace hvk
 					&imageAllocationCreateInfo,
 					&textureResource.memoryResource,
 					&textureResource.allocation,
-					&textureResource.allocationInfo);
+                    nullptr);
 
 				auto commandBuffer = command::beginSingleTimeCommand(device, commandPool);
 				transitionImageLayout(
@@ -195,9 +192,9 @@ namespace hvk
 				int imageWidth,
 				int imageHeight,
 				int bitDepth,
-				VkImageType imageType = VK_IMAGE_TYPE_2D,
-				VkImageCreateFlags flags = 0,
-				VkFormat imageFormat = VK_FORMAT_R8G8B8A8_UNORM)
+				VkImageType imageType,
+				VkImageCreateFlags flags,
+				VkFormat imageFormat)
 			{
 				TextureMap map;
 
@@ -417,7 +414,7 @@ namespace hvk
 					&imageAllocationCreateInfo,
 					&imageMap.texture.memoryResource,
 					&imageMap.texture.allocation,
-					&imageMap.texture.allocationInfo);
+                    nullptr);
 
 				imageMap.view = createImageView(
 					device,

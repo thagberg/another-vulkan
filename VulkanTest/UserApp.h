@@ -22,6 +22,8 @@ namespace hvk
 	class Light;
 	class DebugMeshRenderObject;
 	class Camera;
+    class ModelPipeline;
+	class StaticMeshGenerator;
 	struct AmbientLight;
 	struct GammaSettings;
 	struct PBRWeight;
@@ -73,4 +75,6 @@ public:
 	void useEnvironmentMap();
 	void useIrradianceMap();
 	void usePrefilteredMap(float lod);
+    hvk::ModelPipeline& getModelPipeline();
+	std::shared_ptr<hvk::StaticMeshGenerator> getMeshRenderer();
 };
