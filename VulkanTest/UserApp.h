@@ -10,6 +10,7 @@
 #include "Clock.h"
 #include "HvkUtil.h"
 #include "CubemapGenerator.h"
+#include "entt/entt.hpp"
 /*
 #include "RenderObject.h"
 #include "Light.h"
@@ -34,6 +35,7 @@ namespace hvk
 	struct ExposureSettings;
 	struct SkySettings;
 	struct Swapchain;
+	class Camera;
 }
 
 namespace hvk
@@ -52,6 +54,7 @@ namespace hvk
 
     protected:
 		// Moving things out of vulkanapp
+		entt::registry mRegistry;
 		VkRenderPass mPBRRenderPass;
 		VkRenderPass mFinalRenderPass;
 		Swapchain mSwapchain;
@@ -67,7 +70,6 @@ namespace hvk
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
 		std::shared_ptr<CubemapGenerator<SkySettings>> mSkyboxRenderer;
 		std::shared_ptr<QuadGenerator> mQuadRenderer;
-		std::shared_ptr<AmbientLight> mAmbientLight;
 		std::shared_ptr<TextureMap> mEnvironmentMap;
 		std::shared_ptr<TextureMap> mIrradianceMap;
 		std::shared_ptr<TextureMap> mPrefilteredMap;
@@ -76,6 +78,8 @@ namespace hvk
 		PBRWeight mPBRWeight;
 		ExposureSettings mExposureSettings;
 		SkySettings mSkySettings;
+		std::shared_ptr<Camera> mCamera;
+		AmbientLight mAmbientLight;
 
     private:
 		void createPBRRenderPass();

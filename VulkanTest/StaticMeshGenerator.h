@@ -11,11 +11,10 @@
 #include "Light.h"
 #include "Camera.h"
 #include "PBRTypes.h"
+#include "SceneTypes.h"
 
 namespace hvk
 {
-	class NodeTransform;
-
 	class StaticMeshGenerator : public DrawlistGenerator
 	{
 	private:
@@ -160,16 +159,16 @@ namespace hvk
 		PushConstant push = {};
 		VmaAllocationInfo allocInfo;
         const auto& allocator = GpuManager::getAllocator();
-		elements.each([](auto entity, auto transform, const auto& mesh, const auto& binding) {
+		elements.each([&](auto entity, auto transform, const auto& mesh, const auto& binding) {
 			// update UBO
-			auto allocInfo = vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
+			vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
 			ubo.model = transform.localTransform;
 			ubo.model[1][1] *= -1;
 			ubo.modelViewProj = viewProj * ubo.model;
 			memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));
 
-			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, binding.vbo.memoryResource, offsets);
-			vkCmdBindIndexBuffer(mCommandBuffer, binding.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mesh.vbo.memoryResource, offsets);
+			vkCmdBindIndexBuffer(mCommandBuffer, mesh.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
 			vkCmdBindDescriptorSets(
 				mCommandBuffer,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,

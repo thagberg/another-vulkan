@@ -4,7 +4,6 @@
 #include "descriptor-util.h"
 #include "pipeline-util.h"
 #include "image-util.h"
-#include "SceneTypes.h"
 
 namespace hvk
 {

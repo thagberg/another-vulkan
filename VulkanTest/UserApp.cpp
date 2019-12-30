@@ -10,6 +10,10 @@
 #include "image-util.h"
 #include "command-util.h"
 #include "framebuffer-util.h"
+#include "Camera.h"
+
+const uint32_t HEIGHT = 1024;
+const uint32_t WIDTH = 1024;
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -49,6 +53,7 @@ namespace hvk
         mApp(std::make_unique<hvk::VulkanApp>()),
         mWindow(initializeWindow(mWindowWidth, mWindowHeight, mWindowTitle), glfwDestroyWindow),
         mClock(),
+        mRegistry(),
         mPBRRenderPass(VK_NULL_HANDLE),
         mFinalRenderPass(VK_NULL_HANDLE),
         mSwapchain(),
@@ -64,7 +69,6 @@ namespace hvk
         mDebugRenderer(nullptr),
         mSkyboxRenderer(nullptr),
         mQuadRenderer(nullptr),
-        mAmbientLight(nullptr),
         mEnvironmentMap(nullptr),
         mIrradianceMap(nullptr),
         mPrefilteredMap(nullptr),
@@ -72,7 +76,9 @@ namespace hvk
         mGammaSettings(),
         mPBRWeight(),
         mExposureSettings(),
-        mSkySettings()
+        mSkySettings(),
+        mCamera(nullptr),
+        mAmbientLight{glm::vec3(1.f), 0.3f}
     {
         VkApplicationInfo appInfo = {};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -203,6 +209,15 @@ namespace hvk
 		//	mCommandPool,
   //          skyboxMap,
 		//	skyboxShaders);
+
+        mCamera = std::make_shared<Camera>(
+            90.f,
+            WIDTH / static_cast<float>(HEIGHT),
+            0.001f,
+            1000.f,
+			"Main Camera",
+			nullptr,
+            glm::mat4(1.f));
     }
 
     UserApp::~UserApp()
@@ -408,6 +423,22 @@ namespace hvk
         auto pbrInheritanceInfo = mApp->renderpassBegin(pbrRenderBegin);
         std::vector<VkCommandBuffer> pbrCommandBuffers;
         //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
+        auto pbrGroup = mRegistry.group<NodeTransform, PBRMesh, PBRBinding>();
+        pbrCommandBuffers.push_back(mPBRMeshRenderer->drawElements(
+            pbrInheritanceInfo,
+            viewport,
+            scissor,
+            *mCamera,
+            mAmbientLight,
+            mGammaSettings,
+            mPBRWeight,
+            pbrGroup));
+        //mPBRMeshRenderer->drawElements(
+        //    pbrInheritanceInfo,
+        //    viewport,
+        //    scissor,
+
+        //)
 
         mApp->renderpassExecuteAndClose(pbrCommandBuffers);
 

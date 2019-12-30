@@ -51,9 +51,7 @@ private:
     HVK_shared<StaticMeshRenderObject> mDuck;
     HVK_shared<Light> mDynamicLight;
     HVK_shared<DebugMeshRenderObject> mLightBox;
-    HVK_shared<Camera> mCamera;
     CameraController mCameraController;
-	entt::registry mRegistry;
 
 public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
@@ -62,9 +60,7 @@ public:
         mDuck(nullptr),
         mDynamicLight(nullptr),
         mLightBox(nullptr),
-        mCamera(nullptr),
-        mCameraController(nullptr),
-		mRegistry()
+        mCameraController(nullptr)
 	{
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
@@ -125,15 +121,6 @@ public:
         //addDynamicLight(mDynamicLight);
 		mLightBox->addChild(mDynamicLight);
 
-
-        mCamera = HVK_make_shared<Camera>(
-            90.f,
-            WIDTH / static_cast<float>(HEIGHT),
-            0.001f,
-            1000.f,
-			"Main Camera",
-			mScene,
-            glm::mat4(1.f));
         mCameraController = CameraController(mCamera);
 
 		mScene->addChild(mDuck);
