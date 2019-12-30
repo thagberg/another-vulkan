@@ -9,16 +9,13 @@
 namespace hvk
 {
 	StaticMeshGenerator::StaticMeshGenerator(
-		VulkanDevice device, 
-		VmaAllocator allocator, 
-		VkQueue graphicsQueue, 
 		VkRenderPass renderPass,
 		VkCommandPool commandPool,
         HVK_shared<TextureMap> environmentMap,
 		HVK_shared<TextureMap> irradianceMap,
 		HVK_shared<TextureMap> brdfLutMap) :
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
+		DrawlistGenerator(renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mLightsDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
@@ -34,6 +31,9 @@ namespace hvk
         mGammaCorrection(2.2f),
         mUseSRGBTex(false)
 	{
+        const VkDevice& device = GpuManager::getDevice();
+        const VmaAllocator& allocator = GpuManager::getAllocator();
+
 		mRenderables.reserve(NUM_INITIAL_RENDEROBJECTS);
 		mLights.reserve(NUM_INITIAL_LIGHTS);
 
@@ -57,10 +57,10 @@ namespace hvk
 			irradianceSamplerBinding,
 			brdfSamplerBinding
         };
-		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(device, bindings, mDescriptorSetLayout);
 
         auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_UBOS, MAX_SAMPLERS);
-		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		util::descriptor::createDescriptorPool(device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/*************
 		 Create Lights UBO
@@ -74,7 +74,7 @@ namespace hvk
 		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&uboInfo,
 			&uniformAllocCreateInfo,
 			&mLightsUbo.memoryResource,
@@ -88,10 +88,10 @@ namespace hvk
 		std::vector<decltype(lightLayoutBinding)> lightBindings = {
 			lightLayoutBinding
 		};
-		util::descriptor::createDescriptorSetLayout(mDevice.device, lightBindings, mLightsDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(device, lightBindings, mLightsDescriptorSetLayout);
 
 		std::vector<VkDescriptorSetLayout> lightLayouts = { mLightsDescriptorSetLayout };
-		util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mLightsDescriptorSet, lightLayouts);
+		util::descriptor::allocateDescriptorSets(device, mDescriptorPool, mLightsDescriptorSet, lightLayouts);
 
 		VkDescriptorBufferInfo lightsBufferInfo = {};
 		lightsBufferInfo.buffer = mLightsUbo.memoryResource;
@@ -106,7 +106,7 @@ namespace hvk
 		lightsDescriptorWrite.descriptorCount = 1;
 		lightsDescriptorWrite.pBufferInfo = &lightsBufferInfo;
 
-		vkUpdateDescriptorSets(mDevice.device, 1, &lightsDescriptorWrite, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &lightsDescriptorWrite, 0, nullptr);
 
 		/*
 		 prepare graphics pipeline info	
@@ -119,33 +119,38 @@ namespace hvk
 
     StaticMeshGenerator::~StaticMeshGenerator()
     {
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+
         for (auto& renderable : mRenderables)
         {
             // destroy buffers
-            vmaDestroyBuffer(mAllocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
-            vmaDestroyBuffer(mAllocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
-            vmaDestroyBuffer(mAllocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
+            vmaDestroyBuffer(allocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
+            vmaDestroyBuffer(allocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
+            vmaDestroyBuffer(allocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
 
             // destroy textures
-			util::image::destroyMap(mDevice.device, mAllocator, renderable.diffuseMap);
-			util::image::destroyMap(mDevice.device, mAllocator, renderable.metallicRoughnessMap);
-			util::image::destroyMap(mDevice.device, mAllocator, renderable.normalMap);
+			util::image::destroyMap(device, allocator, renderable.diffuseMap);
+			util::image::destroyMap(device, allocator, renderable.metallicRoughnessMap);
+			util::image::destroyMap(device, allocator, renderable.normalMap);
         }
 
 		// TODO: need to make sure environment map and irradiance map are being cleaned up
 
-        vmaDestroyBuffer(mAllocator, mLightsUbo.memoryResource, mLightsUbo.allocation);
-        vkDestroyDescriptorSetLayout(mDevice.device, mLightsDescriptorSetLayout, nullptr);
+        vmaDestroyBuffer(allocator, mLightsUbo.memoryResource, mLightsUbo.allocation);
+        vkDestroyDescriptorSetLayout(device, mLightsDescriptorSetLayout, nullptr);
 
-        vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
-        vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+        vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+        vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
 
-        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
-        vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
+        vkDestroyPipeline(device, mPipeline, nullptr);
+        vkDestroyPipelineLayout(device, mPipelineInfo.pipelineLayout, nullptr);
     }
 
 	void StaticMeshGenerator::preparePipelineInfo()
 	{
+        const auto& device = GpuManager::getDevice();
+
 		VkPushConstantRange pushRange = {};
 		pushRange.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 		pushRange.size = sizeof(hvk::PushConstant);
@@ -158,7 +163,7 @@ namespace hvk
 		layoutCreate.pushConstantRangeCount = 1;
 		layoutCreate.pPushConstantRanges = &pushRange;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		util::pipeline::fillVertexInfo<Vertex>(mPipelineInfo.vertexInfo);
 
@@ -174,26 +179,28 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
 
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 	}
 
 	void StaticMeshGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
 		mColorRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 
 	void StaticMeshGenerator::invalidate()
 	{
 		setInitialized(false);
-		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+		vkDestroyPipeline(GpuManager::getDevice(), mPipeline, nullptr);
 	}
 
 	PBRBinding StaticMeshGenerator::createPBRBinding(const PBRMaterial& material)
 	{
 		PBRBinding newBinding;
 
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
 		//const auto& comp = registry.get<PBRMaterial>(pbrEntity);
 
 		// Create UBO
@@ -206,7 +213,7 @@ namespace hvk
 		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&uboInfo,
 			&uniformAllocCreateInfo,
 			&newBinding.ubo.memoryResource,
@@ -218,7 +225,7 @@ namespace hvk
 		dsAlloc.descriptorSetCount = 1;
 		dsAlloc.pSetLayouts = &mDescriptorSetLayout;
 
-		assert(vkAllocateDescriptorSets(mDevice.device, &dsAlloc, &newBinding.descriptorSet) == VK_SUCCESS);
+		assert(vkAllocateDescriptorSets(device, &dsAlloc, &newBinding.descriptorSet) == VK_SUCCESS);
 
 		// Update descriptor set
 		{
@@ -295,7 +302,7 @@ namespace hvk
 				6);
 			descriptorWrites.push_back(brdfDescriptorWrite);
 
-			vkUpdateDescriptorSets(mDevice.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+			vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 		}
 
 		return newBinding;

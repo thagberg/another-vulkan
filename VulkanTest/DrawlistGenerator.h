@@ -7,6 +7,7 @@
 #include "vk_mem_alloc.h"
 
 #include "types.h"
+#include "GpuManager.h"
 
 namespace hvk
 {
@@ -32,7 +33,6 @@ namespace hvk
 	};
 
 	VkPipeline generatePipeline(
-		const VulkanDevice& device, 
 		VkRenderPass renderPass, 
 		const RenderPipelineInfo& pipelineInfo);
 
@@ -42,10 +42,6 @@ namespace hvk
 	protected:
         bool mInitialized;
 
-        VulkanDevice mDevice;
-        VmaAllocator mAllocator;
-        VkQueue mGraphicsQueue;
-
         VkRenderPass mColorRenderPass;
         VkFence mRenderFence;
         VkSemaphore mRenderFinished;
@@ -53,9 +49,6 @@ namespace hvk
         VkCommandBuffer mCommandBuffer;
 
         DrawlistGenerator(
-			VulkanDevice device, 
-			VmaAllocator allocator, 
-			VkQueue mGraphicsQueue, 
 			VkRenderPass renderPass,
 			VkCommandPool commandPool);
         void setInitialized(bool init) { mInitialized = init; }

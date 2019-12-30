@@ -21,9 +21,6 @@ namespace hvk
 		VkExtent2D mWindowExtent;
 	public:
 		UiDrawGenerator(
-			VulkanDevice device,
-			VmaAllocator  allocator,
-			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
 			VkExtent2D windowExtent);

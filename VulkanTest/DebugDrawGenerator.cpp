@@ -8,19 +8,18 @@ namespace hvk
 {
 
 	DebugDrawGenerator::DebugDrawGenerator(
-			VulkanDevice device,
-			VmaAllocator allocator,
-			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool) :
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
+		DrawlistGenerator(renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mPipeline(VK_NULL_HANDLE),
 		mPipelineInfo(),
 		mRenderables()
 	{
+        const VkDevice& device = GpuManager::getDevice();
+
 		/***************
 		 Create descriptor set layout and descriptor pool
 		***************/
@@ -36,10 +35,10 @@ namespace hvk
 		layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
 		layoutInfo.pBindings = bindings.data();
 
-		assert(vkCreateDescriptorSetLayout(mDevice.device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
+		assert(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
 
 		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(MAX_UBOS);
-		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		util::descriptor::createDescriptorPool(device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		/**************
 		Set up pipeline
@@ -50,7 +49,7 @@ namespace hvk
 		layoutCreate.pSetLayouts = dsLayouts.data();
 		layoutCreate.pushConstantRangeCount = 0;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		util::pipeline::fillVertexInfo<ColorVertex>(mPipelineInfo.vertexInfo);
 
@@ -66,7 +65,7 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
 
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 
 		setInitialized(true);
 	}
@@ -74,36 +73,42 @@ namespace hvk
 
 	DebugDrawGenerator::~DebugDrawGenerator()
 	{
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+
         for (auto& renderable : mRenderables)
         {
             // destroy buffers
-            vmaDestroyBuffer(mAllocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
-            vmaDestroyBuffer(mAllocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
-            vmaDestroyBuffer(mAllocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
+            vmaDestroyBuffer(allocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
+            vmaDestroyBuffer(allocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
+            vmaDestroyBuffer(allocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
         }
 
-        vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
-        vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+        vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+        vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
 
-        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
-        vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
+        vkDestroyPipeline(device, mPipeline, nullptr);
+        vkDestroyPipelineLayout(device, mPipelineInfo.pipelineLayout, nullptr);
 	}
 
 	void DebugDrawGenerator::invalidate()
 	{
 		setInitialized(false);
-		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+		vkDestroyPipeline(GpuManager::getDevice(), mPipeline, nullptr);
 	}
 
 	void DebugDrawGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
 		mColorRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 
 	void DebugDrawGenerator::addDebugMeshObject(std::shared_ptr<DebugMeshRenderObject> object)
 	{
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+
 		DebugMeshRenderable newRenderable;
 		newRenderable.renderObject = object;
 
@@ -122,7 +127,7 @@ namespace hvk
         allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
         allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         vmaCreateBuffer(
-            mAllocator,
+            allocator,
             &bufferInfo,
             &allocCreateInfo,
             &newRenderable.vbo.memoryResource,
@@ -141,7 +146,7 @@ namespace hvk
         indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
         indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         vmaCreateBuffer(
-            mAllocator,
+            allocator,
             &iboInfo,
             &indexAllocCreateInfo,
             &newRenderable.ibo.memoryResource,
@@ -160,7 +165,7 @@ namespace hvk
 		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&uboInfo,
 			&uniformAllocCreateInfo,
 			&newRenderable.ubo.memoryResource,
@@ -174,7 +179,7 @@ namespace hvk
 		dsAlloc.descriptorSetCount = 1;
 		dsAlloc.pSetLayouts = &mDescriptorSetLayout;
 
-		assert(vkAllocateDescriptorSets(mDevice.device, &dsAlloc, &newRenderable.descriptorSet) == VK_SUCCESS);
+		assert(vkAllocateDescriptorSets(device, &dsAlloc, &newRenderable.descriptorSet) == VK_SUCCESS);
 
 		// Update descriptor set
 		{
@@ -196,7 +201,7 @@ namespace hvk
 			std::array<VkWriteDescriptorSet, 1> descriptorWrites = { descriptorWrite };
 
 			vkUpdateDescriptorSets(
-                mDevice.device, 
+                device, 
                 static_cast<uint32_t>(descriptorWrites.size()), 
                 descriptorWrites.data(), 
                 0, 

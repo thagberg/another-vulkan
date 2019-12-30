@@ -24,10 +24,10 @@ namespace hvk
             VkCommandPool commandPool, 
             VkQueue graphicsQueue, 
             VmaAllocator allocator);
-        static const VkPhysicalDevice& getPhysicalDevice() { return sPhysicalDevice; }
-        static const VkDevice& getDevice() { return sDevice; }
-        static const VkCommandPool& getCommandPool() { return sCommandPool; }
-        static const VkQueue& getGraphicsQueue() { return sGraphicsQueue; }
-        static const VmaAllocator& getAllocator() { return sAllocator; }
+        static VkPhysicalDevice getPhysicalDevice() { return sPhysicalDevice; }
+        static VkDevice getDevice() { return sDevice; }
+        static VkCommandPool getCommandPool() { return sCommandPool; }
+        static VkQueue getGraphicsQueue() { return sGraphicsQueue; }
+        static VmaAllocator getAllocator() { return sAllocator; }
     };
 }

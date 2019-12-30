@@ -18,7 +18,7 @@ namespace hvk
 		namespace render
 		{
 			VkFence renderImageMap(
-				VulkanDevice& device,
+				VkDevice device,
 				VmaAllocator allocator,
 				VkCommandPool commandPool,
 				VkQueue graphicsQueue,
@@ -29,7 +29,7 @@ namespace hvk
 				std::array<std::string, 2>& shaderFiles)
 			{
 				auto fbMap = HVK_make_shared<TextureMap>(image::createImageMap(
-					device.device,
+					device,
 					allocator,
 					commandPool,
 					graphicsQueue,
@@ -46,7 +46,7 @@ namespace hvk
 					renderpass::createSubpassDependency()
 				};
 				auto fbRenderPass = renderpass::createRenderPass(
-					device.device,
+					device,
 					outFormat,
 					fbColorPassDependencies, 
 					&fbColorAttachment);
@@ -56,7 +56,7 @@ namespace hvk
 				};
 				VkFramebuffer framebuffer;
 				framebuffer::createFramebuffer(
-					device.device,
+					device,
 					fbRenderPass,
 					fbExtent,
 					fbMap->view, 
@@ -64,9 +64,6 @@ namespace hvk
 					&framebuffer);
 
 				auto quadRenderer = QuadGenerator(
-					device,
-					allocator,
-					graphicsQueue,
 					fbRenderPass,
 					commandPool,
 					nullptr,
@@ -74,7 +71,7 @@ namespace hvk
 
 				// Create cubemap which we will iteratively copy environmentFramebuffer onto
 				*outMap = image::createImageMap(
-					device.device,
+					device,
 					allocator,
 					commandPool,
 					graphicsQueue,
@@ -85,16 +82,16 @@ namespace hvk
 					VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
 				// map needs to be transitioned to a transfer destination
-				auto onetime = command::beginSingleTimeCommand(device.device, commandPool);
+				auto onetime = command::beginSingleTimeCommand(device, commandPool);
 				util::image::transitionImageLayout(
 					onetime,
 					outMap->texture.memoryResource,
 					VK_IMAGE_LAYOUT_UNDEFINED,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				command::endSingleTimeCommand(device.device, commandPool, onetime, graphicsQueue);
+				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
 
 				// Start getting ready for the renders
-				VkFence renderFence = signal::createFence(device.device);
+				VkFence renderFence = signal::createFence(device);
 
 				std::array<VkClearValue, 1> clearValues = {};
 				clearValues[0].color = { 0.f, 0.f, 0.f, 1.0f };
@@ -211,7 +208,7 @@ namespace hvk
 				submitInfo.signalSemaphoreCount = 0;
 				submitInfo.pSignalSemaphores = nullptr;
 
-				assert(vkResetFences(device.device, 1, &renderFence) == VK_SUCCESS);
+				assert(vkResetFences(device, 1, &renderFence) == VK_SUCCESS);
 				assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, renderFence) == VK_SUCCESS);
 
 				return renderFence;
@@ -219,7 +216,7 @@ namespace hvk
 
 			template <typename PushT>
 			VkFence renderCubeMap(
-				VulkanDevice& device,
+				VkDevice device,
 				VmaAllocator allocator,
 				VkCommandPool commandPool,
 				VkQueue graphicsQueue,
@@ -233,7 +230,7 @@ namespace hvk
 				uint32_t mipLevels=1)
 			{
 				auto cubeMap = HVK_make_shared<TextureMap>(image::createImageMap(
-					device.device,
+					device,
 					allocator,
 					commandPool,
 					graphicsQueue,
@@ -250,7 +247,7 @@ namespace hvk
 					renderpass::createSubpassDependency()
 				};
 				auto cubeRenderPass = renderpass::createRenderPass(
-					device.device,
+					device,
 					outFormat,
 					cubeColorPassDependencies, 
 					&cubeColorAttachment);
@@ -260,7 +257,7 @@ namespace hvk
 				};
 				VkFramebuffer cubeFrameBuffer;
 				framebuffer::createFramebuffer(
-					device.device,
+					device,
 					cubeRenderPass,
 					cubeExtent,
 					cubeMap->view, 
@@ -268,9 +265,6 @@ namespace hvk
 					&cubeFrameBuffer);
 
 				CubemapGenerator<PushT> cubeRenderer(
-					device,
-					allocator,
-					graphicsQueue,
 					cubeRenderPass,
 					commandPool,
 					inMap,
@@ -278,7 +272,7 @@ namespace hvk
 
 				// Create cubemap which we will iteratively copy environmentFramebuffer onto
 				*outMap = image::createImageMap(
-					device.device,
+					device,
 					allocator,
 					commandPool,
 					graphicsQueue,
@@ -293,7 +287,7 @@ namespace hvk
 					mipLevels);
 
 				// map needs to be transitioned to a transfer destination
-				auto onetime = command::beginSingleTimeCommand(device.device, commandPool);
+				auto onetime = command::beginSingleTimeCommand(device, commandPool);
 				util::image::transitionImageLayout(
 					onetime,
 					outMap->texture.memoryResource,
@@ -302,10 +296,10 @@ namespace hvk
 					6,
 					0,
 					mipLevels);
-				command::endSingleTimeCommand(device.device, commandPool, onetime, graphicsQueue);
+				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
 
 				// Start getting ready for the renders
-				VkFence renderFence = signal::createFence(device.device);
+				VkFence renderFence = signal::createFence(device);
 
 				std::array<VkClearValue, 1> clearValues = {};
 				clearValues[0].color = { 0.f, 0.f, 0.f, 1.0f };
@@ -353,7 +347,7 @@ namespace hvk
 							mipResolution
 						};
 						framebuffer::createFramebuffer(
-							device.device,
+							device,
 							cubeRenderPass,
 							cubeExtent,
 							cubeMap->view, 
@@ -467,9 +461,9 @@ namespace hvk
 						submitInfo.signalSemaphoreCount = 0;
 						submitInfo.pSignalSemaphores = nullptr;
 
-						assert(vkResetFences(device.device, 1, &renderFence) == VK_SUCCESS);
+						assert(vkResetFences(device, 1, &renderFence) == VK_SUCCESS);
 						assert(vkQueueSubmit(graphicsQueue, 1, &submitInfo, renderFence) == VK_SUCCESS);
-						assert(vkWaitForFences(device.device, 1, &renderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
+						assert(vkWaitForFences(device, 1, &renderFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 					}
 				}
 

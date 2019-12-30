@@ -23,14 +23,11 @@ namespace hvk
     }
 
 	UiDrawGenerator::UiDrawGenerator(
-		VulkanDevice device,
-		VmaAllocator allocator,
-		VkQueue graphicsQueue,
 		VkRenderPass renderPass,
 		VkCommandPool commandPool,
 		VkExtent2D windowExtent) :
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
+		DrawlistGenerator(renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mDescriptorSet(VK_NULL_HANDLE),
@@ -43,6 +40,10 @@ namespace hvk
 		mPipelineInfo(),
 		mWindowExtent(windowExtent)
 	{
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+        const auto& graphicsQueue = GpuManager::getGraphicsQueue();
+
 		// Initialize Imgui stuff
 		unsigned char* fontTextureData;
 		int fontTextWidth, fontTextHeight, bytesPerPixel;
@@ -52,10 +53,10 @@ namespace hvk
         setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));
 
         mFontImage = util::image::createTextureImage(
-			mDevice.device, 
-			mAllocator, 
+            device,
+            allocator,
 			mCommandPool, 
-			mGraphicsQueue,
+            graphicsQueue,
 			fontTextureData,
 			1,
 			fontTextWidth,
@@ -66,11 +67,11 @@ namespace hvk
 		 Create descriptor set layout and descriptor pool
 		***************/
 		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(MAX_SAMPLERS);
-		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		util::descriptor::createDescriptorPool(device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
 
 		VkDescriptorSetLayout uiDescriptorSetLayout;
-		mFontView = util::image::createImageView(mDevice.device, mFontImage.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
-		mFontSampler = util::image::createImageSampler(mDevice.device);
+		mFontView = util::image::createImageView(device, mFontImage.memoryResource, VK_FORMAT_R8G8B8A8_UNORM);
+		mFontSampler = util::image::createImageSampler(device);
 
 		VkDescriptorSetLayoutBinding uiLayoutImageBinding = {};
 		uiLayoutImageBinding.binding = 0;
@@ -83,14 +84,14 @@ namespace hvk
 		uiLayoutInfo.bindingCount = 1;
 		uiLayoutInfo.pBindings = &uiLayoutImageBinding;
 
-		assert(vkCreateDescriptorSetLayout(mDevice.device, &uiLayoutInfo, nullptr, &uiDescriptorSetLayout) == VK_SUCCESS);
+		assert(vkCreateDescriptorSetLayout(device, &uiLayoutInfo, nullptr, &uiDescriptorSetLayout) == VK_SUCCESS);
 
 		VkDescriptorSetAllocateInfo uiAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 		uiAlloc.descriptorPool = mDescriptorPool;
 		uiAlloc.descriptorSetCount = 1;
 		uiAlloc.pSetLayouts = &uiDescriptorSetLayout;
 
-		assert(vkAllocateDescriptorSets(mDevice.device, &uiAlloc, &mDescriptorSet) == VK_SUCCESS);
+		assert(vkAllocateDescriptorSets(device, &uiAlloc, &mDescriptorSet) == VK_SUCCESS);
 
 		VkDescriptorImageInfo fontImageInfo = {};
 		fontImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -105,7 +106,7 @@ namespace hvk
 		fontDescriptorWrite.descriptorCount = 1;
 		fontDescriptorWrite.pImageInfo = &fontImageInfo;
 
-		vkUpdateDescriptorSets(mDevice.device, 1, &fontDescriptorWrite, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &fontDescriptorWrite, 0, nullptr);
 
 		VkPushConstantRange uiPushRange = {};
 		uiPushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -118,7 +119,7 @@ namespace hvk
 		uiLayoutCreate.pushConstantRangeCount = 1;
 		uiLayoutCreate.pPushConstantRanges = &uiPushRange;
 
-		assert(vkCreatePipelineLayout(mDevice.device, &uiLayoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(device, &uiLayoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		mPipelineInfo.vertexInfo = {};
 		mPipelineInfo.vertexInfo.bindingDescription = {};
@@ -176,38 +177,41 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
 
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 
 		setInitialized(true);
 	}
 
 	UiDrawGenerator::~UiDrawGenerator()
 	{
-        vkDestroySampler(mDevice.device, mFontSampler, nullptr);
-        vkDestroyImageView(mDevice.device, mFontView, nullptr);
-        vmaDestroyImage(mAllocator, mFontImage.memoryResource, mFontImage.allocation);
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
 
-        vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
-        vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
+        vkDestroySampler(device, mFontSampler, nullptr);
+        vkDestroyImageView(device, mFontView, nullptr);
+        vmaDestroyImage(allocator, mFontImage.memoryResource, mFontImage.allocation);
 
-        vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
-        vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
+        vmaDestroyBuffer(allocator, mVbo.memoryResource, mVbo.allocation);
+        vmaDestroyBuffer(allocator, mIbo.memoryResource, mIbo.allocation);
 
-        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
-        vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
+        vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+        vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
+
+        vkDestroyPipeline(device, mPipeline, nullptr);
+        vkDestroyPipelineLayout(device, mPipelineInfo.pipelineLayout, nullptr);
 	}
 
 	void UiDrawGenerator::invalidate()
 	{
         setInitialized(false);
-		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+		vkDestroyPipeline(GpuManager::getDevice(), mPipeline, nullptr);
 	}
 
 	void UiDrawGenerator::updateRenderPass(VkRenderPass renderPass, VkExtent2D windowExtent)
 	{
 		mWindowExtent = windowExtent;
 		mColorRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 
 		ImGuiIO& io = ImGui::GetIO();
         setIOSizes(io, mWindowExtent, ImVec2(1.f, 1.f));
@@ -221,6 +225,8 @@ namespace hvk
 		const VkViewport& viewport,
 		const VkRect2D& scissor)
 	{
+        const auto& allocator = GpuManager::getAllocator();
+
 		ImGuiIO& io = ImGui::GetIO();
 		ImGui::Render();
 		ImDrawData* imDrawData = ImGui::GetDrawData();
@@ -229,7 +235,7 @@ namespace hvk
 		uint32_t indexMemorySize = sizeof(ImDrawIdx) * imDrawData->TotalIdxCount;
 		if (vertexMemorySize && indexMemorySize) {
 			if (mVbo.allocationInfo.size < vertexMemorySize) {
-                vmaDestroyBuffer(mAllocator, mVbo.memoryResource, mVbo.allocation);
+                vmaDestroyBuffer(allocator, mVbo.memoryResource, mVbo.allocation);
 				VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 				bufferInfo.size = vertexMemorySize;
 				bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -238,7 +244,7 @@ namespace hvk
 				allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 				allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				vmaCreateBuffer(
-					mAllocator,
+                    allocator,
 					&bufferInfo,
 					&allocCreateInfo,
 					&mVbo.memoryResource,
@@ -248,7 +254,7 @@ namespace hvk
 			}
 
 			if (mIbo.allocationInfo.size < indexMemorySize) {
-                vmaDestroyBuffer(mAllocator, mIbo.memoryResource, mIbo.allocation);
+                vmaDestroyBuffer(allocator, mIbo.memoryResource, mIbo.allocation);
 				VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 				iboInfo.size = indexMemorySize;
 				iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -257,7 +263,7 @@ namespace hvk
 				indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 				indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 				vmaCreateBuffer(
-					mAllocator,
+                    allocator,
 					&iboInfo,
 					&indexAllocCreateInfo,
 					&mIbo.memoryResource,

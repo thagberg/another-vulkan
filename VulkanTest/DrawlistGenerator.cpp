@@ -10,14 +10,16 @@
 
 namespace hvk
 {
-	VkPipeline generatePipeline(const VulkanDevice& device, VkRenderPass renderPass, const RenderPipelineInfo& pipelineInfo) {
+	VkPipeline generatePipeline(VkRenderPass renderPass, const RenderPipelineInfo& pipelineInfo) {
 
 		VkPipeline pipeline;
 
+        const VkDevice& device = GpuManager::getDevice();
+
 		auto modelVertShaderCode = readFile(pipelineInfo.vertShaderFile);
 		auto modelFragShaderCode = readFile(pipelineInfo.fragShaderFile);
-		VkShaderModule modelVertShaderModule = createShaderModule(device.device, modelVertShaderCode);
-		VkShaderModule modelFragShaderModule = createShaderModule(device.device, modelFragShaderCode);
+		VkShaderModule modelVertShaderModule = createShaderModule(device, modelVertShaderCode);
+		VkShaderModule modelFragShaderModule = createShaderModule(device, modelFragShaderCode);
 
 		VkPipelineShaderStageCreateInfo modelVertStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 		modelVertStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -39,7 +41,7 @@ namespace hvk
 
 
 		pipeline = util::pipeline::createGraphicsPipeline(
-			device.device,
+			device,
 			renderPass,
 			pipelineInfo.pipelineLayout,
 			pipelineInfo.frontFace,
@@ -49,37 +51,33 @@ namespace hvk
 			pipelineInfo.depthStencilState,
 			pipelineInfo.blendAttachments);
 
-		vkDestroyShaderModule(device.device, modelVertShaderModule, nullptr);
-		vkDestroyShaderModule(device.device, modelFragShaderModule, nullptr);
+		vkDestroyShaderModule(device, modelVertShaderModule, nullptr);
+		vkDestroyShaderModule(device, modelFragShaderModule, nullptr);
 
 		return pipeline;
 	}
 
     DrawlistGenerator::DrawlistGenerator(
-        VulkanDevice device, 
-        VmaAllocator allocator, 
-        VkQueue graphicsQueue, 
         VkRenderPass renderPass,
         VkCommandPool commandPool) :
 
 		mInitialized(false),
-		mDevice(device),
-		mAllocator(allocator),
-		mGraphicsQueue(graphicsQueue),
 		mColorRenderPass(renderPass),
 		mRenderFinished(VK_NULL_HANDLE),
 		mCommandPool(commandPool),
 		mCommandBuffer(VK_NULL_HANDLE)
     {
+        const VkDevice device = GpuManager::getDevice();
+
 		// Create fence for rendering complete
 		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 		fenceCreate.pNext = nullptr;
 		fenceCreate.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-		assert(vkCreateFence(mDevice.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
+		assert(vkCreateFence(device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
 		// create semaphore for rendering finished
-		mRenderFinished = util::signal::createSemaphore(mDevice.device);
+		mRenderFinished = util::signal::createSemaphore(device);
 
 		// Allocate command buffer
 		VkCommandBufferAllocateInfo bufferAlloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -87,7 +85,7 @@ namespace hvk
 		bufferAlloc.commandPool = mCommandPool;
 		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
 
-		assert(vkAllocateCommandBuffers(mDevice.device, &bufferAlloc, &mCommandBuffer) == VK_SUCCESS);
+		assert(vkAllocateCommandBuffers(device, &bufferAlloc, &mCommandBuffer) == VK_SUCCESS);
     }
 
     DrawlistGenerator::~DrawlistGenerator()

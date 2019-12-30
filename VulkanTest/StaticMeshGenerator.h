@@ -59,9 +59,6 @@ namespace hvk
 
 	public:
         StaticMeshGenerator(
-			VulkanDevice device, 
-			VmaAllocator allocator, 
-			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
             HVK_shared<TextureMap> environmentMap,
@@ -162,9 +159,10 @@ namespace hvk
 		// Prepare and draw PBR elements
 		PushConstant push = {};
 		VmaAllocationInfo allocInfo;
+        const auto& allocator = GpuManager::getAllocator();
 		elements.each([](auto entity, auto transform, const auto& mesh, const auto& binding) {
 			// update UBO
-			auto allocInfo = vmaGetAllocationInfo(mAllocator, binding.ubo.allocation, &allocInfo);
+			auto allocInfo = vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
 			ubo.model = transform.localTransform;
 			ubo.model[1][1] *= -1;
 			ubo.modelViewProj = viewProj * ubo.model;

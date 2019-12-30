@@ -67,8 +67,6 @@ namespace hvk {
         mQuadRenderer(nullptr),
 		mAmbientLight(nullptr),
         mRenderFence(VK_NULL_HANDLE),
-		mFirstPassCommandBuffers(),
-		mSecondPassCommandBuffers(),
 		mGammaSettings(nullptr),
 		mPBRWeight(nullptr),
 		mExposureSettings(nullptr),
@@ -445,13 +443,13 @@ namespace hvk {
 		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 	}
 
-	uint32_t VulkanApp::renderPrepare()
+	uint32_t VulkanApp::renderPrepare(VkSwapchainKHR& swapchain)
 	{
 		// Wait for an image on the swapchain to become available
         uint32_t imageIndex;
         vkAcquireNextImageKHR(
             mDevice,
-            mSwapchain.swapchain,
+            swapchain,
             std::numeric_limits<uint64_t>::max(),
             mImageAvailable,
             VK_NULL_HANDLE,
@@ -527,97 +525,8 @@ namespace hvk {
         vkQueuePresentKHR(mGraphicsQueue, &presentInfo);
 	}
 
-    void VulkanApp::drawFrame() {
-
-		VkViewport viewport = {};
-		viewport.x = 0.f;
-		viewport.y = 0.f;
-		viewport.width = (float)mSwapchain.swapchainExtent.width;
-		viewport.height = (float)mSwapchain.swapchainExtent.height;
-		viewport.minDepth = 0.f;
-		viewport.maxDepth = 1.f;
-
-		VkRect2D scissor = {};
-		scissor.offset = { 0, 0 };
-		scissor.extent = mSwapchain.swapchainExtent;
-
-		std::array<VkClearValue, 2> clearValues = {};
-		clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.0f };
-		clearValues[1].depthStencil = { 1.0f, 0 };
-
-		uint32_t swapIndex = renderPrepare();
-
-		VkRenderPassBeginInfo renderBegin = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-		renderBegin.renderPass = mColorRenderPass;
-		renderBegin.framebuffer = mColorPassFramebuffer;
-		renderBegin.renderArea = scissor;
-		renderBegin.clearValueCount = static_cast<float>(clearValues.size());
-		renderBegin.pClearValues = clearValues.data();
-
-		auto inheritanceInfo = renderpassBegin(renderBegin);
-
-		std::vector<VkCommandBuffer> colorpassCommandBuffers;
-		colorpassCommandBuffers.push_back(mMeshRenderer->drawFrame(
-            inheritanceInfo,
-			mColorPassFramebuffer,
-			viewport,
-			scissor,
-			*mActiveCamera.get(),
-			*mAmbientLight,
-			*mGammaSettings,
-			*mPBRWeight));
-
-		colorpassCommandBuffers.push_back(mDebugRenderer->drawFrame(
-			inheritanceInfo, 
-			mColorPassFramebuffer, 
-			viewport, 
-			scissor,
-			*mActiveCamera.get()));
-
-		SkySettings tempSkySettings{
-			mGammaSettings->gamma,
-			mSkySettings->lod
-		};
-		colorpassCommandBuffers.push_back(mSkyboxRenderer->drawFrame(
-			inheritanceInfo,
-			mColorPassFramebuffer,
-			viewport,
-			scissor,
-			*mActiveCamera,
-			tempSkySettings));
-
-		renderpassExecuteAndClose(colorpassCommandBuffers);
-
-		renderBegin.renderPass = mFinalRenderPass;
-		renderBegin.framebuffer = mFinalPassFramebuffers[swapIndex];
-		inheritanceInfo = renderpassBegin(renderBegin);
-
-		std::vector<VkCommandBuffer> finalpassCommandBuffers;
-        finalpassCommandBuffers.push_back(mQuadRenderer->drawFrame(
-            inheritanceInfo,
-            mFinalPassFramebuffers[swapIndex],
-            viewport,
-            scissor,
-			*mExposureSettings));
-
-		finalpassCommandBuffers.push_back(mUiRenderer->drawFrame(
-            inheritanceInfo,
-			//mColorPassFramebuffer,
-			mFinalPassFramebuffers[swapIndex],
-			viewport,
-			scissor));
-
-		renderpassExecuteAndClose(finalpassCommandBuffers);
-
-		// end primary command buffer, execute commands, and then present to screen
-		renderFinish();
-		renderSubmit();
-		renderPresent(swapIndex);
-    }
-
     bool VulkanApp::update(double frameTime)
     {
-        drawFrame();
         return false;
     }
 
@@ -647,24 +556,20 @@ namespace hvk {
 		std::shared_ptr<TextureMap> prefilteredMap,
 		std::shared_ptr<TextureMap> brdfLutMap)
 	{
-		QueueFamilies families = {
-			mGraphicsIndex,
-			mGraphicsIndex
-		};
-		VulkanDevice device = {
-			mPhysicalDevice,
-			mDevice,
-			families
-		};
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+        const auto& commandPool = GpuManager::getCommandPool();
+        const auto& graphicsQueue = GpuManager::getGraphicsQueue();
+
 		// Convert HDR equirectangular map to cubemap
 		int hdrWidth, hdrHeight, hdrBitDepth;
 		float* hdrData = stbi_loadf("resources/Alexs_Apartment/Alexs_Apt_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
 		//float* hdrData = stbi_loadf("resources/MonValley_Lookout/MonValley_A_LookoutPoint_2k.hdr", &hdrWidth, &hdrHeight, &hdrBitDepth, 4);
 		auto hdrImage = util::image::createTextureImage(
-			mDevice, 
-			mAllocator, 
-			mCommandPool, 
-			mGraphicsQueue, 
+            device,
+            allocator,
+            commandPool,
+            graphicsQueue,
 			hdrData, 
 			1, 
 			hdrWidth, 
@@ -685,9 +590,9 @@ namespace hvk {
 			"shaders/compiled/hdr_to_cubemap_frag.spv"};
 		util::render::renderCubeMap<GammaSettings>(
 			device,
-			mAllocator,
-			mCommandPool,
-			mGraphicsQueue,
+            allocator,
+            commandPool,
+            graphicsQueue,
 			mPrimaryCommandBuffer,
 			hdrMap,
 			1024,
@@ -708,9 +613,9 @@ namespace hvk {
 		};
 		util::render::renderCubeMap<GammaSettings>(
 			device,
-			mAllocator,
-			mCommandPool,
-			mGraphicsQueue,
+            allocator,
+            commandPool,
+            graphicsQueue,
 			mPrimaryCommandBuffer,
 			environmentMap,
 			32,
@@ -734,9 +639,9 @@ namespace hvk {
 		};
 		util::render::renderCubeMap<RoughnessSettings>(
 			device,
-			mAllocator,
-			mCommandPool,
-			mGraphicsQueue,
+            allocator,
+            commandPool,
+            graphicsQueue,
 			mPrimaryCommandBuffer,
 			environmentMap,
 			256,
@@ -754,10 +659,10 @@ namespace hvk {
 			"shaders/compiled/quad_vert.spv",
 			"shaders/compiled/brdfLUT_frag.spv" };
 		auto brdfFence = util::render::renderImageMap(
-			device,
-			mAllocator,
-			mCommandPool,
-			mGraphicsQueue,
+            device,
+            allocator,
+            commandPool,
+            graphicsQueue,
 			mPrimaryCommandBuffer,
 			512,
 			VK_FORMAT_R16G16B16A16_SFLOAT,

@@ -47,9 +47,6 @@ namespace hvk
 		
 	public:
 		CubemapGenerator(
-			VulkanDevice device,
-			VmaAllocator allocator,
-			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
             HVK_shared<TextureMap> skyboxMap,
@@ -70,15 +67,12 @@ namespace hvk
 
 	template <typename PushT>
 	CubemapGenerator<PushT>::CubemapGenerator(
-		VulkanDevice device, 
-		VmaAllocator allocator, 
-		VkQueue graphicsQueue, 
 		VkRenderPass renderPass, 
 		VkCommandPool commandPool,
         HVK_shared<TextureMap> skyboxMap,
 		std::array<std::string, 2>& shaderFiles):
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
+		DrawlistGenerator(renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mDescriptorSet(VK_NULL_HANDLE),
@@ -88,6 +82,9 @@ namespace hvk
 		mCubeRenderable(),
 		mDescriptorSetDirty(false)
 	{
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+
 		//auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
         auto cube = createEnvironmentCube();
 		mCubeRenderable.renderObject = HVK_make_shared<CubeMeshRenderObject>(
@@ -113,7 +110,7 @@ namespace hvk
 		allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&bufferInfo,
 			&allocCreateInfo,
 			&mCubeRenderable.vbo.memoryResource,
@@ -132,7 +129,7 @@ namespace hvk
         indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
         indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         vmaCreateBuffer(
-            mAllocator,
+            allocator,
             &iboInfo,
             &indexAllocCreateInfo,
             &mCubeRenderable.ibo.memoryResource,
@@ -151,7 +148,7 @@ namespace hvk
 		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&uboInfo,
 			&uniformAllocCreateInfo,
 			&mCubeRenderable.ubo.memoryResource,
@@ -160,7 +157,7 @@ namespace hvk
 
 		// Create descriptor pool
 		auto poolSizes = util::descriptor::template createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1, 1);
-		util::descriptor::createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
+		util::descriptor::createDescriptorPool(device, poolSizes, 1, mDescriptorPool);
 
 		// Create descriptor set layout
 		auto uboLayoutBinding = util::descriptor::generateUboLayoutBinding(0, 1);
@@ -170,11 +167,11 @@ namespace hvk
 			uboLayoutBinding,
 			skySamplerBinding
 		};
-		util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+		util::descriptor::createDescriptorSetLayout(device, bindings, mDescriptorSetLayout);
 
 		// Create descriptor set
 		std::vector<VkDescriptorSetLayout> layouts = { mDescriptorSetLayout };
-		util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
+		util::descriptor::allocateDescriptorSets(device, mDescriptorPool, mDescriptorSet, layouts);
 
 		// Update descriptor set
 		VkDescriptorBufferInfo dsBufferInfo = {
@@ -199,7 +196,7 @@ namespace hvk
 			bufferWrite,
             imageWrite
 		};
-		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+		util::descriptor::writeDescriptorSets(device, descriptorWrites);
 
 
 		// Prepare pipeline
@@ -213,7 +210,7 @@ namespace hvk
 		layoutCreate.pSetLayouts = layouts.data();
 		layoutCreate.pushConstantRangeCount = 1;
 		layoutCreate.pPushConstantRanges = &push;
-		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		util::pipeline::template fillVertexInfo<CubeVertex>(mPipelineInfo.vertexInfo);
 
@@ -229,7 +226,7 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState(true, true);
 
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		
 
 		setInitialized(true);
@@ -261,7 +258,7 @@ namespace hvk
 			bufferWrite,
             imageWrite
 		};
-		util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+		util::descriptor::writeDescriptorSets(GpuManager::getDevice(), descriptorWrites);
 	}
 
 	template <typename PushT>
@@ -277,20 +274,23 @@ namespace hvk
 	void CubemapGenerator<PushT>::updateRenderPass(VkRenderPass renderPass)
 	{
 		mColorRenderPass = renderPass;
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 
 	template <typename PushT>
 	CubemapGenerator<PushT>::~CubemapGenerator()
 	{
-		vmaDestroyBuffer(mAllocator, mCubeRenderable.vbo.memoryResource, mCubeRenderable.vbo.allocation);
-		vmaDestroyBuffer(mAllocator, mCubeRenderable.ibo.memoryResource, mCubeRenderable.ibo.allocation);
-		vmaDestroyBuffer(mAllocator, mCubeRenderable.ubo.memoryResource, mCubeRenderable.ubo.allocation);
-		vkDestroyDescriptorSetLayout(mDevice.device, mDescriptorSetLayout, nullptr);
-		vkDestroyDescriptorPool(mDevice.device, mDescriptorPool, nullptr);
-		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
-		vkDestroyPipelineLayout(mDevice.device, mPipelineInfo.pipelineLayout, nullptr);
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+
+		vmaDestroyBuffer(allocator, mCubeRenderable.vbo.memoryResource, mCubeRenderable.vbo.allocation);
+		vmaDestroyBuffer(allocator, mCubeRenderable.ibo.memoryResource, mCubeRenderable.ibo.allocation);
+		vmaDestroyBuffer(allocator, mCubeRenderable.ubo.memoryResource, mCubeRenderable.ubo.allocation);
+		vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
+		vkDestroyPipeline(device, mPipeline, nullptr);
+		vkDestroyPipelineLayout(device, mPipelineInfo.pipelineLayout, nullptr);
 		mCubeMap.reset();
 	}
 
@@ -298,7 +298,7 @@ namespace hvk
 	void CubemapGenerator<PushT>::invalidate()
 	{
 		setInitialized(false);
-		vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+		vkDestroyPipeline(GpuManager::getDevice(), mPipeline, nullptr);
 	}
 
 	template <typename PushT>

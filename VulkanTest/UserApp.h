@@ -80,6 +80,7 @@ namespace hvk
 		void createPBRFramebuffers();
 		void createFinalRenderPass();
 		void createSwapFramebuffers();
+        void drawFrame(double frametime);
 
 		static void handleWindowResize(GLFWwindow* window, int width, int height);
 		static void handleCharInput(GLFWwindow* window, uint32_t character);
@@ -100,20 +101,20 @@ namespace hvk
 		void addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node);
 		void activateCamera(hvk::HVK_shared<hvk::Camera> camera);
 		void setGammaCorrection(float gamma);
-		hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
-		hvk::HVK_shared<hvk::PBRWeight> getPBRWeight();
-		hvk::HVK_shared<hvk::ExposureSettings> getExposureSettings();
-		hvk::HVK_shared<hvk::SkySettings> getSkySettings();
-		void setUseSRGBTex(bool useSRGBTex);
-		hvk::HVK_shared<hvk::AmbientLight> getAmbientLight();
-		float getGammaCorrection();
-		bool isUseSRGBTex();
-		VkDevice getDevice();
-		void generateEnvironmentMap();
-		void useEnvironmentMap();
-		void useIrradianceMap();
-		void usePrefilteredMap(float lod);
-		hvk::ModelPipeline& getModelPipeline();
-		std::shared_ptr<hvk::StaticMeshGenerator> getMeshRenderer();
+		//hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
+		//hvk::HVK_shared<hvk::PBRWeight> getPBRWeight();
+		//hvk::HVK_shared<hvk::ExposureSettings> getExposureSettings();
+		//hvk::HVK_shared<hvk::SkySettings> getSkySettings();
+		//void setUseSRGBTex(bool useSRGBTex);
+		//hvk::HVK_shared<hvk::AmbientLight> getAmbientLight();
+		//float getGammaCorrection();
+		//bool isUseSRGBTex();
+		//VkDevice getDevice();
+		//void generateEnvironmentMap();
+		//void useEnvironmentMap();
+		//void useIrradianceMap();
+		//void usePrefilteredMap(float lod);
+		//hvk::ModelPipeline& getModelPipeline();
+		//std::shared_ptr<hvk::StaticMeshGenerator> getMeshRenderer();
 	};
 }

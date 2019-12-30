@@ -84,7 +84,6 @@ namespace hvk {
 		void initializeDevice();
 		void initializeRenderer();
 		void initFramebuffers();
-		void drawFrame();
 		void cleanupSwapchain();
 
 	public:
@@ -137,7 +136,7 @@ namespace hvk {
 		}
 
 		// new render paradigm
-		uint32_t renderPrepare();
+		uint32_t renderPrepare(VkSwapchainKHR& swapchain);
 		VkCommandBufferInheritanceInfo renderpassBegin(const VkRenderPassBeginInfo& renderBegin);
 		void renderpassExecuteAndClose(std::vector<VkCommandBuffer>& secondaryBuffers);
 		void renderFinish();

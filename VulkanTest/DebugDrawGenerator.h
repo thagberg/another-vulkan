@@ -37,9 +37,6 @@ namespace hvk
 
 	public:
 		DebugDrawGenerator(
-			VulkanDevice device,
-			VmaAllocator allocator,
-			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool);
 		virtual ~DebugDrawGenerator();

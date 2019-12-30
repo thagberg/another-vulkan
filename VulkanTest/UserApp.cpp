@@ -170,18 +170,12 @@ namespace hvk
 			"shaders/compiled/quad_vert.spv",
 			"shaders/compiled/quad_frag.spv" };
         mQuadRenderer = std::make_shared<QuadGenerator>(
-            GpuManager::getDevice(),
-            GpuManager::getAllocator(),
-            GpuManager::getGraphicsQueue(),
             mFinalRenderPass,
             GpuManager::getCommandPool(),
             mPBRPassMap,
 			quadShaderFiles);
 
 		mPBRMeshRenderer = std::make_shared<StaticMeshGenerator>(
-            GpuManager::getDevice(),
-            GpuManager::getAllocator(),
-            GpuManager::getGraphicsQueue(),
             mPBRRenderPass, 
             GpuManager::getCommandPool(),
 			mPrefilteredMap,
@@ -189,17 +183,11 @@ namespace hvk
 			mBrdfLutMap);
 
 		mUiRenderer = std::make_shared<UiDrawGenerator>(
-            GpuManager::getDevice(),
-            GpuManager::getAllocator(),
-            GpuManager::getGraphicsQueue(),
             mFinalRenderPass, 
             GpuManager::getCommandPool(),
             mSwapchain.swapchainExtent);
 
 		mDebugRenderer = std::make_shared<DebugDrawGenerator>(
-            GpuManager::getDevice(),
-            GpuManager::getAllocator(),
-            GpuManager::getGraphicsQueue(),
             mPBRRenderPass, 
             GpuManager::getCommandPool());
 
@@ -382,6 +370,71 @@ namespace hvk
         io.AddInputCharacter(character);
     }
 
+    void UserApp::drawFrame(double frametime)
+    {
+        uint32_t swapIndex = mApp->renderPrepare(mSwapchain.swapchain);
+
+        // prepare PBR render pass
+        std::array<VkClearValue, 2> clearValues = {};
+        clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.f };
+        clearValues[1].depthStencil = { 1.f, 0 };
+
+        VkRect2D scissor = {
+            {0, 0},
+            mSwapchain.swapchainExtent};
+
+        VkViewport viewport = {
+            0.f, // x
+            0.f, // y
+            static_cast<float>(mSwapchain.swapchainExtent.width), // width
+            static_cast<float>(mSwapchain.swapchainExtent.height), // height
+            0.f, // minDepth
+            1.f  // maxDepth
+        };
+
+        VkRenderPassBeginInfo pbrRenderBegin = 
+        { 
+            VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            nullptr,
+            mPBRRenderPass,
+            mPBRFramebuffer,
+            scissor,
+            static_cast<uint32_t>(clearValues.size()),
+            clearValues.data()
+        };
+
+        auto pbrInheritanceInfo = mApp->renderpassBegin(pbrRenderBegin);
+        std::vector<VkCommandBuffer> pbrCommandBuffers;
+        //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
+
+        mApp->renderpassExecuteAndClose(pbrCommandBuffers);
+
+        // prepare final render pass
+        VkRenderPassBeginInfo finalRenderBegin = {
+            VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            nullptr,
+            mFinalRenderPass,
+            mSwapFramebuffers[swapIndex],
+            scissor,
+            static_cast<uint32_t>(clearValues.size()),
+            clearValues.data()
+        };
+        auto finalInheritanceInfo = mApp->renderpassBegin(finalRenderBegin);
+        std::vector<VkCommandBuffer> finalCommandBuffers;
+        finalCommandBuffers.push_back(mQuadRenderer->drawFrame(
+            finalInheritanceInfo,
+            mSwapFramebuffers[swapIndex],
+            viewport,
+            scissor,
+            mExposureSettings));
+
+        mApp->renderpassExecuteAndClose(finalCommandBuffers);
+
+        mApp->renderFinish();
+        mApp->renderSubmit();
+        mApp->renderPresent(swapIndex);
+    }
+
     void UserApp::runApp()
     {
         double frameTime = 0.f;
@@ -394,7 +447,8 @@ namespace hvk
             shouldClose |= glfwWindowShouldClose(mWindow.get());
 
             shouldClose |= run(frameTime);
-            shouldClose |= mApp->update(frameTime);
+            drawFrame(frameTime);
+            //shouldClose |= mApp->update(frameTime);
             mClock.end();
         }
     }
@@ -436,78 +490,78 @@ namespace hvk
         mApp->setGammaCorrection(gamma);
     }
 
-    void UserApp::setUseSRGBTex(bool useSRGBTex)
-    {
-        mApp->setUseSRGBTex(useSRGBTex);
-    }
+    //void UserApp::setUseSRGBTex(bool useSRGBTex)
+    //{
+    //    mApp->setUseSRGBTex(useSRGBTex);
+    //}
 
-    float UserApp::getGammaCorrection()
-    {
-        return mApp->getGammaCorrection();
-    }
+    //float UserApp::getGammaCorrection()
+    //{
+    //    return mApp->getGammaCorrection();
+    //}
 
-    bool UserApp::isUseSRGBTex()
-    {
-        return mApp->isUseSRGBTex();
-    }
+    //bool UserApp::isUseSRGBTex()
+    //{
+    //    return mApp->isUseSRGBTex();
+    //}
 
-    VkDevice UserApp::getDevice()
-    {
-        return mApp->getDevice();
-    }
+    //VkDevice UserApp::getDevice()
+    //{
+    //    return mApp->getDevice();
+    //}
 
-    hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
-    {
-        return mApp->getAmbientLight();
-    }
+    //hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
+    //{
+    //    return mApp->getAmbientLight();
+    //}
 
-    hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
-    {
-        return mApp->getGammaSettings();
-    }
+    //hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
+    //{
+    //    return mApp->getGammaSettings();
+    //}
 
-    hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
-    {
-        return mApp->getPBRWeight();
-    }
+    //hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
+    //{
+    //    return mApp->getPBRWeight();
+    //}
 
-    hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
-    {
-        return mApp->getExposureSettings();
-    }
+    //hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
+    //{
+    //    return mApp->getExposureSettings();
+    //}
 
-    hvk::HVK_shared<hvk::SkySettings> UserApp::getSkySettings()
-    {
-        return mApp->getSkySettings();
-    }
+    //hvk::HVK_shared<hvk::SkySettings> UserApp::getSkySettings()
+    //{
+    //    return mApp->getSkySettings();
+    //}
 
-    void UserApp::generateEnvironmentMap()
-    {
-        mApp->generateEnvironmentMap();
-    }
+    //void UserApp::generateEnvironmentMap()
+    //{
+    //    mApp->generateEnvironmentMap();
+    //}
 
-    void UserApp::useEnvironmentMap()
-    {
-        mApp->useEnvironmentMap();
-    }
+    //void UserApp::useEnvironmentMap()
+    //{
+    //    mApp->useEnvironmentMap();
+    //}
 
-    void UserApp::useIrradianceMap()
-    {
-        mApp->useIrradianceMap();
-    }
+    //void UserApp::useIrradianceMap()
+    //{
+    //    mApp->useIrradianceMap();
+    //}
 
-    void UserApp::usePrefilteredMap(float lod)
-    {
-        mApp->usePrefilteredMap(lod);
-    }
+    //void UserApp::usePrefilteredMap(float lod)
+    //{
+    //    mApp->usePrefilteredMap(lod);
+    //}
 
-    hvk::ModelPipeline& UserApp::getModelPipeline()
-    {
-        return mApp->getModelPipeline();
-    }
+    //hvk::ModelPipeline& UserApp::getModelPipeline()
+    //{
+    //    return mApp->getModelPipeline();
+    //}
 
-    std::shared_ptr<hvk::StaticMeshGenerator> UserApp::getMeshRenderer()
-    {
-        return mApp->getMeshRenderer();
-    }
+    //std::shared_ptr<hvk::StaticMeshGenerator> UserApp::getMeshRenderer()
+    //{
+    //    return mApp->getMeshRenderer();
+    //}
 }

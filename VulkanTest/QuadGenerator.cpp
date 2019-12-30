@@ -7,15 +7,12 @@
 namespace hvk
 {
 	QuadGenerator::QuadGenerator(
-		VulkanDevice device,
-		VmaAllocator allocator,
-		VkQueue graphicsQueue,
 		VkRenderPass renderPass,
 		VkCommandPool commandPool,
 		HVK_shared<TextureMap> offscreenMap,
 		std::array<std::string, 2>& shaderFiles) :
 
-		DrawlistGenerator(device, allocator, graphicsQueue, renderPass, commandPool),
+		DrawlistGenerator(renderPass, commandPool),
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mDescriptorSet(VK_NULL_HANDLE),
@@ -24,6 +21,9 @@ namespace hvk
 		mRenderable(),
 		mOffscreenMap(offscreenMap)
 	{
+        const auto& device = GpuManager::getDevice();
+        const auto& allocator = GpuManager::getAllocator();
+
 		// Create VBO
 		size_t vertexMemorySize = sizeof(QuadVertex) * numVertices;
 		VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -34,7 +34,7 @@ namespace hvk
 		allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 		allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&bufferInfo,
 			&allocCreateInfo,
 			&mRenderable.vbo.memoryResource,
@@ -52,7 +52,7 @@ namespace hvk
 		indexCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 		indexCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 		vmaCreateBuffer(
-			mAllocator,
+            allocator,
 			&iboInfo,
 			&indexCreateInfo,
 			&mRenderable.ibo.memoryResource,
@@ -65,16 +65,16 @@ namespace hvk
 		{
 			// Create descriptor pool
 			auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER>(1);
-			util::descriptor::createDescriptorPool(mDevice.device, poolSizes, 1, mDescriptorPool);
+			util::descriptor::createDescriptorPool(device, poolSizes, 1, mDescriptorPool);
 
 			// Create descriptor set layout
 			auto quadSamplerBinding = util::descriptor::generateSamplerLayoutBinding(0, 1);
 			std::vector<decltype(quadSamplerBinding)> bindings = { quadSamplerBinding };
-			util::descriptor::createDescriptorSetLayout(mDevice.device, bindings, mDescriptorSetLayout);
+			util::descriptor::createDescriptorSetLayout(device, bindings, mDescriptorSetLayout);
 
 			// Create descriptor set
 			layouts.push_back(mDescriptorSetLayout);
-			util::descriptor::allocateDescriptorSets(mDevice.device, mDescriptorPool, mDescriptorSet, layouts);
+			util::descriptor::allocateDescriptorSets(device, mDescriptorPool, mDescriptorSet, layouts);
 
 			// Update descriptor set
 			VkDescriptorImageInfo imageInfo = {
@@ -86,7 +86,7 @@ namespace hvk
 			auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
 			std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-			util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+			util::descriptor::writeDescriptorSets(device, descriptorWrites);
 		}
 
 		// Prepare pipeline
@@ -100,7 +100,7 @@ namespace hvk
 		layoutCreate.pSetLayouts = layouts.data();
 		layoutCreate.pushConstantRangeCount = 1;
 		layoutCreate.pPushConstantRanges = &pushRange;
-		assert(vkCreatePipelineLayout(mDevice.device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
+		assert(vkCreatePipelineLayout(device, &layoutCreate, nullptr, &mPipelineInfo.pipelineLayout) == VK_SUCCESS);
 
 		util::pipeline::fillVertexInfo<QuadVertex>(mPipelineInfo.vertexInfo);
 
@@ -116,27 +116,28 @@ namespace hvk
 
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState(false, false);
 
-		mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 
 		setInitialized(true);
 	}
 
 	QuadGenerator::~QuadGenerator()
 	{
-        vmaDestroyBuffer(mAllocator, mRenderable.vbo.memoryResource, mRenderable.vbo.allocation);
-        vmaDestroyBuffer(mAllocator, mRenderable.ibo.memoryResource, mRenderable.ibo.allocation);
+        vmaDestroyBuffer(GpuManager::getAllocator(), mRenderable.vbo.memoryResource, mRenderable.vbo.allocation);
+        vmaDestroyBuffer(GpuManager::getAllocator(), mRenderable.ibo.memoryResource, mRenderable.ibo.allocation);
 	}
 
 	void QuadGenerator::invalidate()
 	{
 		setInitialized(false);
-        vkDestroyPipeline(mDevice.device, mPipeline, nullptr);
+        vkDestroyPipeline(GpuManager::getDevice(), mPipeline, nullptr);
 	}
 
 	void QuadGenerator::updateRenderPass(VkRenderPass renderPass)
 	{
-        mColorRenderPass = renderPass;
+        const auto& device = GpuManager::getDevice();
 
+        mColorRenderPass = renderPass;
 		if (mOffscreenMap != nullptr)
 		{
 			// need to re-apply the color attachment since it was destroyed
@@ -150,9 +151,9 @@ namespace hvk
 			auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
 			std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-			util::descriptor::writeDescriptorSets(mDevice.device, descriptorWrites);
+			util::descriptor::writeDescriptorSets(device, descriptorWrites);
 		}
-        mPipeline = generatePipeline(mDevice, mColorRenderPass, mPipelineInfo);
+        mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}
 

@@ -71,9 +71,6 @@ namespace hvk
 
 	public:
 		QuadGenerator(
-			VulkanDevice device,
-			VmaAllocator allocator,
-			VkQueue graphicsQueue,
 			VkRenderPass renderPass,
 			VkCommandPool commandPool,
 			HVK_shared<TextureMap> offscreenMap,
