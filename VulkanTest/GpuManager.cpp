@@ -4,6 +4,7 @@
 
 namespace hvk
 {
+    VkPhysicalDevice GpuManager::sPhysicalDevice = VK_NULL_HANDLE;
     VkDevice GpuManager::sDevice = VK_NULL_HANDLE;
     VkCommandPool GpuManager::sCommandPool = VK_NULL_HANDLE;
     VkQueue GpuManager::sGraphicsQueue = VK_NULL_HANDLE;

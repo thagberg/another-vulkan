@@ -76,7 +76,7 @@ public:
 			mScene,
             duckTransform, 
             duckMesh);
-        addStaticMeshInstance(mDuck);
+        //addStaticMeshInstance(mDuck);
 
 		// ENTT experiments
 		entt::entity modelEntity = mRegistry.create();
@@ -92,7 +92,7 @@ public:
 		//auto comp = mRegistry.get<PBRMaterial, PBRMesh>(modelEntity);
 		//getMeshRenderer()->preparePBREntity(mRegistry, modelEntity);
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
-		mRegistry.assign<PBRBinding>(modelEntity, getMeshRenderer()->createPBRBinding(materialComp));
+		mRegistry.assign<PBRBinding>(modelEntity, mPBRMeshRenderer->createPBRBinding(materialComp));
 
 		auto renderGroup = mRegistry.group<NodeTransform, PBRMesh, PBRBinding>();
 		TestGroup(renderGroup);
@@ -115,14 +115,14 @@ public:
 			//mDynamicLight->getTransform(), 
 			lightTransform,
 			debugMesh);
-		addDebugMeshInstance(mLightBox);
+		//addDebugMeshInstance(mLightBox);
 
         mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
 			"Dynamic Light",
 			mLightBox,
             glm::mat4(1.f), 
             glm::vec3(1.f, 1.f, 1.f), 0.3f);
-        addDynamicLight(mDynamicLight);
+        //addDynamicLight(mDynamicLight);
 		mLightBox->addChild(mDynamicLight);
 
 
@@ -266,50 +266,50 @@ protected:
 		ImGui::End();
 
         ImGui::Begin("Rendering");
-        float gamma = getGammaCorrection();
-		auto gammaSettings = getGammaSettings();
-        bool useSRGBTex = isUseSRGBTex();
-        //ImGui::SliderFloat("Gamma", &gamma, 0.f, 10.f);
-        ImGui::SliderFloat("Gamma", &gammaSettings->gamma, 0.f, 10.f);
-        ImGui::Checkbox("Use sRGB Textures", &useSRGBTex);
-        //setGammaCorrection(gamma);
-        setUseSRGBTex(useSRGBTex);
-		ImGui::Text("Ambient Light");
-		auto ambientLight = getAmbientLight();
-		//ambientLight->lightColor.r
-		ImGui::ColorEdit3("Color##Ambient", &(ambientLight->lightColor.r));
-		ImGui::SliderFloat("IntensityF##Ambient", &(ambientLight->lightIntensity), 0.f, 1.f);
-		auto pbrWeight = getPBRWeight();
-		ImGui::SliderFloat("Metallic", &pbrWeight->metallic, 0.f, 1.f);
-		ImGui::SliderFloat("Roughness", &pbrWeight->roughness, 0.f, 1.f);
-		auto exposureSettings = getExposureSettings();
-		ImGui::SliderFloat("Exposure", &exposureSettings->exposure, 0.f, 10.f);
+  //      float gamma = getGammaCorrection();
+		//auto gammaSettings = getGammaSettings();
+  //      bool useSRGBTex = isUseSRGBTex();
+  //      //ImGui::SliderFloat("Gamma", &gamma, 0.f, 10.f);
+  //      ImGui::SliderFloat("Gamma", &gammaSettings->gamma, 0.f, 10.f);
+  //      ImGui::Checkbox("Use sRGB Textures", &useSRGBTex);
+  //      //setGammaCorrection(gamma);
+  //      setUseSRGBTex(useSRGBTex);
+		//ImGui::Text("Ambient Light");
+		//auto ambientLight = getAmbientLight();
+		////ambientLight->lightColor.r
+		//ImGui::ColorEdit3("Color##Ambient", &(ambientLight->lightColor.r));
+		//ImGui::SliderFloat("IntensityF##Ambient", &(ambientLight->lightIntensity), 0.f, 1.f);
+		//auto pbrWeight = getPBRWeight();
+		//ImGui::SliderFloat("Metallic", &pbrWeight->metallic, 0.f, 1.f);
+		//ImGui::SliderFloat("Roughness", &pbrWeight->roughness, 0.f, 1.f);
+		//auto exposureSettings = getExposureSettings();
+		//ImGui::SliderFloat("Exposure", &exposureSettings->exposure, 0.f, 10.f);
 
-		auto skySettings = getSkySettings();
-		static int skyChoice = 0;
-		static float skyLod = 0.f;
-		bool skyChanged = false;
-		skyChanged = ImGui::RadioButton("Environment Map", &skyChoice, 1); ImGui::SameLine();
-		skyChanged |= ImGui::RadioButton("Irradiance Map", &skyChoice, 2);
-		skyChanged |= ImGui::RadioButton("Prefiltered Map", &skyChoice, 3);
-		if (skyChoice == 3)
-		{
-			ImGui::SliderFloat("LOD", &skySettings->lod, 0.f, 9.f);
-		}
-		if (skyChanged)
-		{
-			switch (skyChoice)
-			{
-			case 1:
-				useEnvironmentMap();
-				break;
-			case 2:
-				useIrradianceMap();
-				break;
-			case 3:
-				usePrefilteredMap(skyLod);
-			}
-		}
+		//auto skySettings = getSkySettings();
+		//static int skyChoice = 0;
+		//static float skyLod = 0.f;
+		//bool skyChanged = false;
+		//skyChanged = ImGui::RadioButton("Environment Map", &skyChoice, 1); ImGui::SameLine();
+		//skyChanged |= ImGui::RadioButton("Irradiance Map", &skyChoice, 2);
+		//skyChanged |= ImGui::RadioButton("Prefiltered Map", &skyChoice, 3);
+		//if (skyChoice == 3)
+		//{
+		//	ImGui::SliderFloat("LOD", &skySettings->lod, 0.f, 9.f);
+		//}
+		//if (skyChanged)
+		//{
+		//	switch (skyChoice)
+		//	{
+		//	case 1:
+		//		useEnvironmentMap();
+		//		break;
+		//	case 2:
+		//		useIrradianceMap();
+		//		break;
+		//	case 3:
+		//		usePrefilteredMap(skyLod);
+		//	}
+		//}
 
         ImGui::End();
 		

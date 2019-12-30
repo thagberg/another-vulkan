@@ -60,21 +60,7 @@ namespace hvk {
 		mFinalRenderFinished(VK_NULL_HANDLE),
         mAllocator(),
         mActiveCamera(nullptr),
-        mMeshRenderer(nullptr),
-        mUiRenderer(nullptr),
-        mDebugRenderer(nullptr),
-		mSkyboxRenderer(nullptr),
-        mQuadRenderer(nullptr),
-		mAmbientLight(nullptr),
-        mRenderFence(VK_NULL_HANDLE),
-		mGammaSettings(nullptr),
-		mPBRWeight(nullptr),
-		mExposureSettings(nullptr),
-		mSkySettings(nullptr),
-		mEnvironmentMap(nullptr),
-		mIrradianceMap(nullptr),
-		mPrefilteredMap(nullptr),
-		mBdrfLutMap(nullptr)
+        mRenderFence(VK_NULL_HANDLE)
     {
 
     }
@@ -84,12 +70,6 @@ namespace hvk {
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
 
 		cleanupSwapchain();
-
-        mQuadRenderer.reset();
-        mMeshRenderer.reset();
-        mUiRenderer.reset();
-        mDebugRenderer.reset();
-		mSkyboxRenderer.reset();
 
 		util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
 		vkDestroyFramebuffer(mDevice, mColorPassFramebuffer, nullptr);
@@ -202,32 +182,12 @@ namespace hvk {
         mImageAvailable = util::signal::createSemaphore(mDevice);
     }
 
-    void VulkanApp::addStaticMeshInstance(HVK_shared<StaticMeshRenderObject> node)
-    {
-        mMeshRenderer->addStaticMeshObject(node);
-    }
-
-    void VulkanApp::addDynamicLight(HVK_shared<Light> light)
-    {
-        mMeshRenderer->addLight(light);
-    }
-
-    void VulkanApp::addDebugMeshInstance(HVK_shared<DebugMeshRenderObject> node)
-    {
-        mDebugRenderer->addDebugMeshObject(node);
-    }
-
 	void VulkanApp::recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight) {
 		vkDeviceWaitIdle(mDevice);
 
         mSurfaceWidth = surfaceWidth;
         mSurfaceHeight = surfaceHeight;
 
-		mSkyboxRenderer->invalidate();
-		mMeshRenderer->invalidate();
-		mUiRenderer->invalidate();
-		mDebugRenderer->invalidate();
-        mQuadRenderer->invalidate();
 		cleanupSwapchain();
 
 		// the color pass map which we render to in the color pass
@@ -247,11 +207,6 @@ namespace hvk {
                 0.001f,
                 1000.0f);
         }
-		mSkyboxRenderer->updateRenderPass(mColorRenderPass);
-		mMeshRenderer->updateRenderPass(mColorRenderPass);
-		mDebugRenderer->updateRenderPass(mColorRenderPass);
-        mQuadRenderer->updateRenderPass(mFinalRenderPass);
-		mUiRenderer->updateRenderPass(mFinalRenderPass, mSwapchain.swapchainExtent);
 	}
 
     void VulkanApp::init(
@@ -277,9 +232,6 @@ namespace hvk {
 
         try {
 			ResourceManager::initialize(200 * 1000 * 1000);
-			mAmbientLight = HVK_make_shared<AmbientLight>(AmbientLight{
-				glm::vec3(1.f, 1.f, 1.f),
-				0.1f });
     	
             enableVulkanValidationLayers();
             std::cout << "init device" << std::endl;
@@ -510,15 +462,14 @@ namespace hvk {
 		assert(vkQueueSubmit(mGraphicsQueue, 1, &submitInfo, mRenderFence) == VK_SUCCESS);
 	}
 
-	void VulkanApp::renderPresent(uint32_t swapIndex)
+	void VulkanApp::renderPresent(uint32_t swapIndex, VkSwapchainKHR swapchain)
 	{
-        VkSwapchainKHR swapchains[] = { mSwapchain.swapchain };
         VkPresentInfoKHR presentInfo = {};
         presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
         presentInfo.waitSemaphoreCount = 1;
         presentInfo.pWaitSemaphores = &mRenderFinished;
         presentInfo.swapchainCount = 1;
-        presentInfo.pSwapchains = swapchains;
+        presentInfo.pSwapchains = &swapchain;
         presentInfo.pImageIndices = &swapIndex;
         presentInfo.pResults = nullptr;
 
@@ -535,26 +486,12 @@ namespace hvk {
         mActiveCamera = camera;
     }
 
-    void VulkanApp::setGammaCorrection(float gamma)
-    {
-        mMeshRenderer->setGammaCorrection(gamma);
-    }
-
-    void VulkanApp::setUseSRGBTex(bool useSRGBTex)
-    {
-        mMeshRenderer->setUseSRGBTex(useSRGBTex);
-    }
-
-	void VulkanApp::setAmbientLight(HVK_shared<AmbientLight> ambientLight)
-    {
-		mAmbientLight = ambientLight;
-    }
-
 	void VulkanApp::generateEnvironmentMap(
 		std::shared_ptr<TextureMap> environmentMap,
 		std::shared_ptr<TextureMap> irradianceMap,
 		std::shared_ptr<TextureMap> prefilteredMap,
-		std::shared_ptr<TextureMap> brdfLutMap)
+		std::shared_ptr<TextureMap> brdfLutMap,
+        const GammaSettings& gammaSettings)
 	{
         const auto& device = GpuManager::getDevice();
         const auto& allocator = GpuManager::getAllocator();
@@ -583,7 +520,7 @@ namespace hvk {
 			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R32G32B32A32_SFLOAT),
 			util::image::createImageSampler(mDevice)});
 
-		std::vector<GammaSettings> gammaSettings = { *mGammaSettings };
+		std::vector<GammaSettings> vgammaSettings = { gammaSettings };
 
 		std::array<std::string, 2> hdrMapShaders = {
 			"shaders/compiled/hdr_to_cubemap_vert.spv",
@@ -599,7 +536,7 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			environmentMap,
 			hdrMapShaders,
-			gammaSettings);
+			vgammaSettings);
 
         // clean up
         vmaDestroyImage(mAllocator, hdrImage.memoryResource, hdrImage.allocation);
@@ -622,7 +559,7 @@ namespace hvk {
 			VK_FORMAT_R16G16B16A16_SFLOAT,
 			irradianceMap,
 			irradianceMapShaders,
-			gammaSettings);
+			vgammaSettings);
 
 		//mSkyboxRenderer->setCubemap(irradianceMap);
 		

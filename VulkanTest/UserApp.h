@@ -50,6 +50,7 @@ namespace hvk
 		std::shared_ptr<GLFWwindow> mWindow;
 		hvk::Clock mClock;
 
+    protected:
 		// Moving things out of vulkanapp
 		VkRenderPass mPBRRenderPass;
 		VkRenderPass mFinalRenderPass;
@@ -76,6 +77,7 @@ namespace hvk
 		ExposureSettings mExposureSettings;
 		SkySettings mSkySettings;
 
+    private:
 		void createPBRRenderPass();
 		void createPBRFramebuffers();
 		void createFinalRenderPass();
@@ -96,11 +98,8 @@ namespace hvk
 		void runApp();
 		void doClose();
 		void toggleCursor(bool enabled);
-		void addStaticMeshInstance(hvk::HVK_shared<hvk::StaticMeshRenderObject> node);
-		void addDynamicLight(hvk::HVK_shared<hvk::Light> light);
-		void addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node);
 		void activateCamera(hvk::HVK_shared<hvk::Camera> camera);
-		void setGammaCorrection(float gamma);
+		hvk::ModelPipeline& getModelPipeline();
 		//hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
 		//hvk::HVK_shared<hvk::PBRWeight> getPBRWeight();
 		//hvk::HVK_shared<hvk::ExposureSettings> getExposureSettings();
@@ -114,7 +113,6 @@ namespace hvk
 		//void useEnvironmentMap();
 		//void useIrradianceMap();
 		//void usePrefilteredMap(float lod);
-		//hvk::ModelPipeline& getModelPipeline();
 		//std::shared_ptr<hvk::StaticMeshGenerator> getMeshRenderer();
 	};
 }

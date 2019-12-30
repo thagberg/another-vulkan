@@ -163,7 +163,8 @@ namespace hvk
             mEnvironmentMap,
             mIrradianceMap,
             mPrefilteredMap,
-            mBrdfLutMap);
+            mBrdfLutMap,
+            mGammaSettings);
 
         // Initialize drawlist generators
 		std::array<std::string, 2> quadShaderFiles = {
@@ -344,6 +345,7 @@ namespace hvk
                 mSwapchain.swapchainImageFormat);
         }
 
+        mSwapFramebuffers.resize(mSwapchainViews.size());
         for (size_t i = 0; i < mSwapchainViews.size(); ++i)
         {
             util::framebuffer::createFramebuffer(
@@ -432,7 +434,7 @@ namespace hvk
 
         mApp->renderFinish();
         mApp->renderSubmit();
-        mApp->renderPresent(swapIndex);
+        mApp->renderPresent(swapIndex, mSwapchain.swapchain);
     }
 
     void UserApp::runApp()
@@ -464,104 +466,13 @@ namespace hvk
         glfwSetInputMode(mWindow.get(), GLFW_CURSOR, toggle);
     }
 
-
-    void UserApp::addStaticMeshInstance(hvk::HVK_shared<hvk::StaticMeshRenderObject> node)
-    {
-        mApp->addStaticMeshInstance(node);
-    }
-
-    void UserApp::addDynamicLight(hvk::HVK_shared<hvk::Light> light)
-    {
-        mApp->addDynamicLight(light);
-    }
-
-    void UserApp::addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node)
-    {
-        mApp->addDebugMeshInstance(node);
-    }
-
     void UserApp::activateCamera(hvk::HVK_shared<hvk::Camera> camera)
     {
         mApp->setActiveCamera(camera);
     }
 
-    void UserApp::setGammaCorrection(float gamma)
+    hvk::ModelPipeline& UserApp::getModelPipeline()
     {
-        mApp->setGammaCorrection(gamma);
+        return mApp->getModelPipeline();
     }
-
-    //void UserApp::setUseSRGBTex(bool useSRGBTex)
-    //{
-    //    mApp->setUseSRGBTex(useSRGBTex);
-    //}
-
-    //float UserApp::getGammaCorrection()
-    //{
-    //    return mApp->getGammaCorrection();
-    //}
-
-    //bool UserApp::isUseSRGBTex()
-    //{
-    //    return mApp->isUseSRGBTex();
-    //}
-
-    //VkDevice UserApp::getDevice()
-    //{
-    //    return mApp->getDevice();
-    //}
-
-    //hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
-    //{
-    //    return mApp->getAmbientLight();
-    //}
-
-    //hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
-    //{
-    //    return mApp->getGammaSettings();
-    //}
-
-    //hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
-    //{
-    //    return mApp->getPBRWeight();
-    //}
-
-    //hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
-    //{
-    //    return mApp->getExposureSettings();
-    //}
-
-    //hvk::HVK_shared<hvk::SkySettings> UserApp::getSkySettings()
-    //{
-    //    return mApp->getSkySettings();
-    //}
-
-    //void UserApp::generateEnvironmentMap()
-    //{
-    //    mApp->generateEnvironmentMap();
-    //}
-
-    //void UserApp::useEnvironmentMap()
-    //{
-    //    mApp->useEnvironmentMap();
-    //}
-
-    //void UserApp::useIrradianceMap()
-    //{
-    //    mApp->useIrradianceMap();
-    //}
-
-    //void UserApp::usePrefilteredMap(float lod)
-    //{
-    //    mApp->usePrefilteredMap(lod);
-    //}
-
-    //hvk::ModelPipeline& UserApp::getModelPipeline()
-    //{
-    //    return mApp->getModelPipeline();
-    //}
-
-    //std::shared_ptr<hvk::StaticMeshGenerator> UserApp::getMeshRenderer()
-    //{
-    //    return mApp->getMeshRenderer();
-    //}
 }
