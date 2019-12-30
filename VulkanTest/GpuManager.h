@@ -9,6 +9,7 @@ namespace hvk
     class GpuManager
     {
     private:
+        static VkPhysicalDevice sPhysicalDevice;
         static VkDevice sDevice;
         static VkCommandPool sCommandPool;
         static VkQueue sGraphicsQueue;
@@ -17,7 +18,13 @@ namespace hvk
         ~GpuManager();
 
     public:
-        static void init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VmaAllocator allocator);
+        static void init(
+            VkPhysicalDevice physicalDevice, 
+            VkDevice device, 
+            VkCommandPool commandPool, 
+            VkQueue graphicsQueue, 
+            VmaAllocator allocator);
+        static const VkPhysicalDevice& getPhysicalDevice() { return sPhysicalDevice; }
         static const VkDevice& getDevice() { return sDevice; }
         static const VkCommandPool& getCommandPool() { return sCommandPool; }
         static const VkQueue& getGraphicsQueue() { return sGraphicsQueue; }

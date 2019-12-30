@@ -164,7 +164,7 @@ namespace hvk
 		VmaAllocationInfo allocInfo;
 		elements.each([](auto entity, auto transform, const auto& mesh, const auto& binding) {
 			// update UBO
-			auto allocInfo = vmaGetAllocationInfo(mAllocator, binding.ubo.allocation, , &allocInfo);
+			auto allocInfo = vmaGetAllocationInfo(mAllocator, binding.ubo.allocation, &allocInfo);
 			ubo.model = transform.localTransform;
 			ubo.model[1][1] *= -1;
 			ubo.modelViewProj = viewProj * ubo.model;
@@ -174,7 +174,7 @@ namespace hvk
 			vkCmdBindIndexBuffer(mCommandBuffer, binding.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
 			vkCmdBindDescriptorSets(
 				mCommandBuffer,
-				VK_PIPELINE_BIND_POINT_GRAHPICS,
+				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				mPipelineInfo.pipelineLayout,
 				1,
 				1,
@@ -185,7 +185,13 @@ namespace hvk
 			push.gamma = gammaSettings.gamma;
 			push.sRGBTextures = true;
 			push.pbrWeight = pbrWeight;
-			vkCmdPushConstants(mCommandBuffer, mPipelineInfo.pipelineLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(PushConstant), &push);
+			vkCmdPushConstants(
+				mCommandBuffer, 
+				mPipelineInfo.pipelineLayout, 
+				VK_SHADER_STAGE_FRAGMENT_BIT, 
+				0, 
+				sizeof(PushConstant), 
+				&push);
 			vkCmdDrawIndexed(mCommandBuffer, mesh.numIndices, 1, 0, 0, 0);
 		});
 

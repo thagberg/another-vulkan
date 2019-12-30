@@ -28,28 +28,28 @@ namespace hvk {
 	private:
 		uint32_t mSurfaceWidth, mSurfaceHeight;
 		VkInstance mInstance;
-		VkSurfaceKHR mSurface;
+		VkSurfaceKHR mSurface;	// M
 
 		VkDevice mDevice;
 		VkPhysicalDevice mPhysicalDevice;
 
 		uint32_t mGraphicsIndex;
 		VkQueue mGraphicsQueue;
-		VkRenderPass mColorRenderPass;
-        VkRenderPass mFinalRenderPass;
+		VkRenderPass mColorRenderPass;	// M
+        VkRenderPass mFinalRenderPass; // M
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mPrimaryCommandBuffer;
 
-        ModelPipeline mModelPipeline;
+		ModelPipeline mModelPipeline;
 
-		SwapchainImageViews mFinalPassImageViews;
-		SwapchainImages mFinalPassSwapchainImages;
-        HVK_shared<TextureMap> mColorPassMap;
-		Resource<VkImage> mDepthResource;
-		VkImageView mDepthView;
-		FrameBuffers mFinalPassFramebuffers;
-        VkFramebuffer mColorPassFramebuffer;
-		Swapchain mSwapchain;
+		SwapchainImageViews mFinalPassImageViews; // M
+		SwapchainImages mFinalPassSwapchainImages; // M
+        HVK_shared<TextureMap> mColorPassMap; // M
+		Resource<VkImage> mDepthResource; // M
+		VkImageView mDepthView; // M
+		FrameBuffers mFinalPassFramebuffers; // M
+        VkFramebuffer mColorPassFramebuffer; // M
+		Swapchain mSwapchain; // M
 
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
@@ -57,29 +57,26 @@ namespace hvk {
 
 		VmaAllocator mAllocator;
 
-		CameraRef mActiveCamera;
+		CameraRef mActiveCamera;	// M
 
-		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;
-		std::shared_ptr<UiDrawGenerator> mUiRenderer;
-		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
-		HVK_shared<CubemapGenerator<SkySettings>> mSkyboxRenderer;
-        HVK_shared<QuadGenerator> mQuadRenderer;
-		HVK_shared<AmbientLight> mAmbientLight;
+		std::shared_ptr<StaticMeshGenerator> mMeshRenderer;	// M
+		std::shared_ptr<UiDrawGenerator> mUiRenderer;	// M
+		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;	// M
+		HVK_shared<CubemapGenerator<SkySettings>> mSkyboxRenderer; // M
+        HVK_shared<QuadGenerator> mQuadRenderer; // M
+		HVK_shared<AmbientLight> mAmbientLight;	// M
 
 		VkFence mRenderFence;
 
-		std::vector<VkCommandBuffer> mFirstPassCommandBuffers;
-		std::vector<VkCommandBuffer> mSecondPassCommandBuffers;
+		HVK_shared<GammaSettings> mGammaSettings; // M
+		HVK_shared<PBRWeight> mPBRWeight; // M
+		HVK_shared<ExposureSettings> mExposureSettings; // M
+		HVK_shared<SkySettings> mSkySettings; // M
 
-		HVK_shared<GammaSettings> mGammaSettings;
-		HVK_shared<PBRWeight> mPBRWeight;
-		HVK_shared<ExposureSettings> mExposureSettings;
-		HVK_shared<SkySettings> mSkySettings;
-
-		HVK_shared<TextureMap> mEnvironmentMap;
-		HVK_shared<TextureMap> mIrradianceMap;
-		HVK_shared<TextureMap> mPrefilteredMap;
-		HVK_shared<TextureMap> mBdrfLutMap;
+		HVK_shared<TextureMap> mEnvironmentMap; // M
+		HVK_shared<TextureMap> mIrradianceMap; // M
+		HVK_shared<TextureMap> mPrefilteredMap; // M
+		HVK_shared<TextureMap> mBdrfLutMap; // M
 
 	private:
 
@@ -120,7 +117,11 @@ namespace hvk {
         float getGammaCorrection() { return mMeshRenderer->getGammaCorrection(); }
         bool isUseSRGBTex() { return mMeshRenderer->isUseSRGBTex(); }
         VkDevice getDevice() { return mDevice; }
-		void generateEnvironmentMap();
+		void generateEnvironmentMap(
+			std::shared_ptr<TextureMap> environmentMap,
+			std::shared_ptr<TextureMap> irradianceMap,
+			std::shared_ptr<TextureMap> prefilteredMap,
+			std::shared_ptr<TextureMap> brdfLutMap);
 		void useEnvironmentMap() { mSkyboxRenderer->setCubemap(mEnvironmentMap); }
 		void useIrradianceMap() { mSkyboxRenderer->setCubemap(mIrradianceMap); }
 		void usePrefilteredMap(float lod) 

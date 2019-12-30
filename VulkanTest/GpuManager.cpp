@@ -18,8 +18,14 @@ namespace hvk
     {
     }
 
-    void GpuManager::init(VkDevice device, VkCommandPool commandPool, VkQueue graphicsQueue, VmaAllocator allocator)
+    void GpuManager::init(
+        VkPhysicalDevice physicalDevice, 
+        VkDevice device, 
+        VkCommandPool commandPool, 
+        VkQueue graphicsQueue, 
+        VmaAllocator allocator)
     {
+        sPhysicalDevice = physicalDevice;
         sDevice = device;
         sCommandPool = commandPool;
         sGraphicsQueue = graphicsQueue;

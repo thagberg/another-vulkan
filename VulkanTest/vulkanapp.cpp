@@ -185,28 +185,6 @@ namespace hvk {
 			mGraphicsIndex, 
 			VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT);
 
-        VkBool32 surfaceSupported;
-        vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, mSurface, &surfaceSupported);
-        if (!surfaceSupported) {
-            throw std::runtime_error("Surface not supported by Physical Device");
-        }
-
-        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Swapchain");
-        }
-
-		initFramebuffers();
-
-		QueueFamilies families = {
-			mGraphicsIndex,
-			mGraphicsIndex
-		};
-		VulkanDevice device = {
-			mPhysicalDevice,
-			mDevice,
-			families
-		};
-
 		// Create fence for rendering complete
 		VkFenceCreateInfo fenceCreate = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 		fenceCreate.pNext = nullptr;
@@ -214,7 +192,7 @@ namespace hvk {
 
 		mRenderFinished = util::signal::createSemaphore(mDevice);
 		mFinalRenderFinished = util::signal::createSemaphore(mDevice);
-		assert(vkCreateFence(device.device, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
+		assert(vkCreateFence(mDevice, &fenceCreate, nullptr, &mRenderFence) == VK_SUCCESS);
 
 		// Allocate command buffer
 		VkCommandBufferAllocateInfo bufferAlloc = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
@@ -222,97 +200,6 @@ namespace hvk {
 		bufferAlloc.commandPool = mCommandPool;
 		bufferAlloc.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		assert(vkAllocateCommandBuffers(mDevice, &bufferAlloc, &mPrimaryCommandBuffer) == VK_SUCCESS);
-
-		// Initialize gamma settings
-		mGammaSettings = HVK_make_shared<GammaSettings>(GammaSettings{ 2.2f });
-
-		// Initialize PBR weight values
-		mPBRWeight = HVK_make_shared<PBRWeight>(PBRWeight{ 1.f, 1.f });
-
-		// Initialize Exposure settings
-		mExposureSettings = HVK_make_shared<ExposureSettings>(ExposureSettings{ 1.0 });
-
-		// TEST: Initialize sky settings
-		mSkySettings = HVK_make_shared<SkySettings>(SkySettings{ 2.2f, 2.f });
-
-
-        // Create cubemap for skybox and environmental mapping
-        std::array<std::string, 6> skyboxFiles = {
-            "resources/sky/desertsky_rt.png",
-            "resources/sky/desertsky_lf.png",
-            "resources/sky/desertsky_up_fixed.png",
-            "resources/sky/desertsky_dn_fixed.png",
-            "resources/sky/desertsky_bk.png",
-            "resources/sky/desertsky_ft.png"
-        };
-        auto skyboxMap = HVK_make_shared<TextureMap>(util::image::createCubeMap(
-            mDevice,
-            mAllocator,
-            mCommandPool,
-            mGraphicsQueue,
-            skyboxFiles));
-
-		// Initialize lighting maps
-		mEnvironmentMap = HVK_make_shared<TextureMap>();
-		mIrradianceMap = HVK_make_shared<TextureMap>();
-		mPrefilteredMap = HVK_make_shared<TextureMap>();
-		mBdrfLutMap = HVK_make_shared<TextureMap>();
-		generateEnvironmentMap();
-
-		// Initialize drawlist generators
-		std::array<std::string, 2> quadShaderFiles = {
-			"shaders/compiled/quad_vert.spv",
-			"shaders/compiled/quad_frag.spv" };
-        mQuadRenderer = HVK_make_shared<QuadGenerator>(
-            device,
-            mAllocator,
-            mGraphicsQueue,
-            mFinalRenderPass,
-            mCommandPool,
-            mColorPassMap,
-			quadShaderFiles);
-
-		mMeshRenderer = std::make_shared<StaticMeshGenerator>(
-            device, 
-            mAllocator, 
-            mGraphicsQueue, 
-            mColorRenderPass, 
-            mCommandPool,
-            //mEnvironmentMap,
-			mPrefilteredMap,
-			mIrradianceMap,
-			mBdrfLutMap);
-
-		mUiRenderer = std::make_shared<UiDrawGenerator>(
-            device, 
-            mAllocator, 
-            mGraphicsQueue, 
-            //mColorRenderPass, 
-            mFinalRenderPass, 
-            mCommandPool, 
-            mSwapchain.swapchainExtent);
-
-		mDebugRenderer = std::make_shared<DebugDrawGenerator>(
-            device, 
-            mAllocator, 
-            mGraphicsQueue, 
-            mColorRenderPass, 
-            mCommandPool);
-
-		std::array<std::string, 2> skyboxShaders = {
-			"shaders/compiled/sky_vert.spv",
-			"shaders/compiled/sky_frag.spv"};
-		mSkyboxRenderer = HVK_make_shared<CubemapGenerator<SkySettings>>(
-			device,
-			mAllocator,
-			mGraphicsQueue,
-			mColorRenderPass,
-			mCommandPool,
-            skyboxMap,
-			skyboxShaders);
-
-		mFirstPassCommandBuffers.resize(3);
-		mSecondPassCommandBuffers.resize(2);
 
         mImageAvailable = util::signal::createSemaphore(mDevice);
     }
@@ -399,6 +286,12 @@ namespace hvk {
             enableVulkanValidationLayers();
             std::cout << "init device" << std::endl;
             initializeDevice();
+			std::cout << "Verify surface support and compatibility" << std::endl;
+			VkBool32 surfaceSupported;
+			vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, mSurface, &surfaceSupported);
+			if (!surfaceSupported) {
+				throw std::runtime_error("Surface not supported by Physical Device");
+			}
             std::cout << "init renderer" << std::endl;
             initializeRenderer();
             std::cout << "done initializing" << std::endl;
@@ -407,7 +300,7 @@ namespace hvk {
             std::cout << "Error during initialization: " << error.what() << std::endl;
         }
 
-		GpuManager::init(mDevice, mCommandPool, mGraphicsQueue, mAllocator);
+		GpuManager::init(mPhysicalDevice, mDevice, mCommandPool, mGraphicsQueue, mAllocator);
         mModelPipeline.init();
     }
 
@@ -748,7 +641,11 @@ namespace hvk {
 		mAmbientLight = ambientLight;
     }
 
-	void VulkanApp::generateEnvironmentMap()
+	void VulkanApp::generateEnvironmentMap(
+		std::shared_ptr<TextureMap> environmentMap,
+		std::shared_ptr<TextureMap> irradianceMap,
+		std::shared_ptr<TextureMap> prefilteredMap,
+		std::shared_ptr<TextureMap> brdfLutMap)
 	{
 		QueueFamilies families = {
 			mGraphicsIndex,
@@ -795,7 +692,7 @@ namespace hvk {
 			hdrMap,
 			1024,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
-			mEnvironmentMap,
+			environmentMap,
 			hdrMapShaders,
 			gammaSettings);
 
@@ -815,10 +712,10 @@ namespace hvk {
 			mCommandPool,
 			mGraphicsQueue,
 			mPrimaryCommandBuffer,
-			mEnvironmentMap,
+			environmentMap,
 			32,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
-			mIrradianceMap,
+			irradianceMap,
 			irradianceMapShaders,
 			gammaSettings);
 
@@ -841,10 +738,10 @@ namespace hvk {
 			mCommandPool,
 			mGraphicsQueue,
 			mPrimaryCommandBuffer,
-			mEnvironmentMap,
+			environmentMap,
 			256,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
-			mPrefilteredMap,
+			prefilteredMap,
 			prefilterMapShaders,
 			roughnessSettings,
 			numMips);
@@ -864,7 +761,7 @@ namespace hvk {
 			mPrimaryCommandBuffer,
 			512,
 			VK_FORMAT_R16G16B16A16_SFLOAT,
-			mBdrfLutMap,
+			brdfLutMap,
 			brdfLutShaders);
 		assert(vkWaitForFences(mDevice, 1, &brdfFence, VK_TRUE, UINT64_MAX) == VK_SUCCESS);
 

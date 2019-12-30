@@ -2,6 +2,14 @@
 #include "vulkanapp.h"
 #include "InputManager.h"
 #include "imgui\imgui.h"
+#include "vulkan-util.h"
+#include "GpuManager.h"
+#include "types.h"
+#include "HvkUtil.h"
+#include "renderpass-util.h"
+#include "image-util.h"
+#include "command-util.h"
+#include "framebuffer-util.h"
 
 const std::vector<const char*> validationLayers = {
     "VK_LAYER_KHRONOS_validation"
@@ -29,201 +37,477 @@ std::vector<const char*> getRequiredExtensions() {
     return extensions;
 }
 
-UserApp::UserApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
-    mWindowWidth(windowWidth),
-    mWindowHeight(windowHeight),
-    mWindowTitle(windowTitle),
-    mVulkanInstance(VK_NULL_HANDLE),
-    mWindowSurface(VK_NULL_HANDLE),
-	mApp(std::make_unique<hvk::VulkanApp>()),
-    mWindow(initializeWindow(mWindowWidth, mWindowHeight, mWindowTitle), glfwDestroyWindow),
-    mClock()
+namespace hvk
 {
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Vulkan Test";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "No Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_1;
 
-    std::vector<const char*> extensions = getRequiredExtensions();
-
-    VkInstanceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
-    createInfo.ppEnabledExtensionNames = extensions.data();
-    createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
-    createInfo.ppEnabledLayerNames = validationLayers.data();
-
-    VkResult instanceResult = vkCreateInstance(&createInfo, nullptr, &mVulkanInstance);
-
-    if (instanceResult != VK_SUCCESS) {
-        throw std::runtime_error("Failed to initialize Vulkan");
-    }
-
-    if (glfwCreateWindowSurface(mVulkanInstance, mWindow.get(), nullptr, &mWindowSurface) != VK_SUCCESS) {
-        throw std::runtime_error("Failed to create Window Surface");
-    }
-
-    glfwSetWindowUserPointer(mWindow.get(), this);
-    glfwSetFramebufferSizeCallback(mWindow.get(), UserApp::handleWindowResize);
-	glfwSetCharCallback(mWindow.get(), UserApp::handleCharInput);
-    ImGui::CreateContext();
-	// must init InputManager after we've created an ImGui context
-    hvk::InputManager::init(mWindow);
-
-	mApp->init(mWindowWidth, mWindowHeight, mVulkanInstance, mWindowSurface);
-}
-
-UserApp::~UserApp()
-{
-    glfwTerminate();
-    mApp.reset();
-    vkDestroySurfaceKHR(mVulkanInstance, mWindowSurface, nullptr);
-    vkDestroyInstance(mVulkanInstance, nullptr);
-}
-
-void UserApp::handleWindowResize(GLFWwindow* window, int width, int height) 
-{
-    UserApp* thisApp = reinterpret_cast<UserApp*>(glfwGetWindowUserPointer(window));
-    thisApp->mWindowWidth = width;
-    thisApp->mWindowHeight = height;
-    thisApp->mApp->recreateSwapchain(thisApp->mWindowWidth, thisApp->mWindowHeight);
-}
-
-void UserApp::handleCharInput(GLFWwindow* window, uint32_t character)
-{
-	ImGuiIO& io = ImGui::GetIO();
-	io.AddInputCharacter(character);
-}
-
-void UserApp::runApp()
-{
-    double frameTime = 0.f;
-    bool shouldClose = false;
-    while (!shouldClose)
+    UserApp::UserApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
+        mWindowWidth(windowWidth),
+        mWindowHeight(windowHeight),
+        mWindowTitle(windowTitle),
+        mVulkanInstance(VK_NULL_HANDLE),
+        mWindowSurface(VK_NULL_HANDLE),
+        mApp(std::make_unique<hvk::VulkanApp>()),
+        mWindow(initializeWindow(mWindowWidth, mWindowHeight, mWindowTitle), glfwDestroyWindow),
+        mClock(),
+        mPBRRenderPass(VK_NULL_HANDLE),
+        mFinalRenderPass(VK_NULL_HANDLE),
+        mSwapchain(),
+        mSwapchainImages(),
+        mSwapchainViews(),
+        mSwapFramebuffers(),
+        mPBRFramebuffer(VK_NULL_HANDLE),
+        mPBRPassMap(nullptr),
+        mPBRDepthImage(),
+        mPBRDepthView(VK_NULL_HANDLE),
+        mPBRMeshRenderer(nullptr),
+        mUiRenderer(nullptr),
+        mDebugRenderer(nullptr),
+        mSkyboxRenderer(nullptr),
+        mQuadRenderer(nullptr),
+        mAmbientLight(nullptr),
+        mEnvironmentMap(nullptr),
+        mIrradianceMap(nullptr),
+        mPrefilteredMap(nullptr),
+        mBrdfLutMap(nullptr),
+        mGammaSettings(),
+        mPBRWeight(),
+        mExposureSettings(),
+        mSkySettings()
     {
-        mClock.start();
-		frameTime = mClock.getDelta();
+        VkApplicationInfo appInfo = {};
+        appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+        appInfo.pApplicationName = "Vulkan Test";
+        appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.pEngineName = "No Engine";
+        appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+        appInfo.apiVersion = VK_API_VERSION_1_1;
 
-        shouldClose |= glfwWindowShouldClose(mWindow.get());
+        std::vector<const char*> extensions = getRequiredExtensions();
 
-        shouldClose |= run(frameTime);
-        shouldClose |= mApp->update(frameTime);
-        mClock.end();
+        VkInstanceCreateInfo createInfo = {};
+        createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+        createInfo.pApplicationInfo = &appInfo;
+        createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
+        createInfo.ppEnabledExtensionNames = extensions.data();
+        createInfo.enabledLayerCount = static_cast<uint32_t>(validationLayers.size());
+        createInfo.ppEnabledLayerNames = validationLayers.data();
+
+        VkResult instanceResult = vkCreateInstance(&createInfo, nullptr, &mVulkanInstance);
+
+        if (instanceResult != VK_SUCCESS) {
+            throw std::runtime_error("Failed to initialize Vulkan");
+        }
+
+        if (glfwCreateWindowSurface(mVulkanInstance, mWindow.get(), nullptr, &mWindowSurface) != VK_SUCCESS) {
+            throw std::runtime_error("Failed to create Window Surface");
+        }
+
+        glfwSetWindowUserPointer(mWindow.get(), this);
+        glfwSetFramebufferSizeCallback(mWindow.get(), UserApp::handleWindowResize);
+        glfwSetCharCallback(mWindow.get(), UserApp::handleCharInput);
+        ImGui::CreateContext();
+        // must init InputManager after we've created an ImGui context
+        hvk::InputManager::init(mWindow);
+
+        mApp->init(mWindowWidth, mWindowHeight, mVulkanInstance, mWindowSurface);
+
+        // Create swapchain
+        assert(createSwapchain(
+            GpuManager::getPhysicalDevice(),
+            GpuManager::getDevice(),
+            mWindowSurface,
+            mWindowWidth,
+            mWindowHeight,
+            mSwapchain) == VK_SUCCESS);
+
+        // initialize render passes
+        createFinalRenderPass();
+        createPBRRenderPass();
+
+        // initialize framebuffers
+        createPBRFramebuffers();
+        createSwapFramebuffers();
+
+        // Initialize various rendering settings
+		// Initialize gamma settings
+		mGammaSettings = { 2.2f };
+		// Initialize PBR weight values
+		mPBRWeight = { 1.f, 1.f };
+		// Initialize Exposure settings
+		mExposureSettings = { 1.0 };
+		// Initialize sky settings
+		mSkySettings = { 2.2f, 2.f };
+
+        //// Create cubemap for skybox and environmental mapping
+        //std::array<std::string, 6> skyboxFiles = {
+        //    "resources/sky/desertsky_rt.png",
+        //    "resources/sky/desertsky_lf.png",
+        //    "resources/sky/desertsky_up_fixed.png",
+        //    "resources/sky/desertsky_dn_fixed.png",
+        //    "resources/sky/desertsky_bk.png",
+        //    "resources/sky/desertsky_ft.png"
+        //};
+        //auto skyboxMap = HVK_make_shared<TextureMap>(util::image::createCubeMap(
+        //    mDevice,
+        //    mAllocator,
+        //    mCommandPool,
+        //    mGraphicsQueue,
+        //    skyboxFiles));
+
+		// Initialize lighting maps
+		mEnvironmentMap = std::make_shared<TextureMap>();
+		mIrradianceMap = std::make_shared<TextureMap>();
+		mPrefilteredMap = std::make_shared<TextureMap>();
+		mBrdfLutMap = std::make_shared<TextureMap>();
+        mApp->generateEnvironmentMap(
+            mEnvironmentMap,
+            mIrradianceMap,
+            mPrefilteredMap,
+            mBrdfLutMap);
+
+        // Initialize drawlist generators
+		std::array<std::string, 2> quadShaderFiles = {
+			"shaders/compiled/quad_vert.spv",
+			"shaders/compiled/quad_frag.spv" };
+        mQuadRenderer = std::make_shared<QuadGenerator>(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getGraphicsQueue(),
+            mFinalRenderPass,
+            GpuManager::getCommandPool(),
+            mPBRPassMap,
+			quadShaderFiles);
+
+		mPBRMeshRenderer = std::make_shared<StaticMeshGenerator>(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getGraphicsQueue(),
+            mPBRRenderPass, 
+            GpuManager::getCommandPool(),
+			mPrefilteredMap,
+			mIrradianceMap,
+			mBrdfLutMap);
+
+		mUiRenderer = std::make_shared<UiDrawGenerator>(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getGraphicsQueue(),
+            mFinalRenderPass, 
+            GpuManager::getCommandPool(),
+            mSwapchain.swapchainExtent);
+
+		mDebugRenderer = std::make_shared<DebugDrawGenerator>(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getGraphicsQueue(),
+            mPBRRenderPass, 
+            GpuManager::getCommandPool());
+
+		//std::array<std::string, 2> skyboxShaders = {
+		//	"shaders/compiled/sky_vert.spv",
+		//	"shaders/compiled/sky_frag.spv"};
+		//mSkyboxRenderer = HVK_make_shared<CubemapGenerator<SkySettings>>(
+		//	device,
+		//	mAllocator,
+		//	mGraphicsQueue,
+		//	mColorRenderPass,
+		//	mCommandPool,
+  //          skyboxMap,
+		//	skyboxShaders);
     }
-}
 
-void UserApp::doClose()
-{
-	close();
-}
+    UserApp::~UserApp()
+    {
+        glfwTerminate();
+        mApp.reset();
+        vkDestroySurfaceKHR(mVulkanInstance, mWindowSurface, nullptr);
+        vkDestroyInstance(mVulkanInstance, nullptr);
+    }
 
-void UserApp::toggleCursor(bool enabled)
-{
-    int toggle = enabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
-    glfwSetInputMode(mWindow.get(), GLFW_CURSOR, toggle);
-}
+    void UserApp::createPBRFramebuffers()
+    {
+		mPBRPassMap = std::make_shared<TextureMap>(util::image::createImageMap(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getCommandPool(),
+            GpuManager::getGraphicsQueue(),
+			VK_FORMAT_R16G16B16A16_SFLOAT,
+			mSwapchain.swapchainExtent.width,
+			mSwapchain.swapchainExtent.height,
+			0,
+			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
+
+		// create depth image and view
+		VkImageCreateInfo depthImageCreate = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+		depthImageCreate.imageType = VK_IMAGE_TYPE_2D;
+		depthImageCreate.extent.width = mSwapchain.swapchainExtent.width;
+		depthImageCreate.extent.height = mSwapchain.swapchainExtent.height;
+		depthImageCreate.extent.depth = 1;
+		depthImageCreate.mipLevels = 1;
+		depthImageCreate.arrayLayers = 1;
+		depthImageCreate.format = VK_FORMAT_D32_SFLOAT;
+		depthImageCreate.tiling = VK_IMAGE_TILING_OPTIMAL;
+		depthImageCreate.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthImageCreate.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		depthImageCreate.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		depthImageCreate.samples = VK_SAMPLE_COUNT_1_BIT;
+
+        VmaAllocationCreateInfo depthImageAllocationCreate = {};
+        depthImageAllocationCreate.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        vmaCreateImage(
+            GpuManager::getAllocator(),
+            &depthImageCreate,
+            &depthImageAllocationCreate,
+            &mPBRDepthImage.memoryResource,
+            &mPBRDepthImage.allocation,
+            nullptr);
+
+		mPBRDepthView = util::image::createImageView(
+            GpuManager::getDevice(),
+            mPBRDepthImage.memoryResource, 
+            VK_FORMAT_D32_SFLOAT, 
+            VK_IMAGE_ASPECT_DEPTH_BIT);
+		auto commandBuffer = util::command::beginSingleTimeCommand(GpuManager::getDevice(), GpuManager::getCommandPool());
+		util::image::transitionImageLayout(
+			commandBuffer,
+			mPBRDepthImage.memoryResource, 
+			VK_IMAGE_LAYOUT_UNDEFINED, 
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		util::command::endSingleTimeCommand(
+            GpuManager::getDevice(), 
+            GpuManager::getCommandPool(), 
+            commandBuffer, 
+            GpuManager::getGraphicsQueue());
+
+        util::framebuffer::createFramebuffer(
+            GpuManager::getDevice(),
+            mPBRRenderPass,
+			mSwapchain.swapchainExtent, 
+			mPBRPassMap->view, 
+			&mPBRDepthView, 
+			&mPBRFramebuffer);
+    }
+
+    void UserApp::createPBRRenderPass()
+    {
+        // PBR pass dependencies
+		std::vector<VkSubpassDependency> pbrPassDependencies = {
+			util::renderpass::createSubpassDependency(
+				VK_SUBPASS_EXTERNAL,
+				0,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT),
+			util::renderpass::createSubpassDependency(
+				0,
+				VK_SUBPASS_EXTERNAL,
+				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+				VK_ACCESS_SHADER_READ_BIT,
+				VK_DEPENDENCY_BY_REGION_BIT)
+		};
+
+        // Color Attachment
+		auto colorAttachment = util::renderpass::createColorAttachment(
+			VK_FORMAT_R16G16B16A16_SFLOAT, 
+			VK_IMAGE_LAYOUT_UNDEFINED, 
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        // Depth attachment
+		auto depthAttachment = util::renderpass::createDepthAttachment();
+
+        mPBRRenderPass = util::renderpass::createRenderPass(
+            GpuManager::getDevice(),
+            VK_FORMAT_R16G16B16A16_SFLOAT,
+            pbrPassDependencies,
+            &colorAttachment,
+            &depthAttachment);
+    }
+
+    void UserApp::createFinalRenderPass()
+    {
+        auto finalColorAttachment = util::renderpass::createColorAttachment(mSwapchain.swapchainImageFormat);
+		std::vector<VkSubpassDependency> finalPassDependencies = { util::renderpass::createSubpassDependency() };
+        mFinalRenderPass = util::renderpass::createRenderPass(
+            GpuManager::getDevice(),
+            mSwapchain.swapchainImageFormat, 
+            finalPassDependencies, 
+            &finalColorAttachment);
+    }
+
+    void UserApp::createSwapFramebuffers()
+    {
+        uint32_t imageCount = 0;
+        vkGetSwapchainImagesKHR(GpuManager::getDevice(), mSwapchain.swapchain, &imageCount, nullptr);
+        vkGetSwapchainImagesKHR(GpuManager::getDevice(), mSwapchain.swapchain, &imageCount, nullptr);
+        mSwapchainImages.resize(imageCount);
+        vkGetSwapchainImagesKHR(GpuManager::getDevice(), mSwapchain.swapchain, &imageCount, mSwapchainImages.data());
+
+        mSwapchainViews.resize(mSwapchainImages.size());
+        for (size_t i = 0; i < mSwapchainViews.size(); ++i)
+        {
+            mSwapchainViews[i] = util::image::createImageView(
+                GpuManager::getDevice(),
+                mSwapchainImages[i],
+                mSwapchain.swapchainImageFormat);
+        }
+
+        for (size_t i = 0; i < mSwapchainViews.size(); ++i)
+        {
+            util::framebuffer::createFramebuffer(
+                GpuManager::getDevice(),
+				mFinalRenderPass, 
+				mSwapchain.swapchainExtent, 
+				mSwapchainViews[i], 
+				nullptr, 
+				&mSwapFramebuffers[i]);
+        }
+    }
+
+    void UserApp::handleWindowResize(GLFWwindow* window, int width, int height)
+    {
+        UserApp* thisApp = reinterpret_cast<UserApp*>(glfwGetWindowUserPointer(window));
+        thisApp->mWindowWidth = width;
+        thisApp->mWindowHeight = height;
+        thisApp->mApp->recreateSwapchain(thisApp->mWindowWidth, thisApp->mWindowHeight);
+    }
+
+    void UserApp::handleCharInput(GLFWwindow* window, uint32_t character)
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddInputCharacter(character);
+    }
+
+    void UserApp::runApp()
+    {
+        double frameTime = 0.f;
+        bool shouldClose = false;
+        while (!shouldClose)
+        {
+            mClock.start();
+            frameTime = mClock.getDelta();
+
+            shouldClose |= glfwWindowShouldClose(mWindow.get());
+
+            shouldClose |= run(frameTime);
+            shouldClose |= mApp->update(frameTime);
+            mClock.end();
+        }
+    }
+
+    void UserApp::doClose()
+    {
+        close();
+    }
+
+    void UserApp::toggleCursor(bool enabled)
+    {
+        int toggle = enabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
+        glfwSetInputMode(mWindow.get(), GLFW_CURSOR, toggle);
+    }
 
 
-void UserApp::addStaticMeshInstance(hvk::HVK_shared<hvk::StaticMeshRenderObject> node)
-{
-    mApp->addStaticMeshInstance(node);
-}
+    void UserApp::addStaticMeshInstance(hvk::HVK_shared<hvk::StaticMeshRenderObject> node)
+    {
+        mApp->addStaticMeshInstance(node);
+    }
 
-void UserApp::addDynamicLight(hvk::HVK_shared<hvk::Light> light)
-{
-    mApp->addDynamicLight(light);
-}
+    void UserApp::addDynamicLight(hvk::HVK_shared<hvk::Light> light)
+    {
+        mApp->addDynamicLight(light);
+    }
 
-void UserApp::addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node)
-{
-    mApp->addDebugMeshInstance(node);
-}
+    void UserApp::addDebugMeshInstance(hvk::HVK_shared<hvk::DebugMeshRenderObject> node)
+    {
+        mApp->addDebugMeshInstance(node);
+    }
 
-void UserApp::activateCamera(hvk::HVK_shared<hvk::Camera> camera)
-{
-    mApp->setActiveCamera(camera);
-}
+    void UserApp::activateCamera(hvk::HVK_shared<hvk::Camera> camera)
+    {
+        mApp->setActiveCamera(camera);
+    }
 
-void UserApp::setGammaCorrection(float gamma)
-{
-    mApp->setGammaCorrection(gamma);
-}
+    void UserApp::setGammaCorrection(float gamma)
+    {
+        mApp->setGammaCorrection(gamma);
+    }
 
-void UserApp::setUseSRGBTex(bool useSRGBTex)
-{
-    mApp->setUseSRGBTex(useSRGBTex);
-}
+    void UserApp::setUseSRGBTex(bool useSRGBTex)
+    {
+        mApp->setUseSRGBTex(useSRGBTex);
+    }
 
-float UserApp::getGammaCorrection() 
-{ 
-    return mApp->getGammaCorrection(); 
-}
+    float UserApp::getGammaCorrection()
+    {
+        return mApp->getGammaCorrection();
+    }
 
-bool UserApp::isUseSRGBTex() 
-{ 
-    return mApp->isUseSRGBTex(); 
-}
+    bool UserApp::isUseSRGBTex()
+    {
+        return mApp->isUseSRGBTex();
+    }
 
-VkDevice UserApp::getDevice()
-{
-    return mApp->getDevice();
-}
+    VkDevice UserApp::getDevice()
+    {
+        return mApp->getDevice();
+    }
 
-hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
-{
-	return mApp->getAmbientLight();
-}
+    hvk::HVK_shared<hvk::AmbientLight> UserApp::getAmbientLight()
+    {
+        return mApp->getAmbientLight();
+    }
 
-hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
-{
-	return mApp->getGammaSettings();
-}
+    hvk::HVK_shared<hvk::GammaSettings> UserApp::getGammaSettings()
+    {
+        return mApp->getGammaSettings();
+    }
 
-hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
-{
-	return mApp->getPBRWeight();
-}
+    hvk::HVK_shared<hvk::PBRWeight> UserApp::getPBRWeight()
+    {
+        return mApp->getPBRWeight();
+    }
 
-hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
-{
-	return mApp->getExposureSettings();
-}
+    hvk::HVK_shared<hvk::ExposureSettings> UserApp::getExposureSettings()
+    {
+        return mApp->getExposureSettings();
+    }
 
-hvk::HVK_shared<hvk::SkySettings> UserApp::getSkySettings()
-{
-	return mApp->getSkySettings();
-}
+    hvk::HVK_shared<hvk::SkySettings> UserApp::getSkySettings()
+    {
+        return mApp->getSkySettings();
+    }
 
-void UserApp::generateEnvironmentMap()
-{
-	mApp->generateEnvironmentMap();
-}
+    void UserApp::generateEnvironmentMap()
+    {
+        mApp->generateEnvironmentMap();
+    }
 
-void UserApp::useEnvironmentMap()
-{
-	mApp->useEnvironmentMap();
-}
+    void UserApp::useEnvironmentMap()
+    {
+        mApp->useEnvironmentMap();
+    }
 
-void UserApp::useIrradianceMap()
-{
-	mApp->useIrradianceMap();
-}
+    void UserApp::useIrradianceMap()
+    {
+        mApp->useIrradianceMap();
+    }
 
-void UserApp::usePrefilteredMap(float lod)
-{
-	mApp->usePrefilteredMap(lod);
-}
+    void UserApp::usePrefilteredMap(float lod)
+    {
+        mApp->usePrefilteredMap(lod);
+    }
 
-hvk::ModelPipeline& UserApp::getModelPipeline()
-{
-    return mApp->getModelPipeline();
-}
+    hvk::ModelPipeline& UserApp::getModelPipeline()
+    {
+        return mApp->getModelPipeline();
+    }
 
-std::shared_ptr<hvk::StaticMeshGenerator> UserApp::getMeshRenderer()
-{
-	return mApp->getMeshRenderer();
+    std::shared_ptr<hvk::StaticMeshGenerator> UserApp::getMeshRenderer()
+    {
+        return mApp->getMeshRenderer();
+    }
 }
