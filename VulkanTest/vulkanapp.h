@@ -28,28 +28,16 @@ namespace hvk {
 	private:
 		uint32_t mSurfaceWidth, mSurfaceHeight;
 		VkInstance mInstance;
-		VkSurfaceKHR mSurface;	// M
 
 		VkDevice mDevice;
 		VkPhysicalDevice mPhysicalDevice;
 
 		uint32_t mGraphicsIndex;
 		VkQueue mGraphicsQueue;
-		VkRenderPass mColorRenderPass;	// M
-        VkRenderPass mFinalRenderPass; // M
 		VkCommandPool mCommandPool;
 		VkCommandBuffer mPrimaryCommandBuffer;
 
 		ModelPipeline mModelPipeline;
-
-		SwapchainImageViews mFinalPassImageViews; // M
-		SwapchainImages mFinalPassSwapchainImages; // M
-        HVK_shared<TextureMap> mColorPassMap; // M
-		Resource<VkImage> mDepthResource; // M
-		VkImageView mDepthView; // M
-		FrameBuffers mFinalPassFramebuffers; // M
-        VkFramebuffer mColorPassFramebuffer; // M
-		Swapchain mSwapchain; // M
 
 		VkSemaphore mImageAvailable;
 		VkSemaphore mRenderFinished;
@@ -66,7 +54,6 @@ namespace hvk {
 		void enableVulkanValidationLayers();
 		void initializeDevice();
 		void initializeRenderer();
-		void initFramebuffers();
 		void cleanupSwapchain();
 
 	public:

@@ -37,24 +37,13 @@ namespace hvk {
         mSurfaceWidth(),
         mSurfaceHeight(),
         mInstance(VK_NULL_HANDLE),
-        mSurface(VK_NULL_HANDLE),
         mDevice(VK_NULL_HANDLE),
         mPhysicalDevice(VK_NULL_HANDLE),
         mGraphicsIndex(),
 		mGraphicsQueue(VK_NULL_HANDLE),
-        mColorRenderPass(VK_NULL_HANDLE),
-        mFinalRenderPass(VK_NULL_HANDLE),
         mCommandPool(VK_NULL_HANDLE),
         mPrimaryCommandBuffer(VK_NULL_HANDLE),
         mModelPipeline(),
-        mFinalPassImageViews(),
-        mFinalPassSwapchainImages(),
-        mColorPassMap(nullptr),
-        mDepthResource(),
-		mDepthView(VK_NULL_HANDLE),
-        mFinalPassFramebuffers(),
-        mColorPassFramebuffer(VK_NULL_HANDLE),
-        mSwapchain(),
         mImageAvailable(VK_NULL_HANDLE),
         mRenderFinished(VK_NULL_HANDLE),
 		mFinalRenderFinished(VK_NULL_HANDLE),
@@ -68,11 +57,6 @@ namespace hvk {
     VulkanApp::~VulkanApp() {
         vkDeviceWaitIdle(mDevice);
         vkDestroyCommandPool(mDevice, mCommandPool, nullptr);
-
-		cleanupSwapchain();
-
-		util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
-		vkDestroyFramebuffer(mDevice, mColorPassFramebuffer, nullptr);
 
         vkDestroySemaphore(mDevice, mImageAvailable, nullptr);
         vkDestroySemaphore(mDevice, mRenderFinished, nullptr);
@@ -192,21 +176,21 @@ namespace hvk {
 
 		// the color pass map which we render to in the color pass
 		// needs to be recreated at the new size
-		util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
+		//util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
 
-        if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
-            throw std::runtime_error("Failed to create Swapchain");
-        }
+  //      if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
+  //          throw std::runtime_error("Failed to create Swapchain");
+  //      }
 
-		initFramebuffers();
-        if (mActiveCamera)
-        {
-            mActiveCamera->updateProjection(
-                90.0f,
-                mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-                0.001f,
-                1000.0f);
-        }
+		//initFramebuffers();
+        //if (mActiveCamera)
+        //{
+        //    mActiveCamera->updateProjection(
+        //        90.0f,
+        //        mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
+        //        0.001f,
+        //        1000.0f);
+        //}
 	}
 
     void VulkanApp::init(
@@ -218,8 +202,6 @@ namespace hvk {
         mSurfaceWidth = surfaceWidth;
         mSurfaceHeight = surfaceHeight;
         mInstance = vulkanInstance;
-        mSurface = surface;
-
 
 		// load Renderdoc API
 		HMODULE renderMod = LoadLibraryA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll");
@@ -238,7 +220,7 @@ namespace hvk {
             initializeDevice();
 			std::cout << "Verify surface support and compatibility" << std::endl;
 			VkBool32 surfaceSupported;
-			vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, mSurface, &surfaceSupported);
+			vkGetPhysicalDeviceSurfaceSupportKHR(mPhysicalDevice, mGraphicsIndex, surface, &surfaceSupported);
 			if (!surfaceSupported) {
 				throw std::runtime_error("Surface not supported by Physical Device");
 			}
@@ -254,145 +236,18 @@ namespace hvk {
         mModelPipeline.init();
     }
 
-	void VulkanApp::initFramebuffers() {
-        uint32_t imageCount = 0;
-        vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
-        vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, nullptr);
-        mFinalPassSwapchainImages.resize(imageCount);
-        vkGetSwapchainImagesKHR(mDevice, mSwapchain.swapchain, &imageCount, mFinalPassSwapchainImages.data());
-
-        mFinalPassImageViews.resize(mFinalPassSwapchainImages.size());
-        for (size_t i = 0; i < mFinalPassSwapchainImages.size(); i++) {
-            mFinalPassImageViews[i] = util::image::createImageView(mDevice, mFinalPassSwapchainImages[i], mSwapchain.swapchainImageFormat);
-        }
-
-		// if mColorPassMap already exists, then just overwrite the value there instead
-		if (mColorPassMap == nullptr) {
-			mColorPassMap = HVK_make_shared<TextureMap>(util::image::createImageMap(
-				mDevice,
-				mAllocator,
-				mCommandPool,
-				mGraphicsQueue,
-				VK_FORMAT_R16G16B16A16_SFLOAT,
-				mSwapchain.swapchainExtent.width,
-				mSwapchain.swapchainExtent.height,
-				0,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
-		}
-		else {
-			*mColorPassMap = util::image::createImageMap(
-				mDevice,
-				mAllocator,
-				mCommandPool,
-				mGraphicsQueue,
-				VK_FORMAT_R16G16B16A16_SFLOAT,
-				mSwapchain.swapchainExtent.width,
-				mSwapchain.swapchainExtent.height,
-				0,
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-		}
-
-		// create depth image and view
-		VkImageCreateInfo depthImageCreate = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-		depthImageCreate.imageType = VK_IMAGE_TYPE_2D;
-		depthImageCreate.extent.width = mSwapchain.swapchainExtent.width;
-		depthImageCreate.extent.height = mSwapchain.swapchainExtent.height;
-		depthImageCreate.extent.depth = 1;
-		depthImageCreate.mipLevels = 1;
-		depthImageCreate.arrayLayers = 1;
-		depthImageCreate.format = VK_FORMAT_D32_SFLOAT;
-		depthImageCreate.tiling = VK_IMAGE_TILING_OPTIMAL;
-		depthImageCreate.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		depthImageCreate.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		depthImageCreate.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		depthImageCreate.samples = VK_SAMPLE_COUNT_1_BIT;
-
-        VmaAllocationCreateInfo depthImageAllocationCreate = {};
-        depthImageAllocationCreate.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        vmaCreateImage(
-            mAllocator,
-            &depthImageCreate,
-            &depthImageAllocationCreate,
-            &mDepthResource.memoryResource,
-            &mDepthResource.allocation,
-            &mDepthResource.allocationInfo);
-
-		mDepthView = util::image::createImageView(mDevice, mDepthResource.memoryResource, VK_FORMAT_D32_SFLOAT, VK_IMAGE_ASPECT_DEPTH_BIT);
-		auto commandBuffer = util::command::beginSingleTimeCommand(mDevice, mCommandPool);
-		util::image::transitionImageLayout(
-			commandBuffer,
-			mDepthResource.memoryResource, 
-			VK_IMAGE_LAYOUT_UNDEFINED, 
-			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-		util::command::endSingleTimeCommand(mDevice, mCommandPool, commandBuffer, mGraphicsQueue);
-
-
-		auto colorAttachment = util::renderpass::createColorAttachment(
-			VK_FORMAT_R16G16B16A16_SFLOAT, 
-			VK_IMAGE_LAYOUT_UNDEFINED, 
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-		auto depthAttachment = util::renderpass::createDepthAttachment();
-		std::vector<VkSubpassDependency> colorPassDependencies = {
-			util::renderpass::createSubpassDependency(
-				VK_SUBPASS_EXTERNAL,
-				0,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT),
-			util::renderpass::createSubpassDependency(
-				0,
-				VK_SUBPASS_EXTERNAL,
-				VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-				VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-				VK_ACCESS_SHADER_READ_BIT,
-				VK_DEPENDENCY_BY_REGION_BIT)
-		};
-        mColorRenderPass = util::renderpass::createRenderPass(
-			mDevice, 
-			VK_FORMAT_R16G16B16A16_SFLOAT, 
-			colorPassDependencies, 
-			&colorAttachment, 
-			&depthAttachment);
-
-        auto finalColorAttachment = util::renderpass::createColorAttachment(mSwapchain.swapchainImageFormat);
-		std::vector<VkSubpassDependency> finalPassDependencies = { util::renderpass::createSubpassDependency() };
-        mFinalRenderPass = util::renderpass::createRenderPass(mDevice, mSwapchain.swapchainImageFormat, finalPassDependencies, &finalColorAttachment);
-
-        mFinalPassFramebuffers.resize(mFinalPassImageViews.size());
-        util::framebuffer::createFramebuffer(
-			mDevice, 
-			mColorRenderPass, 
-			mSwapchain.swapchainExtent, 
-			mColorPassMap->view, 
-			&mDepthView, 
-			&mColorPassFramebuffer);
-        for (size_t i = 0; i < mFinalPassImageViews.size(); ++i)
-        {
-            util::framebuffer::createFramebuffer(
-				mDevice, 
-				mFinalRenderPass, 
-				mSwapchain.swapchainExtent, 
-				mFinalPassImageViews[i], 
-				nullptr, 
-				&mFinalPassFramebuffers[i]);
-        }
-	}
 
 	void VulkanApp::cleanupSwapchain() {
-		vkDestroyImageView(mDevice, mDepthView, nullptr);
-		vmaDestroyImage(mAllocator, mDepthResource.memoryResource, mDepthResource.allocation);
-		for (auto& imageView : mFinalPassImageViews) {
-			vkDestroyImageView(mDevice, imageView, nullptr);
-		}
-		for (auto& framebuffer : mFinalPassFramebuffers) {
-			vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
-		}
-		vkDestroyRenderPass(mDevice, mColorRenderPass, nullptr);
-		vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
+		//vkDestroyImageView(mDevice, mDepthView, nullptr);
+		//vmaDestroyImage(mAllocator, mDepthResource.memoryResource, mDepthResource.allocation);
+		//for (auto& imageView : mFinalPassImageViews) {
+		//	vkDestroyImageView(mDevice, imageView, nullptr);
+		//}
+		//for (auto& framebuffer : mFinalPassFramebuffers) {
+		//	vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
+		//}
+		//vkDestroyRenderPass(mDevice, mColorRenderPass, nullptr);
+		//vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
 	}
 
 	uint32_t VulkanApp::renderPrepare(VkSwapchainKHR& swapchain)
