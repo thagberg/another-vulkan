@@ -137,7 +137,7 @@ namespace hvk
         if (mat->normalProp.texture != nullptr)
         {
             const auto& normalTex = *mat->normalProp.texture;
-            material.metallicRoughness = createTextureMapFromImageData(
+            material.normal = createTextureMapFromImageData(
                 device,
                 allocator,
                 commandPool,

@@ -83,7 +83,7 @@ namespace hvk
         float getGammaCorrection() { return mGammaCorrection; }
         bool isUseSRGBTex() { return mUseSRGBTex; }
 
-		template <typename PBRGroupType>
+		template <typename PBRGroupType, typename LightGroupType>
 		VkCommandBuffer& drawElements(
 			const VkCommandBufferInheritanceInfo& inheritance,
 			const VkViewport& viewport,
@@ -92,11 +92,12 @@ namespace hvk
 			const AmbientLight& ambientLight,
 			const GammaSettings& gammaSettings,
 			const PBRWeight& pbrWeight,
-			PBRGroupType& elements);
+			PBRGroupType& elements,
+			LightGroupType& lights);
 	};
 
 
-	template <typename PBRGroupType>
+	template <typename PBRGroupType, typename LightGroupType>
 	VkCommandBuffer& StaticMeshGenerator::drawElements(
 		const VkCommandBufferInheritanceInfo& inheritance,
 		const VkViewport& viewport,
@@ -105,7 +106,8 @@ namespace hvk
 		const AmbientLight& ambientLight,
 		const GammaSettings& gammaSettings,
 		const PBRWeight& pbrWeight,
-		PBRGroupType& elements)
+		PBRGroupType& elements,
+		LightGroupType& lights)
 	{
 		 // update lights
 		int memOffset = 0;

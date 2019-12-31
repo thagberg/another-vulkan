@@ -63,7 +63,8 @@ public:
         mCameraController(nullptr)
 	{
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
-        hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
+        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
+        hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
         duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
@@ -97,6 +98,8 @@ public:
 			const auto& mesh = renderGroup.get<PBRMesh>(entity);
 			const auto& transform = renderGroup.get<NodeTransform>(entity);
 		}
+
+		entt::entity lightEntity = mRegistry.create();
 
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
