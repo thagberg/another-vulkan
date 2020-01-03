@@ -12,7 +12,21 @@ namespace hvk
 {
 	struct NodeTransform
 	{
+		glm::mat4 transform;
+	};
+
+	struct SceneNode
+	{
 		entt::entity parent{ entt::null };
-		glm::mat4 localTransform;
+	};
+
+	struct WorldTransform
+	{
+		glm::mat4 transform;
+	};
+
+	struct WorldDirty
+	{
+
 	};
 }

@@ -11,6 +11,7 @@
 #include "command-util.h"
 #include "framebuffer-util.h"
 #include "Camera.h"
+#include "LightTypes.h"
 
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
@@ -423,7 +424,8 @@ namespace hvk
         auto pbrInheritanceInfo = mApp->renderpassBegin(pbrRenderBegin);
         std::vector<VkCommandBuffer> pbrCommandBuffers;
         //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
-        auto pbrGroup = mRegistry.group<NodeTransform, PBRMesh, PBRBinding>();
+        auto pbrGroup = mRegistry.group<PBRMesh, PBRBinding>(entt::get<WorldTransform>);
+        auto lightGroup = mRegistry.group<LightColor>(entt::get<WorldTransform>);
         pbrCommandBuffers.push_back(mPBRMeshRenderer->drawElements(
             pbrInheritanceInfo,
             viewport,
@@ -432,13 +434,8 @@ namespace hvk
             mAmbientLight,
             mGammaSettings,
             mPBRWeight,
-            pbrGroup));
-        //mPBRMeshRenderer->drawElements(
-        //    pbrInheritanceInfo,
-        //    viewport,
-        //    scissor,
-
-        //)
+            pbrGroup,
+            lightGroup));
 
         mApp->renderpassExecuteAndClose(pbrCommandBuffers);
 
@@ -460,6 +457,12 @@ namespace hvk
             viewport,
             scissor,
             mExposureSettings));
+
+        finalCommandBuffers.push_back(mUiRenderer->drawFrame(
+            finalInheritanceInfo,
+            mSwapFramebuffers[swapIndex],
+            viewport,
+            scissor));
 
         mApp->renderpassExecuteAndClose(finalCommandBuffers);
 

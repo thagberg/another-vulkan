@@ -165,6 +165,7 @@
     <ClInclude Include="HvkUtil.h" />
     <ClInclude Include="InputManager.h" />
     <ClInclude Include="Light.h" />
+    <ClInclude Include="LightTypes.h" />
     <ClInclude Include="Node.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="ResourceManager.h" />

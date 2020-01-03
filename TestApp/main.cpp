@@ -24,6 +24,7 @@
 #include "ModelPipeline.h"
 #include "SceneTypes.h"
 #include "StaticMeshGenerator.h"
+#include "LightTypes.h"
 
 using namespace hvk;
 
@@ -44,6 +45,11 @@ void TestGroup(GroupType& elements)
 	});
 }
 
+void createWorldTransform(entt::entity entity, entt::registry& registry, NodeTransform& localTransform)
+{
+	registry.assign<WorldTransform>(entity, localTransform.transform);
+}
+
 class TestApp : public UserApp
 {
 private:
@@ -62,12 +68,15 @@ public:
         mLightBox(nullptr),
         mCameraController(nullptr)
 	{
+		mRegistry.on_construct<NodeTransform>().connect<&createWorldTransform>();
+		mRegistry.on_construct<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
+		mRegistry.on_replace<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
         hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
-        duckTransform = glm::scale(duckTransform, glm::vec3(0.1, 0.1f, 0.1f));
+        duckTransform = glm::scale(duckTransform, glm::vec3(1.f, 1.f, 1.f));
         mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
 			"Bottle",
 			mScene,
@@ -76,7 +85,10 @@ public:
         //addStaticMeshInstance(mDuck);
 
 		// ENTT experiments
+		entt::entity sceneEntity = mRegistry.create();
 		entt::entity modelEntity = mRegistry.create();
+
+		mRegistry.assign<NodeTransform>(sceneEntity, glm::mat4(1.f));
 
         PBRMesh duckPbrMesh;
         PBRMaterial duckPbrMaterial;
@@ -84,52 +96,56 @@ public:
         mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
         mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
 
-		mRegistry.assign<NodeTransform>(modelEntity, entt::null, duckTransform);
+		mRegistry.assign<SceneNode>(modelEntity, sceneEntity);
+		mRegistry.assign<NodeTransform>(modelEntity, duckTransform);
 
 		//auto comp = mRegistry.get<PBRMaterial, PBRMesh>(modelEntity);
 		//getMeshRenderer()->preparePBREntity(mRegistry, modelEntity);
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
 		mRegistry.assign<PBRBinding>(modelEntity, mPBRMeshRenderer->createPBRBinding(materialComp));
 
-		auto renderGroup = mRegistry.group<NodeTransform, PBRMesh, PBRBinding>();
-		TestGroup(renderGroup);
-		for (const auto& entity : renderGroup)
-		{
-			const auto& mesh = renderGroup.get<PBRMesh>(entity);
-			const auto& transform = renderGroup.get<NodeTransform>(entity);
-		}
-
 		entt::entity lightEntity = mRegistry.create();
+		auto lightTransform = glm::mat4(1.f);
+		lightTransform = glm::translate(lightTransform, glm::vec3(5.f, -2.f, 0.f));
+		mRegistry.assign<SceneNode>(lightEntity, sceneEntity);
+		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
+		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
+		
+
+		// test triggering dirty flag
+		NodeTransform& testTrans = mRegistry.get<NodeTransform>(modelEntity);
+		mRegistry.assign_or_replace<NodeTransform>(modelEntity, glm::translate(testTrans.transform, glm::vec3(1.f, 0.f, 0.f)));
+		//testTrans.transform = glm::translate(glm::mat4(1.f), glm::vec3(1.f, 0.f, 0.f));
 
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
 
-        glm::mat4 lightTransform = glm::mat4(1.f);
-        lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
-        lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
-		HVK_shared<DebugMesh> debugMesh = createColoredCube(glm::vec3(1.f, 1.f, 1.f));
-		mLightBox = HVK_make_shared<DebugMeshRenderObject>(
-			"Dynamic Light Box",
-			mScene,
-			//mDynamicLight->getTransform(), 
-			lightTransform,
-			debugMesh);
+  //      glm::mat4 lightTransform = glm::mat4(1.f);
+  //      lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
+  //      lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
+		//HVK_shared<DebugMesh> debugMesh = createColoredCube(glm::vec3(1.f, 1.f, 1.f));
+		//mLightBox = HVK_make_shared<DebugMeshRenderObject>(
+		//	"Dynamic Light Box",
+		//	mScene,
+		//	//mDynamicLight->getTransform(), 
+		//	lightTransform,
+		//	debugMesh);
 		//addDebugMeshInstance(mLightBox);
 
-        mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
-			"Dynamic Light",
-			mLightBox,
-            glm::mat4(1.f), 
-            glm::vec3(1.f, 1.f, 1.f), 0.3f);
-        //addDynamicLight(mDynamicLight);
-		mLightBox->addChild(mDynamicLight);
+  //      mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
+		//	"Dynamic Light",
+		//	mLightBox,
+  //          glm::mat4(1.f), 
+  //          glm::vec3(1.f, 1.f, 1.f), 0.3f);
+  //      //addDynamicLight(mDynamicLight);
+		//mLightBox->addChild(mDynamicLight);
 
-        mCameraController = CameraController(mCamera);
+        mCameraController = CameraController(mCamera, 1.f);
 
-		mScene->addChild(mDuck);
-		//mScene->addChild(mDynamicLight);
-		mScene->addChild(mLightBox);
-		mScene->addChild(mCamera);
+		//mScene->addChild(mDuck);
+		////mScene->addChild(mDynamicLight);
+		//mScene->addChild(mLightBox);
+		//mScene->addChild(mCamera);
 
         activateCamera(mCamera);
 
@@ -256,24 +272,13 @@ protected:
 		ImGui::End();
 
         ImGui::Begin("Rendering");
-  //      float gamma = getGammaCorrection();
-		//auto gammaSettings = getGammaSettings();
-  //      bool useSRGBTex = isUseSRGBTex();
-  //      //ImGui::SliderFloat("Gamma", &gamma, 0.f, 10.f);
-  //      ImGui::SliderFloat("Gamma", &gammaSettings->gamma, 0.f, 10.f);
-  //      ImGui::Checkbox("Use sRGB Textures", &useSRGBTex);
-  //      //setGammaCorrection(gamma);
-  //      setUseSRGBTex(useSRGBTex);
-		//ImGui::Text("Ambient Light");
-		//auto ambientLight = getAmbientLight();
-		////ambientLight->lightColor.r
-		//ImGui::ColorEdit3("Color##Ambient", &(ambientLight->lightColor.r));
-		//ImGui::SliderFloat("IntensityF##Ambient", &(ambientLight->lightIntensity), 0.f, 1.f);
-		//auto pbrWeight = getPBRWeight();
-		//ImGui::SliderFloat("Metallic", &pbrWeight->metallic, 0.f, 1.f);
-		//ImGui::SliderFloat("Roughness", &pbrWeight->roughness, 0.f, 1.f);
-		//auto exposureSettings = getExposureSettings();
-		//ImGui::SliderFloat("Exposure", &exposureSettings->exposure, 0.f, 10.f);
+		ImGui::SliderFloat("Gamma", &mGammaSettings.gamma, 0.f, 10.f);
+		ImGui::SliderFloat("Metallic", &mPBRWeight.metallic, 0.f, 1.f);
+		ImGui::SliderFloat("Roughness", &mPBRWeight.roughness, 0.f, 1.f);
+		ImGui::SliderFloat("Exposure", &mExposureSettings.exposure, 0.f, 10.f);
+		ImGui::Text("Ambient Light");
+		ImGui::ColorEdit3("Color##Ambient", &mAmbientLight.lightColor.r);
+		ImGui::SliderFloat("Intensity##Ambient", &mAmbientLight.lightIntensity, 0.f, 10.f);
 
 		//auto skySettings = getSkySettings();
 		//static int skyChoice = 0;
@@ -302,6 +307,8 @@ protected:
 		//}
 
         ImGui::End();
+
+		ImGui::Begin("Objects");
 		
 		ImGui::Begin("Status");
 		ImGui::Text("Mouse State");

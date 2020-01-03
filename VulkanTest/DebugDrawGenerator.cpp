@@ -3,6 +3,7 @@
 
 #include "descriptor-util.h"
 #include "pipeline-util.h"
+#include "GpuManager.h"
 
 namespace hvk
 {
@@ -15,8 +16,7 @@ namespace hvk
 		mDescriptorSetLayout(VK_NULL_HANDLE),
 		mDescriptorPool(VK_NULL_HANDLE),
 		mPipeline(VK_NULL_HANDLE),
-		mPipelineInfo(),
-		mRenderables()
+		mPipelineInfo()
 	{
         const VkDevice& device = GpuManager::getDevice();
 
@@ -75,14 +75,6 @@ namespace hvk
 	{
         const auto& device = GpuManager::getDevice();
         const auto& allocator = GpuManager::getAllocator();
-
-        for (auto& renderable : mRenderables)
-        {
-            // destroy buffers
-            vmaDestroyBuffer(allocator, renderable.vbo.memoryResource, renderable.vbo.allocation);
-            vmaDestroyBuffer(allocator, renderable.ibo.memoryResource, renderable.ibo.allocation);
-            vmaDestroyBuffer(allocator, renderable.ubo.memoryResource, renderable.ubo.allocation);
-        }
 
         vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
         vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
@@ -270,4 +262,48 @@ namespace hvk
 		return mCommandBuffer;
 	}
 
+	DebugDrawBinding DebugDrawGenerator::createDebugDrawBinding()
+	{
+		DebugDrawBinding newBinding;
+
+		const auto& device = GpuManager::getDevice();
+		const auto& allocator = GpuManager::getAllocator();
+
+		// create UBO
+        uint32_t uboMemorySize = sizeof(hvk::UniformBufferObject);
+        VkBufferCreateInfo uboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        uboInfo.size = uboMemorySize;
+        uboInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+
+		VmaAllocationCreateInfo uniformAllocCreateInfo = {};
+		uniformAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+		uniformAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+		vmaCreateBuffer(
+            allocator,
+			&uboInfo,
+			&uniformAllocCreateInfo,
+			&newBinding.ubo.memoryResource,
+			&newBinding.ubo.allocation,
+			nullptr);
+
+		// create descriptor set
+		VkDescriptorSetAllocateInfo dsAlloc = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
+		dsAlloc.descriptorPool = mDescriptorPool;
+		dsAlloc.descriptorSetCount = 1;
+		dsAlloc.pSetLayouts = &mDescriptorSetLayout;
+
+		assert(vkAllocateDescriptorSets(device, &dsAlloc, &newBinding.descriptorSet) == VK_SUCCESS);
+
+		// update descriptor set
+		std::vector<VkWriteDescriptorSet> descriptorWrites;
+		std::vector<VkDescriptorBufferInfo> bufferInfos = {
+			VkDescriptorBufferInfo {
+				newBinding.ubo.memoryResource,
+				0,
+				sizeof(hvk::UniformBufferObject) } };
+		auto bufferDescriptorWrite = util::descriptor::createDescriptorBufferWrite(bufferInfos, newBinding.descriptorSet, 0);
+		vkUpdateDescriptorSets(device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+
+		return newBinding;
+	}
 }

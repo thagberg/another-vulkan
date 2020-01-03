@@ -24,8 +24,9 @@ namespace hvk {
 		{CameraControl::move_down, GLFW_KEY_E}
 	});
 
-	CameraController::CameraController(CameraRef camera) :
+	CameraController::CameraController(CameraRef camera, float movementSpeed) :
 		mCamera(camera),
+		mMovementSpeed(movementSpeed),
 		mRotation{0.f, 0.f, 0.f}
 	{
 	}
@@ -39,9 +40,9 @@ namespace hvk {
 		MouseState mouse = InputManager::currentMouseState;
 		MouseState prevMouse = InputManager::previousMouseState;
 
-		const glm::vec3 forwardMovement = (float)d *  mCamera->getForwardVector();
-		const glm::vec3 lateralMovement = (float)d * mCamera->getRightVector();
-		const glm::vec3 verticalMovement = (float)d * mCamera->getUpVector();
+		const glm::vec3 forwardMovement = (float)d * mMovementSpeed * mCamera->getForwardVector();
+		const glm::vec3 lateralMovement = (float)d * mMovementSpeed * mCamera->getRightVector();
+		const glm::vec3 verticalMovement = (float)d * mMovementSpeed * mCamera->getUpVector();
 
 		bool rotated = false;
 		float pitch = 0.f, yaw = 0.f;

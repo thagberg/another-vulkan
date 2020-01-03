@@ -12,29 +12,13 @@
 #include "Camera.h"
 #include "PBRTypes.h"
 #include "SceneTypes.h"
+#include "LightTypes.h"
 
 namespace hvk
 {
 	class StaticMeshGenerator : public DrawlistGenerator
 	{
 	private:
-
-		struct StaticMeshRenderable 
-		{
-			std::shared_ptr<StaticMeshRenderObject> renderObject;
-
-			Resource<VkBuffer> vbo;
-			Resource<VkBuffer> ibo;
-			size_t numVertices;
-			uint32_t numIndices;
-
-            TextureMap diffuseMap;
-            TextureMap metallicRoughnessMap;
-            TextureMap normalMap;
-
-			Resource<VkBuffer> ubo;
-			VkDescriptorSet descriptorSet;
-		};
 
 		VkDescriptorSetLayout mDescriptorSetLayout;
 		VkDescriptorSetLayout mLightsDescriptorSetLayout;
@@ -43,9 +27,6 @@ namespace hvk
 		VkPipeline mPipeline;
 		RenderPipelineInfo mPipelineInfo;
 		Resource<VkBuffer> mLightsUbo;
-
-		HVK_vector<StaticMeshRenderable> mRenderables;
-		HVK_vector<HVK_shared<Light>> mLights;
 
         HVK_shared<TextureMap> mEnvironmentMap;
 		HVK_shared<TextureMap> mIrradianceMap;
@@ -66,22 +47,7 @@ namespace hvk
 		virtual ~StaticMeshGenerator();
 		virtual void invalidate() override;
 		void updateRenderPass(VkRenderPass renderPass);
-		void addStaticMeshObject(std::shared_ptr<StaticMeshRenderObject> object);
 		PBRBinding createPBRBinding(const PBRMaterial& material);
-		void addLight(std::shared_ptr<Light> light);
-		VkCommandBuffer& drawFrame(
-            const VkCommandBufferInheritanceInfo& inheritance,
-			const VkFramebuffer& framebuffer,
-			const VkViewport& viewport,
-			const VkRect2D& scissor,
-			const Camera& camera,
-			const AmbientLight& ambientLight,
-			const GammaSettings& gammaSettings,
-			const PBRWeight& pbrWeight);
-        void setGammaCorrection(float gamma);
-        void setUseSRGBTex(bool useSRGBTex);
-        float getGammaCorrection() { return mGammaCorrection; }
-        bool isUseSRGBTex() { return mUseSRGBTex; }
 
 		template <typename PBRGroupType, typename LightGroupType>
 		VkCommandBuffer& drawElements(
@@ -113,16 +79,17 @@ namespace hvk
 		int memOffset = 0;
 		auto* copyaddr = reinterpret_cast<UniformLightObject<NUM_INITIAL_LIGHTS>*>(mLightsUbo.allocationInfo.pMappedData);
 		auto uboLights = UniformLightObject<NUM_INITIAL_LIGHTS>();
-		uboLights.numLights = static_cast<uint32_t>(mLights.size());
         uboLights.ambient = ambientLight;
-		for (size_t i = 0; i < mLights.size(); ++i) {
-			HVK_shared<Light> light = mLights[i];
-			UniformLight ubo = {};
-			ubo.lightPos = light->getWorldPosition();
-			ubo.lightColor = light->getColor();
-			ubo.lightIntensity = light->getIntensity();
-			uboLights.lights[i] = ubo;
-		}
+		UniformLight lightUbo = {};
+		size_t i = 0;
+		lights.each([&](auto entity, const auto& color, const auto& transform) {
+			lightUbo.lightPos = transform.transform[3];
+			lightUbo.lightColor = color.color;
+			lightUbo.lightIntensity = color.intensity;
+			uboLights.lights[i] = lightUbo;
+			++i;
+		});
+		uboLights.numLights = static_cast<uint32_t>(i);
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
@@ -161,10 +128,10 @@ namespace hvk
 		PushConstant push = {};
 		VmaAllocationInfo allocInfo;
         const auto& allocator = GpuManager::getAllocator();
-		elements.each([&](auto entity, auto transform, const auto& mesh, const auto& binding) {
+		elements.each([&](auto entity, const auto& mesh, const auto& binding, const auto& transform) {
 			// update UBO
 			vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
-			ubo.model = transform.localTransform;
+			ubo.model = transform.transform;
 			ubo.model[1][1] *= -1;
 			ubo.modelViewProj = viewProj * ubo.model;
 			memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));

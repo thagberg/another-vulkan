@@ -16,8 +16,9 @@ namespace hvk {
 	private:
 		HVK_shared<Camera> mCamera;
 		CameraRotation mRotation;
+		float mMovementSpeed;
 	public:
-		CameraController(HVK_shared<Camera> camera);
+		CameraController(HVK_shared<Camera> camera, float movementSpeed=1.f);
 		~CameraController();
 		void update(double d, std::vector<Command>& commands);
         void setCamera(HVK_shared<Camera> camera)
