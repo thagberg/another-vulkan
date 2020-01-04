@@ -4,14 +4,14 @@
 namespace hvk
 {
     std::array<glm::vec3, 8> cubePositions = {
-        glm::vec3(-1.f, -1.f, 1.f),
-        glm::vec3(1.f, -1.f, 1.f),
-        glm::vec3(-1.f, 1.f, 1.f),
-        glm::vec3(1.f, 1.f, 1.f),
-        glm::vec3(-1.f, -1.f, -1.f),
-        glm::vec3(1.f, -1.f, -1.f),
-        glm::vec3(-1.f, 1.f, -1.f),
-        glm::vec3(1.f, 1.f, -1.f)
+        glm::vec3(-.5f, -.5f, .5f),
+        glm::vec3(.5f, -.5f, .5f),
+        glm::vec3(-.5f, .5f, .5f),
+        glm::vec3(.5f, .5f, .5f),
+        glm::vec3(-.5f, -.5f, -.5f),
+        glm::vec3(.5f, -.5f, -.5f),
+        glm::vec3(-.5f, .5f, -.5f),
+        glm::vec3(.5f, .5f, -.5f)
     };
 
     std::array<VertIndex, 36> cubeIndices = {

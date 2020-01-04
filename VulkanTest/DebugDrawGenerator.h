@@ -32,7 +32,6 @@ namespace hvk
 		template <typename DebugDrawGroupType>
 		VkCommandBuffer& drawElements(
 			const VkCommandBufferInheritanceInfo& inheritance,
-			const VkFramebuffer& framebuffer,
 			const VkViewport& viewport,
 			const VkRect2D& scissor,
 			const Camera& camera,
@@ -42,7 +41,6 @@ namespace hvk
 	template <typename DebugDrawGroupType>
 	VkCommandBuffer& DebugDrawGenerator::drawElements(
 		const VkCommandBufferInheritanceInfo& inheritance,
-		const VkFramebuffer& framebuffer,
 		const VkViewport& viewport,
 		const VkRect2D& scissor,
 		const Camera& camera,
@@ -68,7 +66,7 @@ namespace hvk
 		VmaAllocationInfo allocInfo;
 		const auto& allocator = GpuManager::getAllocator();
 
-		elements.each([&](auto entity, const auto& mesh, const auto& binding, const auto& transform)) {
+		elements.each([&](auto entity, const auto& mesh, const auto& binding, const auto& transform) {
 			vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
 			ubo.model = transform.transform;
 			ubo.model[1][1] *= -1;
@@ -81,7 +79,7 @@ namespace hvk
 				mCommandBuffer,
 				VK_PIPELINE_BIND_POINT_GRAPHICS,
 				mPipelineInfo.pipelineLayout,
-				1,
+				0,
 				1,
 				&binding.descriptorSet,
 				0,

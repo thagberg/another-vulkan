@@ -4,19 +4,26 @@
 
 #include "HvkUtil.h"
 #include "StaticMesh.h"
-#include "PBRTypes.h"
+#include "DebugMesh.h"
+#include "types.h"
 
 namespace hvk
 {
+    struct PBRMesh;
+    struct PBRMaterial;
+    struct DebugDrawMesh;
+
     class ModelPipeline
     {
     private:
         std::unordered_map<std::string, PBRMesh> mMeshStore;
         std::unordered_map<std::string, PBRMaterial> mMaterialStore;
+        std::unordered_map<std::string, DebugDrawMesh> mDebugMeshStore;
         TextureMap mDummyMap;
         bool mInitialized;
 
-        void processGltfModel(HVK_shared<StaticMesh> model, const std::string& modelName);
+        void processGltfModel(std::shared_ptr<StaticMesh> model, const std::string& modelName);
+        void processDebugModel(std::shared_ptr<DebugMesh> model, const std::string& modelName);
 
     public:
         ModelPipeline();
@@ -25,7 +32,15 @@ namespace hvk
 
         PBRMesh fetchMesh(std::string&& name);
         PBRMaterial fetchMaterial(std::string&& name);
-        bool loadAndFetchModel(HVK_shared<StaticMesh> model, std::string&& name, PBRMesh* outMesh, PBRMaterial* outMaterial);
-
+        DebugDrawMesh fetchDebugMesh(const std::string& name);
+        bool loadAndFetchModel(
+            std::shared_ptr<StaticMesh> model, 
+            std::string&& name, 
+            PBRMesh* outMesh, 
+            PBRMaterial* outMaterial);
+        bool loadAndFetchDebugModel(
+            std::shared_ptr<DebugMesh> model,
+            std::string&& name,
+            DebugDrawMesh* outMesh);
     };
 }

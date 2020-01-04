@@ -4,7 +4,7 @@
 
 namespace hvk
 {
-	struct DebugMesh
+	struct DebugDrawMesh
 	{
 		RuntimeResource<VkBuffer> vbo;
 		RuntimeResource<VkBuffer> ibo;

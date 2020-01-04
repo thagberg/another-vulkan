@@ -167,6 +167,7 @@
     <ClInclude Include="command-util.h" />
     <ClInclude Include="ContextManager.h" />
     <ClInclude Include="DebugDrawGenerator.h" />
+    <ClInclude Include="DebugDrawTypes.h" />
     <ClInclude Include="descriptor-util.h" />
     <ClInclude Include="DrawlistGenerator.h" />
     <ClInclude Include="framebuffer-util.h" />

@@ -24,6 +24,7 @@
 #include "ModelPipeline.h"
 #include "SceneTypes.h"
 #include "StaticMeshGenerator.h"
+#include "DebugDrawGenerator.h"
 #include "LightTypes.h"
 
 using namespace hvk;
@@ -54,7 +55,6 @@ class TestApp : public UserApp
 {
 private:
 	HVK_shared<Node> mScene;
-    HVK_shared<StaticMeshRenderObject> mDuck;
     HVK_shared<Light> mDynamicLight;
     HVK_shared<DebugMeshRenderObject> mLightBox;
     CameraController mCameraController;
@@ -63,7 +63,6 @@ public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
 		UserApp(windowWidth, windowHeight, windowTitle),
 		mScene(nullptr),
-        mDuck(nullptr),
         mDynamicLight(nullptr),
         mLightBox(nullptr),
         mCameraController(nullptr)
@@ -73,15 +72,10 @@ public:
 		mRegistry.on_replace<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
         //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
-        hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
+        std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
         duckTransform = glm::scale(duckTransform, glm::vec3(1.f, 1.f, 1.f));
-        mDuck = hvk::HVK_make_shared<hvk::StaticMeshRenderObject>(
-			"Bottle",
-			mScene,
-            duckTransform, 
-            duckMesh);
         //addStaticMeshInstance(mDuck);
 
 		// ENTT experiments
@@ -104,13 +98,27 @@ public:
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
 		mRegistry.assign<PBRBinding>(modelEntity, mPBRMeshRenderer->createPBRBinding(materialComp));
 
+		entt::entity lightBoxHolder = mRegistry.create();
+		auto lightBoxTransform = glm::mat4(1.f);
+		mRegistry.assign<SceneNode>(lightBoxHolder, sceneEntity);
+		mRegistry.assign<NodeTransform>(lightBoxHolder, lightBoxTransform);
+
+		entt::entity boxEntity = mRegistry.create();
+		auto boxTransform = glm::mat4(1.f);
+		boxTransform = glm::scale(boxTransform, glm::vec3(.01f, .01f, .01f));
+		auto boxMesh = createColoredCube(glm::vec3(1.f, 1.f, 1.f));
+		DebugDrawMesh lightBoxMesh;
+		getModelPipeline().loadAndFetchDebugModel(boxMesh, "cube", &lightBoxMesh);
+		mRegistry.assign<DebugDrawMesh>(boxEntity, lightBoxMesh);
+		mRegistry.assign<SceneNode>(boxEntity, lightBoxHolder);
+		mRegistry.assign<NodeTransform>(boxEntity, boxTransform);
+		mRegistry.assign<DebugDrawBinding>(boxEntity, mDebugRenderer->createDebugDrawBinding());
+		
 		entt::entity lightEntity = mRegistry.create();
 		auto lightTransform = glm::mat4(1.f);
-		lightTransform = glm::translate(lightTransform, glm::vec3(5.f, -2.f, 0.f));
-		mRegistry.assign<SceneNode>(lightEntity, sceneEntity);
+		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder);
 		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
-		
 
 		// test triggering dirty flag
 		NodeTransform& testTrans = mRegistry.get<NodeTransform>(modelEntity);
@@ -309,6 +317,7 @@ protected:
         ImGui::End();
 
 		ImGui::Begin("Objects");
+		ImGui::End();
 		
 		ImGui::Begin("Status");
 		ImGui::Text("Mouse State");

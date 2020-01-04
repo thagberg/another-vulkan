@@ -437,6 +437,14 @@ namespace hvk
             pbrGroup,
             lightGroup));
 
+        auto debugGroup = mRegistry.group<DebugDrawMesh, DebugDrawBinding>(entt::get<WorldTransform>);
+        pbrCommandBuffers.push_back(mDebugRenderer->drawElements(
+            pbrInheritanceInfo,
+            viewport,
+            scissor,
+            *mCamera,
+            debugGroup));
+
         mApp->renderpassExecuteAndClose(pbrCommandBuffers);
 
         // prepare final render pass

@@ -2,6 +2,8 @@
 #include "ModelPipeline.h"
 #include "GpuManager.h"
 #include "image-util.h"
+#include "PBRTypes.h"
+#include "DebugDrawTypes.h"
 
 
 namespace hvk
@@ -41,6 +43,7 @@ namespace hvk
     {
         mMeshStore.reserve(50);
         mMaterialStore.reserve(50);
+        mDebugMeshStore.reserve(50);
         mDummyMap = util::image::createTextureMapFromFile(
             GpuManager::getDevice(),
             GpuManager::getAllocator(),
@@ -50,7 +53,7 @@ namespace hvk
         mInitialized = true;
     }
 
-    void ModelPipeline::processGltfModel(HVK_shared<StaticMesh> model, const std::string& name)
+    void ModelPipeline::processGltfModel(std::shared_ptr<StaticMesh> model, const std::string& name)
     {
         assert(mInitialized);
 
@@ -154,6 +157,64 @@ namespace hvk
         mMaterialStore.insert({ name + "_material_lod0", material });
     }
 
+    void ModelPipeline::processDebugModel(std::shared_ptr<DebugMesh> model, const std::string& modelName)
+    {
+        assert(mInitialized);
+
+        DebugDrawMesh mesh;
+
+        const auto& allocator = GpuManager::getAllocator();
+        const auto& device = GpuManager::getDevice();
+
+        const auto vertices = model->getVertices();
+        const auto indices = model->getIndices();
+
+        mesh.numIndices = indices->size();
+
+        // create vertex buffer
+        size_t vertexMemorySize = sizeof(ColorVertex) * vertices->size();
+        VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        bufferInfo.size = vertexMemorySize;
+        bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo allocCreateInfo = {};
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        VmaAllocationInfo vboAllocInfo;
+        vmaCreateBuffer(
+            allocator,
+            &bufferInfo,
+            &allocCreateInfo,
+            &mesh.vbo.memoryResource,
+            &mesh.vbo.allocation,
+            &vboAllocInfo);
+
+        memcpy(vboAllocInfo.pMappedData, vertices->data(), vertexMemorySize);
+
+        // create index buffer
+        uint32_t indexMemorySize = sizeof(uint16_t) * mesh.numIndices;
+        VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+        iboInfo.size = indexMemorySize;
+        iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+
+        VmaAllocationCreateInfo indexAllocCreateInfo = {};
+        indexAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+        indexAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        VmaAllocationInfo iboAllocInfo;
+        vmaCreateBuffer(
+            allocator,
+            &iboInfo,
+            &indexAllocCreateInfo,
+            &mesh.ibo.memoryResource,
+            &mesh.ibo.allocation,
+            &iboAllocInfo);
+
+        memcpy(iboAllocInfo.pMappedData, indices->data(), (size_t)indexMemorySize);
+
+        // register mesh in the store
+        mDebugMeshStore.insert({ modelName, mesh });
+    }
+
     PBRMesh ModelPipeline::fetchMesh(std::string&& name)
     {
         auto found = mMeshStore.find(name);
@@ -168,8 +229,15 @@ namespace hvk
         return found->second;
     }
 
+    DebugDrawMesh ModelPipeline::fetchDebugMesh(const std::string& name)
+    {
+        auto found = mDebugMeshStore.find(name);
+        assert(found != mDebugMeshStore.end());
+        return found->second;
+    }
+
     bool ModelPipeline::loadAndFetchModel(
-        HVK_shared<StaticMesh> model, 
+        std::shared_ptr<StaticMesh> model, 
         std::string&& name, 
         PBRMesh* outMesh, 
         PBRMaterial* outMaterial)
@@ -197,6 +265,30 @@ namespace hvk
             processGltfModel(model, name);
             *outMesh = mMeshStore.at(meshName);
             *outMaterial = mMaterialStore.at(materialName);
+        }
+
+        return newLoad;
+    }
+
+    bool ModelPipeline::loadAndFetchDebugModel(
+        std::shared_ptr<DebugMesh> model,
+        std::string&& name,
+        DebugDrawMesh* outMesh)
+    {
+        bool newLoad = false;
+
+        auto meshAt = mDebugMeshStore.find(name);
+        bool meshFound = meshAt != mDebugMeshStore.end();
+
+        if (meshFound)
+        {
+            *outMesh = meshAt->second;
+        }
+        else
+        {
+            newLoad = true;
+            processDebugModel(model, name);
+            *outMesh = mDebugMeshStore.at(name);
         }
 
         return newLoad;
