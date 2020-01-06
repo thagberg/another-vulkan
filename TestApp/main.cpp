@@ -1,5 +1,6 @@
 #include <iostream>
 #include <variant>
+#include <algorithm>
 
 #define HVK_TOOLS 1
 
@@ -51,38 +52,69 @@ void createWorldTransform(entt::entity entity, entt::registry& registry, NodeTra
 	registry.assign<WorldTransform>(entity, localTransform.transform);
 }
 
+
 class TestApp : public UserApp
 {
 private:
-	HVK_shared<Node> mScene;
-    HVK_shared<Light> mDynamicLight;
-    HVK_shared<DebugMeshRenderObject> mLightBox;
     CameraController mCameraController;
+	bool mSceneDirty;
+	entt::entity mSceneEntity;
+
+	//void markSceneDirty(entt::entity entity, entt::registry& registry, SceneNode& sceneNode)
+	void markSceneDirty()
+	{
+		mSceneDirty = true;
+	}
+
+	//void removeChild(entt::entity entity, entt::registry& registry, SceneNode& sceneNode)
+	//void removeChild(entt::entity entity, entt::registry& registry)
+	void removeChild(entt::entity entity)
+	{
+		auto& sceneNode = mRegistry.get<SceneNode>(entity);
+		if (sceneNode.parent != entt::null)
+		{
+			auto& parentNode = mRegistry.get<SceneNode>(sceneNode.parent);
+			auto found = std::find(parentNode.children.begin(), parentNode.children.end(), entity);
+			parentNode.children.erase(found);
+		}
+	}
+
+	void addChild(entt::entity entity)
+	{
+		auto& sceneNode = mRegistry.get<SceneNode>(entity);
+		if (sceneNode.parent != entt::null)
+		{
+			auto& parentNode = mRegistry.get<SceneNode>(sceneNode.parent);
+			parentNode.children.push_back(entity);
+		}
+	}
 
 public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
 		UserApp(windowWidth, windowHeight, windowTitle),
-		mScene(nullptr),
-        mDynamicLight(nullptr),
-        mLightBox(nullptr),
-        mCameraController(nullptr)
+        mCameraController(nullptr),
+		mSceneDirty(false),
+		mSceneEntity()
 	{
+		mRegistry.on_construct<SceneNode>().connect<&TestApp::markSceneDirty>(*this);
+		mRegistry.on_destroy<SceneNode>().connect<&TestApp::markSceneDirty>(*this);
+		mRegistry.on_construct<SceneNode>().connect<&TestApp::addChild>(*this);
+		mRegistry.on_destroy<SceneNode>().connect<&TestApp::removeChild>(*this);
+		mRegistry.on_replace<SceneNode>().connect<&TestApp::markSceneDirty>(*this);
 		mRegistry.on_construct<NodeTransform>().connect<&createWorldTransform>();
 		mRegistry.on_construct<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mRegistry.on_replace<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
-		mScene = hvk::HVK_make_shared<hvk::Node>("Scene", nullptr, glm::mat4(1.f));
-        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/duck/Duck.gltf"));
+
         std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
-        duckTransform = glm::scale(duckTransform, glm::vec3(1.f, 1.f, 1.f));
-        //addStaticMeshInstance(mDuck);
 
 		// ENTT experiments
-		entt::entity sceneEntity = mRegistry.create();
+		mSceneEntity = mRegistry.create();
 		entt::entity modelEntity = mRegistry.create();
 
-		mRegistry.assign<NodeTransform>(sceneEntity, glm::mat4(1.f));
+		mRegistry.assign<SceneNode>(mSceneEntity, entt::null, "Scene");
+		mRegistry.assign<NodeTransform>(mSceneEntity, glm::mat4(1.f));
 
         PBRMesh duckPbrMesh;
         PBRMaterial duckPbrMaterial;
@@ -90,17 +122,15 @@ public:
         mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
         mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
 
-		mRegistry.assign<SceneNode>(modelEntity, sceneEntity);
+		mRegistry.assign<SceneNode>(modelEntity, mSceneEntity, "Bottle");
 		mRegistry.assign<NodeTransform>(modelEntity, duckTransform);
 
-		//auto comp = mRegistry.get<PBRMaterial, PBRMesh>(modelEntity);
-		//getMeshRenderer()->preparePBREntity(mRegistry, modelEntity);
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
 		mRegistry.assign<PBRBinding>(modelEntity, mPBRMeshRenderer->createPBRBinding(materialComp));
 
 		entt::entity lightBoxHolder = mRegistry.create();
 		auto lightBoxTransform = glm::mat4(1.f);
-		mRegistry.assign<SceneNode>(lightBoxHolder, sceneEntity);
+		mRegistry.assign<SceneNode>(lightBoxHolder, mSceneEntity, "LightHolder");
 		mRegistry.assign<NodeTransform>(lightBoxHolder, lightBoxTransform);
 
 		entt::entity boxEntity = mRegistry.create();
@@ -110,55 +140,23 @@ public:
 		DebugDrawMesh lightBoxMesh;
 		getModelPipeline().loadAndFetchDebugModel(boxMesh, "cube", &lightBoxMesh);
 		mRegistry.assign<DebugDrawMesh>(boxEntity, lightBoxMesh);
-		mRegistry.assign<SceneNode>(boxEntity, lightBoxHolder);
+		mRegistry.assign<SceneNode>(boxEntity, lightBoxHolder, "LightBox");
 		mRegistry.assign<NodeTransform>(boxEntity, boxTransform);
 		mRegistry.assign<DebugDrawBinding>(boxEntity, mDebugRenderer->createDebugDrawBinding());
 		
 		entt::entity lightEntity = mRegistry.create();
 		auto lightTransform = glm::mat4(1.f);
-		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder);
+		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder, "Light");
 		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
 
 		// test triggering dirty flag
 		NodeTransform& testTrans = mRegistry.get<NodeTransform>(modelEntity);
 		mRegistry.assign_or_replace<NodeTransform>(modelEntity, glm::translate(testTrans.transform, glm::vec3(1.f, 0.f, 0.f)));
-		//testTrans.transform = glm::translate(glm::mat4(1.f), glm::vec3(1.f, 0.f, 0.f));
-
-        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
-        //hvk::HVK_shared<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/FlightHelmet/FlightHelmet.gltf"));
-
-  //      glm::mat4 lightTransform = glm::mat4(1.f);
-  //      lightTransform = glm::scale(lightTransform, glm::vec3(0.1f));
-  //      lightTransform = glm::translate(lightTransform, glm::vec3(3.f, 2.f, 1.5f));
-		//HVK_shared<DebugMesh> debugMesh = createColoredCube(glm::vec3(1.f, 1.f, 1.f));
-		//mLightBox = HVK_make_shared<DebugMeshRenderObject>(
-		//	"Dynamic Light Box",
-		//	mScene,
-		//	//mDynamicLight->getTransform(), 
-		//	lightTransform,
-		//	debugMesh);
-		//addDebugMeshInstance(mLightBox);
-
-  //      mDynamicLight = hvk::HVK_make_shared<hvk::Light>(
-		//	"Dynamic Light",
-		//	mLightBox,
-  //          glm::mat4(1.f), 
-  //          glm::vec3(1.f, 1.f, 1.f), 0.3f);
-  //      //addDynamicLight(mDynamicLight);
-		//mLightBox->addChild(mDynamicLight);
 
         mCameraController = CameraController(mCamera, 1.f);
 
-		//mScene->addChild(mDuck);
-		////mScene->addChild(mDynamicLight);
-		//mScene->addChild(mLightBox);
-		//mScene->addChild(mCamera);
-
         activateCamera(mCamera);
-
-		//generateEnvironmentMap();
-
 	}
 
 	virtual ~TestApp() = default;
@@ -270,14 +268,26 @@ protected:
 
         mCameraController.update(frameTime, cameraCommands);
 
+		// sort the scene?
+		//registry.sort<relationship>([&registry](const entt::entity lhs, const entt::entity rhs) {
+		//	const auto& clhs = registry.get<relationship>(lhs);
+		//	const auto& crhs = registry.get<relationship>(rhs);
+		//	return crhs.parent == lhs || clhs.next == rhs
+		//		|| (!(clhs.parent == rhs || crhs.next == lhs) && (clhs.parent < crhs.parent || (clhs.parent == crhs.parent && &clhs < &crhs)));
+		//	});
+		if (mSceneDirty)
+		{
+			mRegistry.sort<SceneNode>([&](const entt::entity lhs, const entt::entity rhs) {
+				const auto& sceneLeft = mRegistry.get<SceneNode>(lhs);
+				const auto& sceneRight = mRegistry.get<SceneNode>(rhs);
+				return sceneRight.parent == lhs || 
+					(!(sceneLeft.parent == rhs) && (sceneLeft.parent < sceneRight.parent || (sceneLeft.parent == sceneRight.parent && lhs < rhs)));
+				});
+			mSceneDirty = false;
+		}
+
         // GUI
         ImGui::NewFrame();
-
-		ImGui::Begin("Objects");
-		//mDuck->displayGui();
-		//mDynamicLight->displayGui();
-		mScene->displayGui();
-		ImGui::End();
 
         ImGui::Begin("Rendering");
 		ImGui::SliderFloat("Gamma", &mGammaSettings.gamma, 0.f, 10.f);
@@ -316,8 +326,35 @@ protected:
 
         ImGui::End();
 
+		entt::entity activeEntity = entt::null;
 		ImGui::Begin("Objects");
+		auto sceneNode = mRegistry.get<SceneNode>(mSceneEntity);
+		if (ImGui::TreeNode(&mSceneEntity, sceneNode.name.c_str()))
+		{
+			auto children = sceneNode.children;
+			for (auto& child : children)
+			{
+				auto& childNode = mRegistry.get<SceneNode>(child);
+				if (ImGui::TreeNode(&child, childNode.name.c_str()))
+				{
+					activeEntity = child;
+					ImGui::TreePop();
+				}
+			}
+			ImGui::TreePop();
+		}
+		//auto sceneView = mRegistry.view<SceneNode>();
+		//sceneView.each([&](auto entity, const auto& sceneNode) {
+		//	std::cout << entt::to_integer(entity) << std::endl;
+		//});
 		ImGui::End();
+
+		if (activeEntity != entt::null)
+		{
+			ImGui::Begin("Current Object");
+
+			ImGui::End();
+		}
 		
 		ImGui::Begin("Status");
 		ImGui::Text("Mouse State");

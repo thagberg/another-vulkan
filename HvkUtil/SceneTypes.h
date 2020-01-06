@@ -18,6 +18,8 @@ namespace hvk
 	struct SceneNode
 	{
 		entt::entity parent{ entt::null };
+		std::string name;
+		std::vector<entt::entity> children;	// figure out how to not make this grow dynamically?
 	};
 
 	struct WorldTransform
