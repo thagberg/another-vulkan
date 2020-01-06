@@ -328,10 +328,10 @@ protected:
 
 		entt::entity activeEntity = entt::null;
 		ImGui::Begin("Objects");
-		auto sceneNode = mRegistry.get<SceneNode>(mSceneEntity);
+		auto& sceneNode = mRegistry.get<SceneNode>(mSceneEntity);
 		if (ImGui::TreeNode(&mSceneEntity, sceneNode.name.c_str()))
 		{
-			auto children = sceneNode.children;
+			auto& children = sceneNode.children;
 			for (auto& child : children)
 			{
 				auto& childNode = mRegistry.get<SceneNode>(child);
