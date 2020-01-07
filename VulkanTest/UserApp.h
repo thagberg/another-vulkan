@@ -87,6 +87,7 @@ namespace hvk
 		void createFinalRenderPass();
 		void createSwapFramebuffers();
         void drawFrame(double frametime);
+		void cleanupSwapchain();
 
 		static void handleWindowResize(GLFWwindow* window, int width, int height);
 		static void handleCharInput(GLFWwindow* window, uint32_t character);

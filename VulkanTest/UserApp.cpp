@@ -379,7 +379,11 @@ namespace hvk
         UserApp* thisApp = reinterpret_cast<UserApp*>(glfwGetWindowUserPointer(window));
         thisApp->mWindowWidth = width;
         thisApp->mWindowHeight = height;
-        thisApp->mApp->recreateSwapchain(thisApp->mWindowWidth, thisApp->mWindowHeight);
+        //thisApp->mApp->recreateSwapchain(thisApp->mWindowWidth, thisApp->mWindowHeight);
+
+		thisApp->cleanupSwapchain();
+
+		util::image::destroyMap(GpuManager::getDevice(), GpuManager::getAllocator(), *thisApp->mPBRPassMap);
     }
 
     void UserApp::handleCharInput(GLFWwindow* window, uint32_t character)
@@ -387,6 +391,25 @@ namespace hvk
         ImGuiIO& io = ImGui::GetIO();
         io.AddInputCharacter(character);
     }
+
+	void UserApp::cleanupSwapchain()
+	{
+		const auto& device = GpuManager::getDevice();
+		const auto& allocator = GpuManager::getAllocator();
+
+		vkDestroyImageView(device, mPBRDepthView, nullptr);
+		vmaDestroyImage(allocator, mPBRDepthImage.memoryResource, mPBRDepthImage.allocation);
+		for (auto& imageView : mSwapchainViews)
+		{
+			vkDestroyImageView(device, imageView, nullptr);
+		}
+		for (auto& framebuffer : mSwapFramebuffers)
+		{
+			vkDestroyFramebuffer(device, framebuffer, nullptr);
+		}
+		vkDestroyRenderPass(device, mPBRRenderPass, nullptr);
+		vkDestroySwapchainKHR(device, mSwapchain.swapchain, nullptr);
+	}
 
     void UserApp::drawFrame(double frametime)
     {
