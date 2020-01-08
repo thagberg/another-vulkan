@@ -155,8 +155,6 @@ public:
 		mRegistry.assign_or_replace<NodeTransform>(modelEntity, glm::translate(testTrans.transform, glm::vec3(1.f, 0.f, 0.f)));
 
         mCameraController = CameraController(mCamera, 1.f);
-
-        activateCamera(mCamera);
 	}
 
 	virtual ~TestApp() = default;

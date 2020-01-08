@@ -170,6 +170,7 @@
     <ClInclude Include="DebugDrawTypes.h" />
     <ClInclude Include="descriptor-util.h" />
     <ClInclude Include="DrawlistGenerator.h" />
+    <ClInclude Include="DrawTypes.h" />
     <ClInclude Include="framebuffer-util.h" />
     <ClInclude Include="GpuManager.h" />
     <ClInclude Include="image-util.h" />

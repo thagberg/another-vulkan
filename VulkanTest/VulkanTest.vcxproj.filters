@@ -138,6 +138,9 @@
     <ClInclude Include="DebugDrawTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DrawTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RenderObject.cpp">

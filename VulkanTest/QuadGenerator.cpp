@@ -133,26 +133,24 @@ namespace hvk
         vkDestroyPipeline(GpuManager::getDevice(), mPipeline, nullptr);
 	}
 
-	void QuadGenerator::updateRenderPass(VkRenderPass renderPass)
+	void QuadGenerator::updateRenderPass(VkRenderPass renderPass, std::shared_ptr<TextureMap> newOffscreenMap)
 	{
         const auto& device = GpuManager::getDevice();
 
+		mOffscreenMap = newOffscreenMap;
         mColorRenderPass = renderPass;
-		if (mOffscreenMap != nullptr)
-		{
-			// need to re-apply the color attachment since it was destroyed
-			// when the resolution changed
-			VkDescriptorImageInfo imageInfo = {
-				mOffscreenMap->sampler,
-				mOffscreenMap->view,
-				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-			};
-			std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
-			auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
+		// need to re-apply the color attachment since it was destroyed
+		// when the resolution changed
+		VkDescriptorImageInfo imageInfo = {
+			mOffscreenMap->sampler,
+			mOffscreenMap->view,
+			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		};
+		std::vector<VkDescriptorImageInfo> imageInfos = { imageInfo };
+		auto imageWrite = util::descriptor::createDescriptorImageWrite(imageInfos, mDescriptorSet, 0);
 
-			std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
-			util::descriptor::writeDescriptorSets(device, descriptorWrites);
-		}
+		std::vector<VkWriteDescriptorSet> descriptorWrites = { imageWrite };
+		util::descriptor::writeDescriptorSets(device, descriptorWrites);
         mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		setInitialized(true);
 	}

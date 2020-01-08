@@ -77,7 +77,7 @@ namespace hvk
 			std::array<std::string, 2>& shaderFiles);
 		virtual ~QuadGenerator();
 		virtual void invalidate() override;
-		void updateRenderPass(VkRenderPass renderPass);
+		void updateRenderPass(VkRenderPass renderPass, std::shared_ptr<TextureMap> newOffscreenMap);
         VkCommandBuffer& drawFrame(
             const VkCommandBufferInheritanceInfo& inheritance,
             const VkFramebuffer& framebuffer,

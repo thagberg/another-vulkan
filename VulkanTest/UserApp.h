@@ -88,6 +88,7 @@ namespace hvk
 		void createSwapFramebuffers();
         void drawFrame(double frametime);
 		void cleanupSwapchain();
+		void recreateSwapchain();
 
 		static void handleWindowResize(GLFWwindow* window, int width, int height);
 		static void handleCharInput(GLFWwindow* window, uint32_t character);
@@ -103,7 +104,6 @@ namespace hvk
 		void runApp();
 		void doClose();
 		void toggleCursor(bool enabled);
-		void activateCamera(hvk::HVK_shared<hvk::Camera> camera);
 		hvk::ModelPipeline& getModelPipeline();
 		//hvk::HVK_shared<hvk::GammaSettings> getGammaSettings();
 		//hvk::HVK_shared<hvk::PBRWeight> getPBRWeight();

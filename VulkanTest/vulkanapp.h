@@ -26,7 +26,6 @@ namespace hvk {
 
 	class VulkanApp {
 	private:
-		uint32_t mSurfaceWidth, mSurfaceHeight;
 		VkInstance mInstance;
 
 		VkDevice mDevice;
@@ -45,8 +44,6 @@ namespace hvk {
 
 		VmaAllocator mAllocator;
 
-		CameraRef mActiveCamera;	// M
-
 		VkFence mRenderFence;
 
 	private:
@@ -54,26 +51,18 @@ namespace hvk {
 		void enableVulkanValidationLayers();
 		void initializeDevice();
 		void initializeRenderer();
-		void cleanupSwapchain();
 
 	public:
         VulkanApp();
 		~VulkanApp();
 
 		void init(
-            uint32_t surfaceWidth, 
-            uint32_t surfaceHeight,
             VkInstance vulkanInstance,
             VkSurfaceKHR surface);
         bool update(double frameTime);
 
         ModelPipeline& getModelPipeline() { return mModelPipeline; }
 
-        void setActiveCamera(HVK_shared<Camera> camera);
-		void recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight);
-
-        void setGammaCorrection(float gamma);
-        void setUseSRGBTex(bool useSRGBTex);
 		void generateEnvironmentMap(
 			std::shared_ptr<TextureMap> environmentMap,
 			std::shared_ptr<TextureMap> irradianceMap,

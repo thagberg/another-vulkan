@@ -34,8 +34,6 @@ const std::vector<const char*> deviceExtensions = {
 namespace hvk {
 
     VulkanApp::VulkanApp() :
-        mSurfaceWidth(),
-        mSurfaceHeight(),
         mInstance(VK_NULL_HANDLE),
         mDevice(VK_NULL_HANDLE),
         mPhysicalDevice(VK_NULL_HANDLE),
@@ -48,7 +46,6 @@ namespace hvk {
         mRenderFinished(VK_NULL_HANDLE),
 		mFinalRenderFinished(VK_NULL_HANDLE),
         mAllocator(),
-        mActiveCamera(nullptr),
         mRenderFence(VK_NULL_HANDLE)
     {
 
@@ -166,41 +163,10 @@ namespace hvk {
         mImageAvailable = util::signal::createSemaphore(mDevice);
     }
 
-	void VulkanApp::recreateSwapchain(uint32_t surfaceWidth, uint32_t surfaceHeight) {
-		vkDeviceWaitIdle(mDevice);
-
-        mSurfaceWidth = surfaceWidth;
-        mSurfaceHeight = surfaceHeight;
-
-		cleanupSwapchain();
-
-		// the color pass map which we render to in the color pass
-		// needs to be recreated at the new size
-		//util::image::destroyMap(mDevice, mAllocator, *mColorPassMap);
-
-  //      if (createSwapchain(mPhysicalDevice, mDevice, mSurface, mSurfaceWidth, mSurfaceHeight, mSwapchain) != VK_SUCCESS) {
-  //          throw std::runtime_error("Failed to create Swapchain");
-  //      }
-
-		//initFramebuffers();
-        //if (mActiveCamera)
-        //{
-        //    mActiveCamera->updateProjection(
-        //        90.0f,
-        //        mSwapchain.swapchainExtent.width / (float)mSwapchain.swapchainExtent.height,
-        //        0.001f,
-        //        1000.0f);
-        //}
-	}
-
     void VulkanApp::init(
-            uint32_t surfaceWidth, 
-            uint32_t surfaceHeight,
             VkInstance vulkanInstance,
             VkSurfaceKHR surface)
     {
-        mSurfaceWidth = surfaceWidth;
-        mSurfaceHeight = surfaceHeight;
         mInstance = vulkanInstance;
 
 		// load Renderdoc API
@@ -236,19 +202,6 @@ namespace hvk {
         mModelPipeline.init();
     }
 
-
-	void VulkanApp::cleanupSwapchain() {
-		//vkDestroyImageView(mDevice, mDepthView, nullptr);
-		//vmaDestroyImage(mAllocator, mDepthResource.memoryResource, mDepthResource.allocation);
-		//for (auto& imageView : mFinalPassImageViews) {
-		//	vkDestroyImageView(mDevice, imageView, nullptr);
-		//}
-		//for (auto& framebuffer : mFinalPassFramebuffers) {
-		//	vkDestroyFramebuffer(mDevice, framebuffer, nullptr);
-		//}
-		//vkDestroyRenderPass(mDevice, mColorRenderPass, nullptr);
-		//vkDestroySwapchainKHR(mDevice, mSwapchain.swapchain, nullptr);
-	}
 
 	uint32_t VulkanApp::renderPrepare(VkSwapchainKHR& swapchain)
 	{
@@ -334,11 +287,6 @@ namespace hvk {
     bool VulkanApp::update(double frameTime)
     {
         return false;
-    }
-
-    void VulkanApp::setActiveCamera(HVK_shared<Camera> camera)
-    {
-        mActiveCamera = camera;
     }
 
 	void VulkanApp::generateEnvironmentMap(

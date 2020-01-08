@@ -116,7 +116,7 @@ namespace hvk
         // must init InputManager after we've created an ImGui context
         hvk::InputManager::init(mWindow);
 
-        mApp->init(mWindowWidth, mWindowHeight, mVulkanInstance, mWindowSurface);
+        mApp->init(mVulkanInstance, mWindowSurface);
 
         // Create swapchain
         assert(createSwapchain(
@@ -381,9 +381,49 @@ namespace hvk
         thisApp->mWindowHeight = height;
         //thisApp->mApp->recreateSwapchain(thisApp->mWindowWidth, thisApp->mWindowHeight);
 
-		thisApp->cleanupSwapchain();
+        vkDeviceWaitIdle(GpuManager::getDevice());
+        thisApp->recreateSwapchain();
+    }
 
-		util::image::destroyMap(GpuManager::getDevice(), GpuManager::getAllocator(), *thisApp->mPBRPassMap);
+    void UserApp::recreateSwapchain()
+    {
+        // invalidate renderers
+        mPBRMeshRenderer->invalidate();
+        mUiRenderer->invalidate();
+        mDebugRenderer->invalidate();
+        //mSkyboxRenderer->invalidate();
+        mQuadRenderer->invalidate();
+
+        cleanupSwapchain();
+        createSwapchain(
+            GpuManager::getPhysicalDevice(), 
+            GpuManager::getDevice(), 
+            mWindowSurface, 
+            mWindowWidth, 
+            mWindowHeight, 
+            mSwapchain);
+
+        // initialize render passes
+        createFinalRenderPass();
+        createPBRRenderPass();
+
+        // initialize framebuffers
+        createPBRFramebuffers();
+        createSwapFramebuffers();
+
+        // update camera FOV
+        mCamera->updateProjection(
+            90.0f,
+            mSwapchain.swapchainExtent.width / static_cast<float>(mSwapchain.swapchainExtent.height),
+            0.001f,
+            1000.f);
+
+        // revalidate renderers
+        mPBRMeshRenderer->updateRenderPass(mPBRRenderPass);
+        mUiRenderer->updateRenderPass(mFinalRenderPass, VkExtent2D{mWindowWidth, mWindowHeight});
+        mDebugRenderer->updateRenderPass(mPBRRenderPass);
+        //mSkyboxRenderer->updateRenderPass(mPBRRenderPass);
+        mQuadRenderer->updateRenderPass(mFinalRenderPass, mPBRPassMap);
     }
 
     void UserApp::handleCharInput(GLFWwindow* window, uint32_t character)
@@ -399,6 +439,8 @@ namespace hvk
 
 		vkDestroyImageView(device, mPBRDepthView, nullptr);
 		vmaDestroyImage(allocator, mPBRDepthImage.memoryResource, mPBRDepthImage.allocation);
+
+        // destroy final framebuffers and renderpass
 		for (auto& imageView : mSwapchainViews)
 		{
 			vkDestroyImageView(device, imageView, nullptr);
@@ -407,7 +449,13 @@ namespace hvk
 		{
 			vkDestroyFramebuffer(device, framebuffer, nullptr);
 		}
-		vkDestroyRenderPass(device, mPBRRenderPass, nullptr);
+		vkDestroyRenderPass(device, mFinalRenderPass, nullptr);
+
+        // destroy PBR framebuffer and renderpass
+		util::image::destroyMap(GpuManager::getDevice(), GpuManager::getAllocator(), *mPBRPassMap);
+        vkDestroyFramebuffer(device, mPBRFramebuffer, nullptr);
+        vkDestroyRenderPass(device, mPBRRenderPass, nullptr);
+
 		vkDestroySwapchainKHR(device, mSwapchain.swapchain, nullptr);
 	}
 
@@ -529,11 +577,6 @@ namespace hvk
     {
         int toggle = enabled ? GLFW_CURSOR_NORMAL : GLFW_CURSOR_DISABLED;
         glfwSetInputMode(mWindow.get(), GLFW_CURSOR, toggle);
-    }
-
-    void UserApp::activateCamera(hvk::HVK_shared<hvk::Camera> camera)
-    {
-        mApp->setActiveCamera(camera);
     }
 
     hvk::ModelPipeline& UserApp::getModelPipeline()
