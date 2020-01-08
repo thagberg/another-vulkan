@@ -89,6 +89,31 @@ private:
 		}
 	}
 
+	void dirtyTree(entt::entity entity)
+	{
+		auto& sceneNode = mRegistry.get<SceneNode>(entity);
+		for (auto& child : sceneNode.children)
+		{
+			mRegistry.assign_or_replace<WorldDirty>(child);
+		}
+	}
+
+	void iterateChildren(entt::entity parent, const SceneNode& parentNode, entt::entity& activeEntity)
+	{
+		const auto& children = parentNode.children;
+		for (const auto& child : children)
+		{
+			const auto& childNode = mRegistry.get<SceneNode>(child);
+			if (ImGui::TreeNode(&child, childNode.name.c_str()))
+			{
+				activeEntity = child;
+				iterateChildren(child, childNode, activeEntity);
+				ImGui::TreePop();
+			}
+		}
+	}
+
+
 public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
 		UserApp(windowWidth, windowHeight, windowTitle),
@@ -104,6 +129,7 @@ public:
 		mRegistry.on_construct<NodeTransform>().connect<&createWorldTransform>();
 		mRegistry.on_construct<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mRegistry.on_replace<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
+		mRegistry.on_construct<WorldDirty>().connect<&TestApp::dirtyTree>(*this);
 
         std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
@@ -149,10 +175,6 @@ public:
 		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder, "Light");
 		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
-
-		// test triggering dirty flag
-		NodeTransform& testTrans = mRegistry.get<NodeTransform>(modelEntity);
-		mRegistry.assign_or_replace<NodeTransform>(modelEntity, glm::translate(testTrans.transform, glm::vec3(1.f, 0.f, 0.f)));
 
         mCameraController = CameraController(mCamera, 1.f);
 	}
@@ -267,12 +289,6 @@ protected:
         mCameraController.update(frameTime, cameraCommands);
 
 		// sort the scene?
-		//registry.sort<relationship>([&registry](const entt::entity lhs, const entt::entity rhs) {
-		//	const auto& clhs = registry.get<relationship>(lhs);
-		//	const auto& crhs = registry.get<relationship>(rhs);
-		//	return crhs.parent == lhs || clhs.next == rhs
-		//		|| (!(clhs.parent == rhs || crhs.next == lhs) && (clhs.parent < crhs.parent || (clhs.parent == crhs.parent && &clhs < &crhs)));
-		//	});
 		if (mSceneDirty)
 		{
 			mRegistry.sort<SceneNode>([&](const entt::entity lhs, const entt::entity rhs) {
@@ -283,6 +299,32 @@ protected:
 				});
 			mSceneDirty = false;
 		}
+
+		// update world transforms
+		//auto dirtyObjects = mRegistry.group<WorldDirty>(entt::get<WorldTransform>);
+		//dirtyObjects.each([&](auto entity, const auto& dirty, const auto& transform) {
+		//	mRegistry.remove<WorldDirty>(entity);
+		//	std::cout << entt::to_integer(entity) << std::endl;
+		//});
+
+		auto dirtyObjects = mRegistry.group<WorldDirty>(entt::get<SceneNode, NodeTransform, WorldTransform>);
+		dirtyObjects.each([&](
+			auto entity, 
+			const auto& dirty, 
+			const auto& sceneNode, 
+			const auto& localTransform, 
+			const auto& worldTransform) {
+
+				mRegistry.remove<WorldDirty>(entity);
+				glm::mat4 newWorld = localTransform.transform;
+				const auto& parent = sceneNode.parent;
+				if (parent != entt::null)
+				{
+					const auto& parentTrans = mRegistry.get<WorldTransform>(parent);
+					newWorld = parentTrans.transform * newWorld;
+				}
+				mRegistry.replace<WorldTransform>(entity, newWorld);
+		});
 
         // GUI
         ImGui::NewFrame();
@@ -330,15 +372,7 @@ protected:
 		if (ImGui::TreeNode(&mSceneEntity, sceneNode.name.c_str()))
 		{
 			auto& children = sceneNode.children;
-			for (auto& child : children)
-			{
-				auto& childNode = mRegistry.get<SceneNode>(child);
-				if (ImGui::TreeNode(&child, childNode.name.c_str()))
-				{
-					activeEntity = child;
-					ImGui::TreePop();
-				}
-			}
+			iterateChildren(mSceneEntity, sceneNode, activeEntity);
 			ImGui::TreePop();
 		}
 		//auto sceneView = mRegistry.view<SceneNode>();
@@ -349,7 +383,20 @@ protected:
 
 		if (activeEntity != entt::null)
 		{
-			ImGui::Begin("Current Object");
+			auto& sceneNode = mRegistry.get<SceneNode>(activeEntity);
+			std::string windowLabel = sceneNode.name + "###ObjectPanel";
+			ImGui::Begin(windowLabel.c_str());
+
+			if (mRegistry.has<NodeTransform>(activeEntity))
+			{
+				auto& transform = mRegistry.get<NodeTransform>(activeEntity).transform;
+				std::string label = "Position##" + sceneNode.name;
+				bool moved = ImGui::DragFloat3(label.c_str(), &transform[3].x, 0.1f);
+				if (moved)
+				{
+					mRegistry.replace<NodeTransform>(activeEntity, transform);
+				}
+			}
 
 			ImGui::End();
 		}
