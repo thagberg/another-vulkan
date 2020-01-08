@@ -398,6 +398,21 @@ protected:
 				}
 			}
 
+			if (mRegistry.has<LightColor>(activeEntity))
+			{
+				auto& lightColor = mRegistry.get<LightColor>(activeEntity);
+				auto& color = lightColor.color;
+				float intensity = lightColor.intensity;
+				std::string colorLabel = "Color##" + sceneNode.name;
+				std::string intensityLabel = "Intensity##" + sceneNode.name;
+				bool colorChanged = ImGui::ColorEdit3(colorLabel.c_str(), &color.r);
+				bool intensityChanged = ImGui::SliderFloat(intensityLabel.c_str(), &intensity, 0.f, 1.f);
+				if (colorChanged || intensityChanged)
+				{
+					mRegistry.replace<LightColor>(activeEntity, color, intensity);
+				}
+			}
+
 			ImGui::End();
 		}
 		
