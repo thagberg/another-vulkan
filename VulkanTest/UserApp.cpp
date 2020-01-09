@@ -213,7 +213,8 @@ namespace hvk
 
         mCamera = std::make_shared<Camera>(
             90.f,
-            WIDTH / static_cast<float>(HEIGHT),
+            //WIDTH / static_cast<float>(HEIGHT),
+            HEIGHT / static_cast<float>(WIDTH),
             0.001f,
             1000.f,
 			"Main Camera",

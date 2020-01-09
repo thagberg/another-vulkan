@@ -8,6 +8,7 @@
 #include "imgui/imgui_internal.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 #include "stb_image.h"
 #include "entt/entt.hpp"
 
@@ -32,6 +33,10 @@ using namespace hvk;
 
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
+
+const glm::vec3 X_AXIS = glm::vec3(1.f, 0.f, 0.f);
+const glm::vec3 Y_AXIS = glm::vec3(0.f, 1.f, 0.f);
+const glm::vec3 Z_AXIS = glm::vec3(0.f, 0.f, 1.f);
 
 template <typename GroupType>
 void TestGroup(GroupType& elements)
@@ -134,6 +139,8 @@ public:
         std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
+		auto rotMat = glm::rotate(glm::mat4(1.f), 1.f, X_AXIS);
+		duckTransform = duckTransform * rotMat;
 
 		// ENTT experiments
 		mSceneEntity = mRegistry.create();
@@ -375,10 +382,6 @@ protected:
 			iterateChildren(mSceneEntity, sceneNode, activeEntity);
 			ImGui::TreePop();
 		}
-		//auto sceneView = mRegistry.view<SceneNode>();
-		//sceneView.each([&](auto entity, const auto& sceneNode) {
-		//	std::cout << entt::to_integer(entity) << std::endl;
-		//});
 		ImGui::End();
 
 		if (activeEntity != entt::null)
@@ -390,10 +393,39 @@ protected:
 			if (mRegistry.has<NodeTransform>(activeEntity))
 			{
 				auto& transform = mRegistry.get<NodeTransform>(activeEntity).transform;
+				glm::mat4 newTransform = glm::mat4(1.f);
+
+				glm::vec3 scale;
+				glm::quat orientation;
+				glm::vec3 translation;
+				glm::vec3 skew;
+				glm::vec4 perspective;
+				glm::decompose(transform, scale, orientation, translation, skew, perspective);
+				orientation = glm::conjugate(orientation);
+
+				bool changed = false;
 				std::string label = "Position##" + sceneNode.name;
-				bool moved = ImGui::DragFloat3(label.c_str(), &transform[3].x, 0.1f);
-				if (moved)
+				changed |= ImGui::DragFloat3(label.c_str(), &translation.x, 0.1f);
+
+				std::string rotationLabel = "Rotation##" + sceneNode.name;
+				ImGui::Text(rotationLabel.c_str());
+				glm::vec3 angles = glm::eulerAngles(orientation);
+				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x);
+				//changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y);
+				//changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z);
+
+				if (changed)
 				{
+					// rebuild transform matrix
+					if (angles.x > 10.f)
+					{
+						std::cout << "break here" << std::endl;
+					}
+					newTransform = glm::rotate(newTransform, angles.x, X_AXIS);
+					newTransform = glm::rotate(newTransform, angles.y, Y_AXIS);
+					newTransform = glm::rotate(newTransform, angles.z, Z_AXIS);
+					newTransform = glm::translate(newTransform, translation);
+
 					mRegistry.replace<NodeTransform>(activeEntity, transform);
 				}
 			}
