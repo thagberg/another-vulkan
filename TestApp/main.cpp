@@ -139,8 +139,8 @@ public:
         std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
-		auto rotMat = glm::rotate(glm::mat4(1.f), 1.f, X_AXIS);
-		duckTransform = duckTransform * rotMat;
+		//auto rotMat = glm::rotate(glm::mat4(1.f), 1.f, X_AXIS);
+		//duckTransform = duckTransform * rotMat;
 
 		// ENTT experiments
 		mSceneEntity = mRegistry.create();

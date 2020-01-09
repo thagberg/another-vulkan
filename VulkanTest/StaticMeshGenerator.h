@@ -138,9 +138,9 @@ namespace hvk
 			auto rot = glm::rotate(glm::mat4(1.f), 1.f, glm::vec3(1.f, 0.f, 0.f));
 			auto two = glm::rotate(glm::mat4(1.f), 1.f, glm::vec3(0.f, 1.f, 0.f));
 			test = trans * two * rot;
-			ubo.model = transform.transform;
-			//ubo.model = test;
-			ubo.model[1][1] *= -1;
+			//ubo.model = transform.transform;
+			ubo.model = test;
+			//ubo.model[1][1] *= -1;
 			ubo.modelViewProj = camera.getProjection() * camera.getViewTransform() * ubo.model;
 			//ubo.modelViewProj = ubo.model;
 			memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));
