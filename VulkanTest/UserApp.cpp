@@ -475,9 +475,9 @@ namespace hvk
 
         VkViewport viewport = {
             0.f, // x
-            0.f, // y
+            static_cast<float>(mSwapchain.swapchainExtent.height), // y
             static_cast<float>(mSwapchain.swapchainExtent.width), // width
-            static_cast<float>(mSwapchain.swapchainExtent.height), // height
+            -static_cast<float>(mSwapchain.swapchainExtent.height), // height
             0.f, // minDepth
             1.f  // maxDepth
         };

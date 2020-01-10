@@ -106,9 +106,9 @@ namespace hvk
 
 				VkViewport viewport = {};
 				viewport.x = 0.f;
-				viewport.y = 0.f;
+				viewport.y = static_cast<float>(outResolution);
 				viewport.width = static_cast<float>(outResolution);
-				viewport.height = static_cast<float>(outResolution);
+				viewport.height = -static_cast<float>(outResolution);
 				viewport.minDepth = 0.f;
 				viewport.maxDepth = 1.f;
 

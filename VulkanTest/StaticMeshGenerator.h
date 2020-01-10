@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "entt/entt.hpp"
-#include <glm/gtc/matrix_transform.hpp>
 
 #include "DrawlistGenerator.h"
 #include "types.h"
@@ -121,8 +120,7 @@ namespace hvk
 		UniformBufferObject ubo = {
 			glm::mat4(1.f),
 			camera.getViewTransform(),
-			//viewProj,
-			glm::mat4(1.f),
+			viewProj,
 			camera.getWorldPosition()
 		};
 
@@ -133,16 +131,9 @@ namespace hvk
 		elements.each([&](auto entity, const auto& mesh, const auto& binding, const auto& transform) {
 			// update UBO
 			vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
-			glm::mat4 test(1.f);
-			auto trans = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -1.f));
-			auto rot = glm::rotate(glm::mat4(1.f), 1.f, glm::vec3(1.f, 0.f, 0.f));
-			auto two = glm::rotate(glm::mat4(1.f), 1.f, glm::vec3(0.f, 1.f, 0.f));
-			test = trans * two * rot;
-			//ubo.model = transform.transform;
-			ubo.model = test;
-			//ubo.model[1][1] *= -1;
-			ubo.modelViewProj = camera.getProjection() * camera.getViewTransform() * ubo.model;
-			//ubo.modelViewProj = ubo.model;
+			ubo.model = transform.transform;
+			//ubo.modelViewProj = camera.getProjection() * camera.getViewTransform() * ubo.model;
+			ubo.modelViewProj = viewProj * ubo.model;
 			memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));
 
 			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mesh.vbo.memoryResource, offsets);

@@ -142,7 +142,6 @@ public:
 		//auto rotMat = glm::rotate(glm::mat4(1.f), 1.f, X_AXIS);
 		//duckTransform = duckTransform * rotMat;
 
-		// ENTT experiments
 		mSceneEntity = mRegistry.create();
 		entt::entity modelEntity = mRegistry.create();
 
@@ -393,7 +392,7 @@ protected:
 			if (mRegistry.has<NodeTransform>(activeEntity))
 			{
 				auto& transform = mRegistry.get<NodeTransform>(activeEntity).transform;
-				glm::mat4 newTransform = glm::mat4(1.f);
+				//glm::mat4 newTransform = glm::mat4(1.f);
 
 				glm::vec3 scale;
 				glm::quat orientation;
@@ -411,8 +410,8 @@ protected:
 				ImGui::Text(rotationLabel.c_str());
 				glm::vec3 angles = glm::eulerAngles(orientation);
 				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x);
-				//changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y);
-				//changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z);
+				changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y);
+				changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z);
 
 				if (changed)
 				{
@@ -421,12 +420,17 @@ protected:
 					{
 						std::cout << "break here" << std::endl;
 					}
-					newTransform = glm::rotate(newTransform, angles.x, X_AXIS);
-					newTransform = glm::rotate(newTransform, angles.y, Y_AXIS);
-					newTransform = glm::rotate(newTransform, angles.z, Z_AXIS);
-					newTransform = glm::translate(newTransform, translation);
+					//newTransform = glm::rotate(newTransform, angles.x, X_AXIS);
+					//newTransform = glm::rotate(newTransform, angles.y, Y_AXIS);
+					//newTransform = glm::rotate(newTransform, angles.z, Z_AXIS);
+					//newTransform = glm::translate(newTransform, translation);
 
-					mRegistry.replace<NodeTransform>(activeEntity, transform);
+					auto trans = glm::translate(glm::mat4(1.f), translation);
+					auto pitch = glm::rotate(glm::mat4(1.f), angles.x, X_AXIS);
+					auto yaw = glm::rotate(glm::mat4(1.f), angles.y, Y_AXIS);
+					auto roll = glm::rotate(glm::mat4(1.f), angles.z, Z_AXIS);
+
+					mRegistry.replace<NodeTransform>(activeEntity, trans * yaw * pitch * roll);
 				}
 			}
 
