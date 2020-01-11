@@ -473,11 +473,22 @@ namespace hvk
             {0, 0},
             mSwapchain.swapchainExtent};
 
+        // 3D scene is rendered using a "negative" viewport to compensate for Vulkan's coordinate system
         VkViewport viewport = {
             0.f, // x
             static_cast<float>(mSwapchain.swapchainExtent.height), // y
             static_cast<float>(mSwapchain.swapchainExtent.width), // width
             -static_cast<float>(mSwapchain.swapchainExtent.height), // height
+            0.f, // minDepth
+            1.f  // maxDepth
+        };
+
+        // Quad is rendered using a "normal" viewport
+        VkViewport quadViewport = {
+            0.f, // x
+            0.f, // y
+            static_cast<float>(mSwapchain.swapchainExtent.width), // width
+            static_cast<float>(mSwapchain.swapchainExtent.height), // height
             0.f, // minDepth
             1.f  // maxDepth
         };
@@ -534,7 +545,7 @@ namespace hvk
         finalCommandBuffers.push_back(mQuadRenderer->drawFrame(
             finalInheritanceInfo,
             mSwapFramebuffers[swapIndex],
-            viewport,
+            quadViewport,
             scissor,
             mExposureSettings));
 

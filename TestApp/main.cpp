@@ -221,7 +221,7 @@ protected:
 		}
 
         float sensitivity = 0.1f;
-        float mouseDeltY = static_cast<float>(mouse.y - prevMouse.y);
+        float mouseDeltY = -static_cast<float>(mouse.y - prevMouse.y);
         float mouseDeltX = static_cast<float>(prevMouse.x - mouse.x);
 
         std::vector<hvk::Command> cameraCommands;
@@ -243,10 +243,10 @@ protected:
 				cameraCommands.push_back(hvk::Command{ 1, "move_right", 1.0f });
 			}
 			if (hvk::InputManager::isDown(GLFW_KEY_Q)) {
-				cameraCommands.push_back(hvk::Command{ 2, "move_up", -1.0f });
+				cameraCommands.push_back(hvk::Command{ 2, "move_up", 1.0f });
 			}
 			if (hvk::InputManager::isDown(GLFW_KEY_E)) {
-				cameraCommands.push_back(hvk::Command{ 2, "move_up", 1.0f });
+				cameraCommands.push_back(hvk::Command{ 2, "move_up", -1.0f });
 			}
 			if (hvk::InputManager::isDown(GLFW_KEY_UP))
 			{
