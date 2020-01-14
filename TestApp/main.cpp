@@ -64,6 +64,7 @@ private:
     CameraController mCameraController;
 	bool mSceneDirty;
 	entt::entity mSceneEntity;
+	entt::entity mModelEntity;
 
 	//void markSceneDirty(entt::entity entity, entt::registry& registry, SceneNode& sceneNode)
 	void markSceneDirty()
@@ -143,7 +144,8 @@ public:
 		//duckTransform = duckTransform * rotMat;
 
 		mSceneEntity = mRegistry.create();
-		entt::entity modelEntity = mRegistry.create();
+		mModelEntity = mRegistry.create();
+		entt::entity modelEntity = mModelEntity;
 
 		mRegistry.assign<SceneNode>(mSceneEntity, entt::null, "Scene");
 		mRegistry.assign<NodeTransform>(mSceneEntity, glm::mat4(1.f));
@@ -294,6 +296,12 @@ protected:
 
         mCameraController.update(frameTime, cameraCommands);
 
+		// test some rotation stuff
+		//const auto& modelTransform = mRegistry.get<NodeTransform>(mModelEntity).transform;
+		//auto newTransform = glm::rotate(modelTransform, 0.001f, X_AXIS);
+		//newTransform = glm::rotate(newTransform, 0.001f, Y_AXIS);
+		//mRegistry.replace<NodeTransform>(mModelEntity, newTransform);
+
 		// sort the scene?
 		if (mSceneDirty)
 		{
@@ -409,9 +417,11 @@ protected:
 				std::string rotationLabel = "Rotation##" + sceneNode.name;
 				ImGui::Text(rotationLabel.c_str());
 				glm::vec3 angles = glm::eulerAngles(orientation);
-				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x);
-				changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y);
-				changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z);
+				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x, 0.f, 360.f);
+				changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y, 0.f, 360.f);
+				changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z, 0.f, 360.f);
+				static float testAngle = 0.f;
+				ImGui::SliderAngle("ThisIsDumb", &testAngle, 0.f, 360.f);
 
 				if (changed)
 				{
@@ -425,12 +435,19 @@ protected:
 					//newTransform = glm::rotate(newTransform, angles.z, Z_AXIS);
 					//newTransform = glm::translate(newTransform, translation);
 
-					auto trans = glm::translate(glm::mat4(1.f), translation);
-					auto pitch = glm::rotate(glm::mat4(1.f), angles.x, X_AXIS);
-					auto yaw = glm::rotate(glm::mat4(1.f), angles.y, Y_AXIS);
-					auto roll = glm::rotate(glm::mat4(1.f), angles.z, Z_AXIS);
+					auto pitch = glm::angleAxis(angles.x, X_AXIS);
+					auto yaw = glm::angleAxis(angles.y, Y_AXIS);
+					auto roll = glm::angleAxis(angles.z, Z_AXIS);
 
-					mRegistry.replace<NodeTransform>(activeEntity, trans * yaw * pitch * roll);
+					auto rotations = yaw * pitch * roll;
+
+					auto trans = glm::translate(glm::mat4(1.f), translation);
+					//auto pitch = glm::rotate(glm::mat4(1.f), angles.x, X_AXIS);
+					//auto yaw = glm::rotate(glm::mat4(1.f), angles.y, Y_AXIS);
+					//auto roll = glm::rotate(glm::mat4(1.f), angles.z, Z_AXIS);
+
+					//mRegistry.replace<NodeTransform>(activeEntity, trans * yaw * pitch * roll);
+					mRegistry.replace<NodeTransform>(activeEntity, trans * glm::mat4_cast(rotations));
 				}
 			}
 
