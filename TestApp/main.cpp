@@ -34,9 +34,9 @@ using namespace hvk;
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
 
-const glm::vec3 X_AXIS = glm::vec3(1.f, 0.f, 0.f);
-const glm::vec3 Y_AXIS = glm::vec3(0.f, 1.f, 0.f);
-const glm::vec3 Z_AXIS = glm::vec3(0.f, 0.f, 1.f);
+const glm::vec3 X_AXIS = glm::vec3(-1.f, 0.f, 0.f);
+const glm::vec3 Y_AXIS = glm::vec3(0.f, -1.f, 0.f);
+const glm::vec3 Z_AXIS = glm::vec3(0.f, 0.f, -1.f);
 
 template <typename GroupType>
 void TestGroup(GroupType& elements)
@@ -140,6 +140,9 @@ public:
         std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
+		//duckTransform = glm::rotate(duckTransform, 0.785398f, X_AXIS);
+		//duckTransform = glm::rotate(duckTransform, 1.5708f, Y_AXIS);
+		//duckTransform = glm::rotate(duckTransform, 0.785398f, Z_AXIS);
 		//auto rotMat = glm::rotate(glm::mat4(1.f), 1.f, X_AXIS);
 		//duckTransform = duckTransform * rotMat;
 
@@ -416,8 +419,50 @@ protected:
 
 				std::string rotationLabel = "Rotation##" + sceneNode.name;
 				ImGui::Text(rotationLabel.c_str());
-				glm::vec3 angles = glm::eulerAngles(orientation);
-				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x, 0.f, 360.f);
+				//glm::vec3 angles = glm::eulerAngles(orientation);
+
+				glm::vec3 angles = glm::vec3(0.f);
+				// get angles from transform
+				//angles.y = asinf(transform[2][0]);
+
+				if (fabsf(transform[2][0]) < 1.f)
+				{
+					angles.y = -asinf(transform[2][0]);
+					float c = 1.f / cosf(angles.y);
+					angles.x = atan2f(transform[2][1] * c, transform[2][2] * c);
+					angles.z = atan2f(transform[1][0] * c, transform[0][0] * c);
+				}
+				else
+				{
+					angles.z = 0.f;
+				}
+
+				/*Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
+				{
+					// http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
+					Vec3 ret;
+					if_likely(fabs(_m(2, 0)) < 1.0f) {
+						ret.y = -asinf(_m(2, 0));
+						float c = 1.0f / cosf(ret.y);
+						ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
+						ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
+					}
+			else {
+				ret.z = 0.0f;
+				if (!(_m(2, 0) > -1.0f)) {
+					ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
+					ret.y = HalfPi;
+				}
+				else {
+					ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));
+					ret.y = -HalfPi;
+				}
+			}
+			return ret;
+				}*/
+
+
+				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x, -180.f, 180.f);
 				changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y, 0.f, 360.f);
 				changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z, 0.f, 360.f);
 				static float testAngle = 0.f;
@@ -439,14 +484,11 @@ protected:
 					auto yaw = glm::angleAxis(angles.y, Y_AXIS);
 					auto roll = glm::angleAxis(angles.z, Z_AXIS);
 
-					auto rotations = yaw * pitch * roll;
+					auto rotations = pitch * yaw * roll;
+					//auto rotations = roll * yaw * pitch;
 
 					auto trans = glm::translate(glm::mat4(1.f), translation);
-					//auto pitch = glm::rotate(glm::mat4(1.f), angles.x, X_AXIS);
-					//auto yaw = glm::rotate(glm::mat4(1.f), angles.y, Y_AXIS);
-					//auto roll = glm::rotate(glm::mat4(1.f), angles.z, Z_AXIS);
 
-					//mRegistry.replace<NodeTransform>(activeEntity, trans * yaw * pitch * roll);
 					mRegistry.replace<NodeTransform>(activeEntity, trans * glm::mat4_cast(rotations));
 				}
 			}
