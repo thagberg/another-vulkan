@@ -462,7 +462,7 @@ protected:
 				}*/
 
 
-				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x, -180.f, 180.f);
+				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x, 0.f, 360.f);
 				changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y, 0.f, 360.f);
 				changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z, 0.f, 360.f);
 				static float testAngle = 0.f;
