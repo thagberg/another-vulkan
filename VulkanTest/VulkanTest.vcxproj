@@ -181,6 +181,7 @@
     <ClInclude Include="include\imgui\imstb_textedit.h" />
     <ClInclude Include="include\imgui\imstb_truetype.h" />
     <ClInclude Include="Inputs.h" />
+    <ClInclude Include="math-util.h" />
     <ClInclude Include="ModelPipeline.h" />
     <ClInclude Include="PBRTypes.h" />
     <ClInclude Include="pipeline-util.h" />
@@ -194,6 +195,7 @@
     <ClInclude Include="pch.h" />
     <ClInclude Include="Subscription.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="ToolsTypes.h" />
     <ClInclude Include="types.h" />
     <ClInclude Include="UiDrawGenerator.h" />
     <ClInclude Include="UserApp.h" />

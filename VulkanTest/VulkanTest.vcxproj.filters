@@ -141,6 +141,12 @@
     <ClInclude Include="DrawTypes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="math-util.h">
+      <Filter>Header Files\util</Filter>
+    </ClInclude>
+    <ClInclude Include="ToolsTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="RenderObject.cpp">

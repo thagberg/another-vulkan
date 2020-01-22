@@ -28,6 +28,8 @@
 #include "StaticMeshGenerator.h"
 #include "DebugDrawGenerator.h"
 #include "LightTypes.h"
+#include "math-util.h"
+#include "ToolsTypes.h"
 
 using namespace hvk;
 
@@ -38,23 +40,15 @@ const glm::vec3 X_AXIS = glm::vec3(-1.f, 0.f, 0.f);
 const glm::vec3 Y_AXIS = glm::vec3(0.f, -1.f, 0.f);
 const glm::vec3 Z_AXIS = glm::vec3(0.f, 0.f, -1.f);
 
-template <typename GroupType>
-void TestGroup(GroupType& elements)
-{
-	std::cout << "Testing group reference" << std::endl;
-	elements.each([](
-		auto entity, 
-		const hvk::NodeTransform& transform, 
-		const hvk::PBRMesh& mesh, 
-		const hvk::PBRBinding& binding) {
-
-		std::cout << "Iterating over each element in group" << std::endl;
-	});
-}
 
 void createWorldTransform(entt::entity entity, entt::registry& registry, NodeTransform& localTransform)
 {
 	registry.assign<WorldTransform>(entity, localTransform.transform);
+}
+
+void createEditorRotation(entt::entity entity, entt::registry& registry, NodeTransform& localTransform)
+{
+	registry.assign<EditorRotation>(entity, glm::vec3(0.f));
 }
 
 
@@ -66,14 +60,11 @@ private:
 	entt::entity mSceneEntity;
 	entt::entity mModelEntity;
 
-	//void markSceneDirty(entt::entity entity, entt::registry& registry, SceneNode& sceneNode)
 	void markSceneDirty()
 	{
 		mSceneDirty = true;
 	}
 
-	//void removeChild(entt::entity entity, entt::registry& registry, SceneNode& sceneNode)
-	//void removeChild(entt::entity entity, entt::registry& registry)
 	void removeChild(entt::entity entity)
 	{
 		auto& sceneNode = mRegistry.get<SceneNode>(entity);
@@ -133,6 +124,7 @@ public:
 		mRegistry.on_destroy<SceneNode>().connect<&TestApp::removeChild>(*this);
 		mRegistry.on_replace<SceneNode>().connect<&TestApp::markSceneDirty>(*this);
 		mRegistry.on_construct<NodeTransform>().connect<&createWorldTransform>();
+		mRegistry.on_construct<NodeTransform>().connect<&createEditorRotation>();
 		mRegistry.on_construct<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mRegistry.on_replace<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mRegistry.on_construct<WorldDirty>().connect<&TestApp::dirtyTree>(*this);
@@ -140,11 +132,6 @@ public:
         std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
 		duckMesh->setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
-		//duckTransform = glm::rotate(duckTransform, 0.785398f, X_AXIS);
-		//duckTransform = glm::rotate(duckTransform, 1.5708f, Y_AXIS);
-		//duckTransform = glm::rotate(duckTransform, 0.785398f, Z_AXIS);
-		//auto rotMat = glm::rotate(glm::mat4(1.f), 1.f, X_AXIS);
-		//duckTransform = duckTransform * rotMat;
 
 		mSceneEntity = mRegistry.create();
 		mModelEntity = mRegistry.create();
@@ -318,12 +305,6 @@ protected:
 		}
 
 		// update world transforms
-		//auto dirtyObjects = mRegistry.group<WorldDirty>(entt::get<WorldTransform>);
-		//dirtyObjects.each([&](auto entity, const auto& dirty, const auto& transform) {
-		//	mRegistry.remove<WorldDirty>(entity);
-		//	std::cout << entt::to_integer(entity) << std::endl;
-		//});
-
 		auto dirtyObjects = mRegistry.group<WorldDirty>(entt::get<SceneNode, NodeTransform, WorldTransform>);
 		dirtyObjects.each([&](
 			auto entity, 
@@ -403,94 +384,48 @@ protected:
 			if (mRegistry.has<NodeTransform>(activeEntity))
 			{
 				auto& transform = mRegistry.get<NodeTransform>(activeEntity).transform;
-				//glm::mat4 newTransform = glm::mat4(1.f);
-
-				glm::vec3 scale;
-				glm::quat orientation;
-				glm::vec3 translation;
-				glm::vec3 skew;
-				glm::vec4 perspective;
-				glm::decompose(transform, scale, orientation, translation, skew, perspective);
-				orientation = glm::conjugate(orientation);
+				auto translation = glm::vec3(transform[3]);
 
 				bool changed = false;
 				std::string label = "Position##" + sceneNode.name;
 				changed |= ImGui::DragFloat3(label.c_str(), &translation.x, 0.1f);
 
-				std::string rotationLabel = "Rotation##" + sceneNode.name;
-				ImGui::Text(rotationLabel.c_str());
-				//glm::vec3 angles = glm::eulerAngles(orientation);
-
-				glm::vec3 angles = glm::vec3(0.f);
-				// get angles from transform
-				//angles.y = asinf(transform[2][0]);
-
-				if (fabsf(transform[2][0]) < 1.f)
+				glm::quat rotQuat;
+				if (mRegistry.has<EditorRotation>(activeEntity))
 				{
-					angles.y = -asinf(transform[2][0]);
-					float c = 1.f / cosf(angles.y);
-					angles.x = atan2f(transform[2][1] * c, transform[2][2] * c);
-					angles.z = atan2f(transform[1][0] * c, transform[0][0] * c);
-				}
-				else
-				{
-					angles.z = 0.f;
-				}
+					auto rotation = mRegistry.get<EditorRotation>(activeEntity);
+					ImGui::Text("Rotation");
 
-				/*Vec3 Im3d::ToEulerXYZ(const Mat3& _m)
-				{
-					// http://www.staff.city.ac.uk/~sbbh653/publications/euler.pdf
-					Vec3 ret;
-					if_likely(fabs(_m(2, 0)) < 1.0f) {
-						ret.y = -asinf(_m(2, 0));
-						float c = 1.0f / cosf(ret.y);
-						ret.x = atan2f(_m(2, 1) * c, _m(2, 2) * c);
-						ret.z = atan2f(_m(1, 0) * c, _m(0, 0) * c);
+					// get angles from transform
+					glm::vec3 angles = util::math::getEulerAnglesFromMatrix(transform);
+
+					changed |= ImGui::SliderAngle("X##ObjectRotation", &rotation.eulerRotation.x, -360.f, 360.f);
+					changed |= ImGui::SliderAngle("Y##ObjectRotation", &rotation.eulerRotation.y, -360.f, 360.f);
+					changed |= ImGui::SliderAngle("Z##ObjectRotation", &rotation.eulerRotation.z, -360.f, 360.f);
+
+					if (changed)
+					{
+						mRegistry.replace<EditorRotation>(activeEntity, rotation.eulerRotation);
 					}
-			else {
-				ret.z = 0.0f;
-				if (!(_m(2, 0) > -1.0f)) {
-					ret.x = ret.z + atan2f(_m(0, 1), _m(0, 2));
-					ret.y = HalfPi;
-				}
-				else {
-					ret.x = -ret.z + atan2f(-_m(0, 1), -_m(0, 2));
-					ret.y = -HalfPi;
-				}
-			}
-			return ret;
-				}*/
 
-
-				changed |= ImGui::SliderAngle("X##ObjectRotation", &angles.x, 0.f, 360.f);
-				changed |= ImGui::SliderAngle("Y##ObjectRotation", &angles.y, 0.f, 360.f);
-				changed |= ImGui::SliderAngle("Z##ObjectRotation", &angles.z, 0.f, 360.f);
-				static float testAngle = 0.f;
-				ImGui::SliderAngle("ThisIsDumb", &testAngle, 0.f, 360.f);
+					auto pitch = glm::angleAxis(rotation.eulerRotation.x, X_AXIS);
+					auto yaw = glm::angleAxis(rotation.eulerRotation.y, Y_AXIS);
+					auto roll = glm::angleAxis(rotation.eulerRotation.z, Z_AXIS);
+					rotQuat = pitch * yaw * roll;
+				}
 
 				if (changed)
 				{
 					// rebuild transform matrix
-					if (angles.x > 10.f)
-					{
-						std::cout << "break here" << std::endl;
-					}
-					//newTransform = glm::rotate(newTransform, angles.x, X_AXIS);
-					//newTransform = glm::rotate(newTransform, angles.y, Y_AXIS);
-					//newTransform = glm::rotate(newTransform, angles.z, Z_AXIS);
-					//newTransform = glm::translate(newTransform, translation);
-
-					auto pitch = glm::angleAxis(angles.x, X_AXIS);
-					auto yaw = glm::angleAxis(angles.y, Y_AXIS);
-					auto roll = glm::angleAxis(angles.z, Z_AXIS);
-
-					auto rotations = pitch * yaw * roll;
-					//auto rotations = roll * yaw * pitch;
-
 					auto trans = glm::translate(glm::mat4(1.f), translation);
 
-					mRegistry.replace<NodeTransform>(activeEntity, trans * glm::mat4_cast(rotations));
+					mRegistry.replace<NodeTransform>(activeEntity, trans * glm::mat4_cast(rotQuat));
 				}
+
+				auto newTrans = mRegistry.get<NodeTransform>(activeEntity).transform;
+				ImGui::InputFloat3("X Axis", &newTrans[0].x, 3);
+				ImGui::InputFloat3("Y Axis", &newTrans[1].x, 3);
+				ImGui::InputFloat3("Z Axis", &newTrans[2].x, 3);
 			}
 
 			if (mRegistry.has<LightColor>(activeEntity))
