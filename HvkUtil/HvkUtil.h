@@ -40,7 +40,8 @@ namespace hvk
 	}
 
 	template <typename T>
-	using HVK_vector = std::vector<T, Hallocator<T>>;
+	using HVK_vector = std::vector<T>;
+	//using HVK_vector = std::vector<T, Hallocator<T>>;
 
 
 	struct MaterialProperty {

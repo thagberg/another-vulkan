@@ -53,7 +53,7 @@ namespace hvk
         mInitialized = true;
     }
 
-    void ModelPipeline::processGltfModel(std::shared_ptr<StaticMesh> model, const std::string& name)
+    void ModelPipeline::processGltfModel(const StaticMesh& model, const std::string& name)
     {
         assert(mInitialized);
 
@@ -65,8 +65,8 @@ namespace hvk
         const auto& commandPool = GpuManager::getCommandPool();
         const auto& graphicsQueue = GpuManager::getGraphicsQueue();
 
-		const StaticMesh::Vertices vertices = model->getVertices();
-		const StaticMesh::Indices indices = model->getIndices();
+		const StaticMesh::Vertices vertices = model.getVertices();
+		const StaticMesh::Indices indices = model.getIndices();
 
 		mesh.numIndices = indices->size();
 
@@ -111,7 +111,7 @@ namespace hvk
         memcpy(iboAllocInfo.pMappedData, indices->data(), indexMemorySize);
 
         // Create texture maps
-        const auto& mat = model->getMaterial();
+        const auto& mat = model.getMaterial();
 
         assert(mat->diffuseProp.texture != nullptr);
         const auto& diffuseTex = *mat->diffuseProp.texture;
@@ -157,7 +157,7 @@ namespace hvk
         mMaterialStore.insert({ name + "_material_lod0", material });
     }
 
-    void ModelPipeline::processDebugModel(std::shared_ptr<DebugMesh> model, const std::string& modelName)
+    void ModelPipeline::processDebugModel(const DebugMesh& model, const std::string& modelName)
     {
         assert(mInitialized);
 
@@ -166,8 +166,8 @@ namespace hvk
         const auto& allocator = GpuManager::getAllocator();
         const auto& device = GpuManager::getDevice();
 
-        const auto vertices = model->getVertices();
-        const auto indices = model->getIndices();
+        const auto vertices = model.getVertices();
+        const auto indices = model.getIndices();
 
         mesh.numIndices = indices->size();
 
@@ -237,10 +237,10 @@ namespace hvk
     }
 
     bool ModelPipeline::loadAndFetchModel(
-        std::shared_ptr<StaticMesh> model, 
-        std::string&& name, 
-        PBRMesh* outMesh, 
-        PBRMaterial* outMaterial)
+        const StaticMesh& model, 
+        const std::string& name, 
+        PBRMesh& outMesh, 
+        PBRMaterial& outMaterial)
     {
         bool newLoad = false;
         auto meshName = name + "_lod0";
@@ -256,24 +256,24 @@ namespace hvk
 
         if (meshFound)
         {
-            *outMesh = meshAt->second;
-            *outMaterial = materialAt->second;
+            outMesh = meshAt->second;
+            outMaterial = materialAt->second;
         }
         else
         {
             newLoad = true;
             processGltfModel(model, name);
-            *outMesh = mMeshStore.at(meshName);
-            *outMaterial = mMaterialStore.at(materialName);
+            outMesh = mMeshStore.at(meshName);
+            outMaterial = mMaterialStore.at(materialName);
         }
 
         return newLoad;
     }
 
     bool ModelPipeline::loadAndFetchDebugModel(
-        std::shared_ptr<DebugMesh> model,
-        std::string&& name,
-        DebugDrawMesh* outMesh)
+        const DebugMesh& model,
+        const std::string& name,
+        DebugDrawMesh& outMesh)
     {
         bool newLoad = false;
 
@@ -282,13 +282,13 @@ namespace hvk
 
         if (meshFound)
         {
-            *outMesh = meshAt->second;
+            outMesh = meshAt->second;
         }
         else
         {
             newLoad = true;
             processDebugModel(model, name);
-            *outMesh = mDebugMeshStore.at(name);
+            outMesh = mDebugMeshStore.at(name);
         }
 
         return newLoad;

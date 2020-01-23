@@ -19,6 +19,7 @@ namespace hvk {
 
 	public:
 		StaticMesh(Vertices vertices, Indices indices, HVK_shared<Material> material);
+		StaticMesh(Vertices vertices, Indices indices);
 		StaticMesh(const StaticMesh& rhs);
 		~StaticMesh();
 

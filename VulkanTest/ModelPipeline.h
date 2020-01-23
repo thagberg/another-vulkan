@@ -22,8 +22,8 @@ namespace hvk
         TextureMap mDummyMap;
         bool mInitialized;
 
-        void processGltfModel(std::shared_ptr<StaticMesh> model, const std::string& modelName);
-        void processDebugModel(std::shared_ptr<DebugMesh> model, const std::string& modelName);
+        void processGltfModel(const StaticMesh& model, const std::string& modelName);
+        void processDebugModel(const DebugMesh& model, const std::string& modelName);
 
     public:
         ModelPipeline();
@@ -34,13 +34,13 @@ namespace hvk
         PBRMaterial fetchMaterial(std::string&& name);
         DebugDrawMesh fetchDebugMesh(const std::string& name);
         bool loadAndFetchModel(
-            std::shared_ptr<StaticMesh> model, 
-            std::string&& name, 
-            PBRMesh* outMesh, 
-            PBRMaterial* outMaterial);
+            const StaticMesh& model, 
+            const std::string& name, 
+            PBRMesh& outMesh, 
+            PBRMaterial& outMaterial);
         bool loadAndFetchDebugModel(
-            std::shared_ptr<DebugMesh> model,
-            std::string&& name,
-            DebugDrawMesh* outMesh);
+            const DebugMesh& model,
+            const std::string& name,
+            DebugDrawMesh& outMesh);
     };
 }

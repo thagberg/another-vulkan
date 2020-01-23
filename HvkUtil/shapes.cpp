@@ -1,6 +1,10 @@
 #include "pch.h"
 #include "shapes.h"
 
+#include "StaticMesh.h"
+#include "DebugMesh.h"
+#include "CubeMesh.h"
+
 namespace hvk
 {
     std::array<glm::vec3, 8> cubePositions = {
@@ -48,9 +52,15 @@ namespace hvk
 		glm::vec3(1.f, 1.f, 1.f)
 	};
 
-	HVK_shared<DebugMesh> createColoredCube(glm::vec3&& color)
+    std::array<glm::vec3, 3> cubeNormals = {
+        glm::vec3(1.f, 0.f, 0.f),
+        glm::vec3(0.f, 1.f, 0.f),
+        glm::vec3(0.f, 0.f, 1.f)
+    };
+
+	std::shared_ptr<DebugMesh> createColoredCube(glm::vec3&& color)
 	{
-		auto vertices = HVK_make_shared<HVK_vector<ColorVertex>>();
+		auto vertices = std::make_shared<HVK_vector<ColorVertex>>();
 		vertices->reserve(8);
 
 		for (auto& pos : cubePositions)
@@ -58,19 +68,19 @@ namespace hvk
 			vertices->push_back({ pos, color });
 		}
 
-		auto indices = HVK_make_shared<HVK_vector<VertIndex>>();
+		auto indices = std::make_shared<HVK_vector<VertIndex>>();
 		indices->reserve(cubeIndices.size());
 		for (auto& index : cubeIndices)
 		{
 			indices->push_back(index);
 		}
 
-		return HVK_make_shared<DebugMesh>(vertices, indices);
+		return std::make_shared<DebugMesh>(vertices, indices);
 	}
 
-    HVK_shared<CubeMesh> createEnvironmentCube()
+    std::shared_ptr<CubeMesh> createEnvironmentCube()
     {
-        auto vertices = HVK_make_shared<HVK_vector<CubeVertex>>();
+        auto vertices = std::shared_ptr<HVK_vector<CubeVertex>>();
         vertices->reserve(8);
 
         for (size_t i = 0; i < cubePositions.size(); ++i)
@@ -80,13 +90,25 @@ namespace hvk
             vertices->push_back({ pos, uvw });
         }
 
-		auto indices = HVK_make_shared<HVK_vector<VertIndex>>();
+		auto indices = std::make_shared<HVK_vector<VertIndex>>();
 		indices->reserve(cubeIndices.size());
 		for (auto& index : cubeIndices)
 		{
 			indices->push_back(index);
 		}
 
-        return HVK_make_shared<CubeMesh>(vertices, indices);
+        return std::make_shared<CubeMesh>(vertices, indices);
+    }
+
+    std::shared_ptr<StaticMesh> createStaticCube()
+    {
+        auto vertices = std::make_shared<std::vector<Vertex>>();
+        vertices->reserve(24);
+
+        //for (size_t i = 0; i < cubePositions.size(); ++i)
+        //{
+        //    const auto& pos = cubePositions[i];
+        //    const auto&
+        //}
     }
 }

@@ -135,44 +135,55 @@ public:
 
 		mSceneEntity = mRegistry.create();
 		mModelEntity = mRegistry.create();
-		entt::entity modelEntity = mModelEntity;
 
 		mRegistry.assign<SceneNode>(mSceneEntity, entt::null, "Scene");
 		mRegistry.assign<NodeTransform>(mSceneEntity, glm::mat4(1.f));
 
+		// Model entity
         PBRMesh duckPbrMesh;
         PBRMaterial duckPbrMaterial;
-        getModelPipeline().loadAndFetchModel(duckMesh, "Duck", &duckPbrMesh, &duckPbrMaterial);
-        mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
-        mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
-
+		entt::entity modelEntity = mModelEntity;
 		mRegistry.assign<SceneNode>(modelEntity, mSceneEntity, "Bottle");
 		mRegistry.assign<NodeTransform>(modelEntity, duckTransform);
-
+        getModelPipeline().loadAndFetchModel(*duckMesh, "Duck", duckPbrMesh, duckPbrMaterial);
+        mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
+        mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
 		mRegistry.assign<PBRBinding>(modelEntity, mPBRMeshRenderer->createPBRBinding(materialComp));
 
+		// Point light holder
 		entt::entity lightBoxHolder = mRegistry.create();
 		auto lightBoxTransform = glm::mat4(1.f);
 		mRegistry.assign<SceneNode>(lightBoxHolder, mSceneEntity, "LightHolder");
 		mRegistry.assign<NodeTransform>(lightBoxHolder, lightBoxTransform);
 
+		// Point light box
 		entt::entity boxEntity = mRegistry.create();
 		auto boxTransform = glm::mat4(1.f);
 		boxTransform = glm::scale(boxTransform, glm::vec3(.01f, .01f, .01f));
 		auto boxMesh = createColoredCube(glm::vec3(1.f, 1.f, 1.f));
 		DebugDrawMesh lightBoxMesh;
-		getModelPipeline().loadAndFetchDebugModel(boxMesh, "cube", &lightBoxMesh);
+		getModelPipeline().loadAndFetchDebugModel(*boxMesh, "cube", lightBoxMesh);
 		mRegistry.assign<DebugDrawMesh>(boxEntity, lightBoxMesh);
 		mRegistry.assign<SceneNode>(boxEntity, lightBoxHolder, "LightBox");
 		mRegistry.assign<NodeTransform>(boxEntity, boxTransform);
 		mRegistry.assign<DebugDrawBinding>(boxEntity, mDebugRenderer->createDebugDrawBinding());
 		
+		// Point light
 		entt::entity lightEntity = mRegistry.create();
 		auto lightTransform = glm::mat4(1.f);
 		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder, "Light");
 		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
+
+		// Floor
+		entt::entity floorEntity = mRegistry.create();
+		mRegistry.assign<SceneNode>(floorEntity, mSceneEntity, "Floor");
+		mRegistry.assign<NodeTransform>(floorEntity, glm::mat4(1.f));
+		DebugDrawMesh floorBoxMesh;
+		getModelPipeline().loadAndFetchDebugModel(*boxMesh, "cube", floorBoxMesh);
+		mRegistry.assign<DebugDrawMesh>(floorEntity, floorBoxMesh);
+		mRegistry.assign<DebugDrawBinding>(floorEntity, mDebugRenderer->createDebugDrawBinding());
 
         mCameraController = CameraController(mCamera, 1.f);
 	}
