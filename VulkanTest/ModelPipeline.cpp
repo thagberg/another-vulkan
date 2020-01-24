@@ -29,7 +29,9 @@ namespace hvk
     ModelPipeline::ModelPipeline() :
         mMeshStore(),
         mMaterialStore(),
-        mDummyMap(),
+        mDummyAlbedoMap(),
+        mDummyNormalMap(),
+        mDummyMetallicRoughnessMap(),
         mInitialized(false)
     {
     }
@@ -44,12 +46,24 @@ namespace hvk
         mMeshStore.reserve(50);
         mMaterialStore.reserve(50);
         mDebugMeshStore.reserve(50);
-        mDummyMap = util::image::createTextureMapFromFile(
+        mDummyAlbedoMap = util::image::createTextureMapFromFile(
             GpuManager::getDevice(),
             GpuManager::getAllocator(),
             GpuManager::getCommandPool(),
             GpuManager::getGraphicsQueue(),
             std::string("resources/dummy-white.png"));
+        mDummyNormalMap = util::image::createTextureMapFromFile(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getCommandPool(),
+            GpuManager::getGraphicsQueue(),
+            std::string("resources/dummy-normal.png"));
+        mDummyMetallicRoughnessMap = util::image::createTextureMapFromFile(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getCommandPool(),
+            GpuManager::getGraphicsQueue(),
+            std::string("resources/dummy-occlusionmetallicroughness.png"));
         mInitialized = true;
     }
 
@@ -68,10 +82,10 @@ namespace hvk
 		const StaticMesh::Vertices vertices = model.getVertices();
 		const StaticMesh::Indices indices = model.getIndices();
 
-		mesh.numIndices = indices->size();
+		mesh.numIndices = indices.size();
 
         // Create vertex buffer
-        size_t vertexMemorySize = sizeof(Vertex) * vertices->size();
+        size_t vertexMemorySize = sizeof(Vertex) * vertices.size();
         VkBufferCreateInfo bufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         bufferInfo.size = vertexMemorySize;
         bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -88,10 +102,10 @@ namespace hvk
             &mesh.vbo.allocation,
             &vboAllocInfo);
 
-        memcpy(vboAllocInfo.pMappedData, vertices->data(), vertexMemorySize);
+        memcpy(vboAllocInfo.pMappedData, vertices.data(), vertexMemorySize);
 
         // Create index buffer
-        size_t indexMemorySize = sizeof(uint16_t) * indices->size();
+        size_t indexMemorySize = sizeof(uint16_t) * indices.size();
         VkBufferCreateInfo iboInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
         iboInfo.size = indexMemorySize;
         iboInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
@@ -108,23 +122,29 @@ namespace hvk
             &mesh.ibo.allocation,
             &iboAllocInfo);
 
-        memcpy(iboAllocInfo.pMappedData, indices->data(), indexMemorySize);
+        memcpy(iboAllocInfo.pMappedData, indices.data(), indexMemorySize);
 
         // Create texture maps
         const auto& mat = model.getMaterial();
 
-        assert(mat->diffuseProp.texture != nullptr);
-        const auto& diffuseTex = *mat->diffuseProp.texture;
-        material.albedo = createTextureMapFromImageData(
-            device,
-            allocator,
-            commandPool,
-            graphicsQueue,
-            diffuseTex);
-
-        if (mat->metallicRoughnessProp.texture != nullptr)
+        if (mat.diffuseProp.texture != nullptr)
         {
-            const auto& mtlRoughTex = *mat->metallicRoughnessProp.texture;
+			const auto& diffuseTex = *mat.diffuseProp.texture;
+			material.albedo = createTextureMapFromImageData(
+				device,
+				allocator,
+				commandPool,
+				graphicsQueue,
+				diffuseTex);
+        }
+        else
+        {
+            material.albedo = mDummyAlbedoMap;
+        }
+
+        if (mat.metallicRoughnessProp.texture != nullptr)
+        {
+            const auto& mtlRoughTex = *mat.metallicRoughnessProp.texture;
             material.metallicRoughness = createTextureMapFromImageData(
                 device,
                 allocator,
@@ -134,12 +154,12 @@ namespace hvk
         }
         else
         {
-            material.metallicRoughness = mDummyMap;
+            material.metallicRoughness = mDummyMetallicRoughnessMap;
         }
 
-        if (mat->normalProp.texture != nullptr)
+        if (mat.normalProp.texture != nullptr)
         {
-            const auto& normalTex = *mat->normalProp.texture;
+            const auto& normalTex = *mat.normalProp.texture;
             material.normal = createTextureMapFromImageData(
                 device,
                 allocator,
@@ -149,7 +169,7 @@ namespace hvk
         }
         else
         {
-            material.normal = mDummyMap;
+            material.normal = mDummyNormalMap;
         }
 
         // register mesh and material in the store

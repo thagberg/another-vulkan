@@ -22,11 +22,13 @@ namespace hvk
 	void processGltfNode(
 		tinygltf::Node& node,
 		tinygltf::Model& model,
-		HVK_vector<Vertex>& vertices,
-		HVK_vector<VertIndex>& indices,
-		Material& mat)
+		std::vector<StaticMesh>& outMeshes)
 	{
 		if (node.mesh >= 0) {
+			std::vector<Vertex> vertices;
+			std::vector<VertIndex> indices;
+			Material mat;
+
 			tinygltf::Mesh mesh = model.meshes[node.mesh];
 			for (size_t j = 0; j < mesh.primitives.size(); ++j) {
 				tinygltf::Primitive prim = mesh.primitives[j];
@@ -119,19 +121,19 @@ namespace hvk
                     mat.normalProp.texture = HVK_shared<tinygltf::Image>(new tinygltf::Image(model.images[normalIndex]));
                 }
 			}
+
+			outMeshes.emplace_back(vertices, indices, mat);
 		}
 
 		for (const int& childId : node.children) {
 			tinygltf::Node& childNode = model.nodes[childId];
-			processGltfNode(childNode, model, vertices, indices, mat);
+			processGltfNode(childNode, model, outMeshes);
 		}
 	}
 
-	HVK_unique<StaticMesh> createMeshFromGltf(const std::string& filename)
+	std::vector<StaticMesh> createMeshFromGltf(const std::string& filename)
 	{
-		HVK_shared<HVK_vector<Vertex>> vertices = HVK_make_shared<HVK_vector<Vertex>>();
-		HVK_shared<HVK_vector<VertIndex>> indices = HVK_make_shared<HVK_vector<VertIndex>>();
-		HVK_shared<Material> mat = HVK_make_shared<Material>();
+		std::vector<StaticMesh> meshes;
 
 		tinygltf::Model model;
 		std::string err, warn;
@@ -148,9 +150,9 @@ namespace hvk
 		const tinygltf::Scene modelScene = model.scenes[model.defaultScene];
 		for (const int& nodeId : modelScene.nodes) {
 			tinygltf::Node& sceneNode = model.nodes[nodeId];
-			processGltfNode(sceneNode, model, *vertices.get(), *indices.get(), *mat.get());
+			processGltfNode(sceneNode, model, meshes);
 		}
 
-		return Pool<StaticMesh>::alloc(vertices, indices, mat);
+		return meshes;
 	}
 }

@@ -11,7 +11,6 @@
 
 #include "vulkanapp.h"
 #include "vulkan-util.h"
-#include "RenderObject.h"
 #include "InputManager.h"
 #include "image-util.h"
 #include "renderpass-util.h"

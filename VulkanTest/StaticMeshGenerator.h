@@ -6,8 +6,6 @@
 
 #include "DrawlistGenerator.h"
 #include "types.h"
-#include "RenderObject.h"
-#include "ResourceManager.h"
 #include "Light.h"
 #include "Camera.h"
 #include "PBRTypes.h"

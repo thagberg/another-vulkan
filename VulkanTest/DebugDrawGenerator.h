@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "DrawlistGenerator.h"
-#include "RenderObject.h"
 #include "types.h"
 #include "ResourceManager.h"
 #include "Camera.h"

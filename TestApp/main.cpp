@@ -129,9 +129,10 @@ public:
 		mRegistry.on_replace<NodeTransform>().connect<&entt::registry::assign_or_replace<WorldDirty>>(&mRegistry);
 		mRegistry.on_construct<WorldDirty>().connect<&TestApp::dirtyTree>(*this);
 
-        std::shared_ptr<hvk::StaticMesh> duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf"));
-		duckMesh->setUsingSRGMat(true);
+        StaticMesh duckMesh(hvk::createMeshFromGltf("resources/bottle/WaterBottle.gltf")[0]);
+		duckMesh.setUsingSRGMat(true);
         glm::mat4 duckTransform = glm::mat4(1.f);
+		StaticMesh staticBoxMesh(hvk::createMeshFromGltf("resources/box/box.gltf")[0]);
 
 		mSceneEntity = mRegistry.create();
 		mModelEntity = mRegistry.create();
@@ -145,7 +146,7 @@ public:
 		entt::entity modelEntity = mModelEntity;
 		mRegistry.assign<SceneNode>(modelEntity, mSceneEntity, "Bottle");
 		mRegistry.assign<NodeTransform>(modelEntity, duckTransform);
-        getModelPipeline().loadAndFetchModel(*duckMesh, "Duck", duckPbrMesh, duckPbrMaterial);
+        getModelPipeline().loadAndFetchModel(duckMesh, "Duck", duckPbrMesh, duckPbrMaterial);
         mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
         mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
@@ -177,13 +178,18 @@ public:
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
 
 		// Floor
+		PBRMesh boxPbrMesh;
+		PBRMaterial boxPbrMaterial;
 		entt::entity floorEntity = mRegistry.create();
 		mRegistry.assign<SceneNode>(floorEntity, mSceneEntity, "Floor");
 		mRegistry.assign<NodeTransform>(floorEntity, glm::mat4(1.f));
-		DebugDrawMesh floorBoxMesh;
-		getModelPipeline().loadAndFetchDebugModel(*boxMesh, "cube", floorBoxMesh);
-		mRegistry.assign<DebugDrawMesh>(floorEntity, floorBoxMesh);
-		mRegistry.assign<DebugDrawBinding>(floorEntity, mDebugRenderer->createDebugDrawBinding());
+		getModelPipeline().loadAndFetchModel(staticBoxMesh, "boxMesh", boxPbrMesh, boxPbrMaterial);
+		mRegistry.assign<PBRMesh>(floorEntity, boxPbrMesh);
+		const auto& boxMaterialComp = mRegistry.assign<PBRMaterial>(floorEntity, boxPbrMaterial);
+		mRegistry.assign<PBRBinding>(floorEntity, mPBRMeshRenderer->createPBRBinding(boxMaterialComp));
+		//getModelPipeline().loadAndFetchDebugModel(*boxMesh, "cube", floorBoxMesh);
+		//mRegistry.assign<DebugDrawMesh>(floorEntity, floorBoxMesh);
+		//mRegistry.assign<DebugDrawBinding>(floorEntity, mDebugRenderer->createDebugDrawBinding());
 
         mCameraController = CameraController(mCamera, 1.f);
 	}

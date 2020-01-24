@@ -19,7 +19,9 @@ namespace hvk
         std::unordered_map<std::string, PBRMesh> mMeshStore;
         std::unordered_map<std::string, PBRMaterial> mMaterialStore;
         std::unordered_map<std::string, DebugDrawMesh> mDebugMeshStore;
-        TextureMap mDummyMap;
+        TextureMap mDummyAlbedoMap;
+        TextureMap mDummyNormalMap;
+        TextureMap mDummyMetallicRoughnessMap;
         bool mInitialized;
 
         void processGltfModel(const StaticMesh& model, const std::string& modelName);

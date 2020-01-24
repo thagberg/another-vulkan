@@ -183,12 +183,13 @@
     <ClInclude Include="Inputs.h" />
     <ClInclude Include="math-util.h" />
     <ClInclude Include="ModelPipeline.h" />
+    <ClInclude Include="NormalDrawGenerator.h" />
     <ClInclude Include="PBRTypes.h" />
     <ClInclude Include="pipeline-util.h" />
     <ClInclude Include="QuadGenerator.h" />
     <ClInclude Include="render-util.h" />
-    <ClInclude Include="RenderObject.h" />
     <ClInclude Include="CubemapGenerator.h" />
+    <ClInclude Include="RenderObject.h" />
     <ClInclude Include="renderpass-util.h" />
     <ClInclude Include="signal-util.h" />
     <ClInclude Include="StaticMeshGenerator.h" />
@@ -218,6 +219,7 @@
     <ClCompile Include="include\imgui\imgui_stdlib.cpp" />
     <ClCompile Include="include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="ModelPipeline.cpp" />
+    <ClCompile Include="NormalDrawGenerator.cpp" />
     <ClCompile Include="pch.cpp" />
     <ClCompile Include="pipeline-util.cpp" />
     <ClCompile Include="QuadGenerator.cpp" />

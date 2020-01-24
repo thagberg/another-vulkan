@@ -13,5 +13,5 @@ namespace hvk
 
     std::shared_ptr<CubeMesh> createEnvironmentCube();
 
-	std::shared_ptr<StaticMesh> createStaticCube();
+	//std::shared_ptr<StaticMesh> createStaticCube();
 }

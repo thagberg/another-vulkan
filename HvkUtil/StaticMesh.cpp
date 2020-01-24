@@ -4,7 +4,7 @@
 
 namespace hvk {
 
-	StaticMesh::StaticMesh(Vertices vertices, Indices indices, HVK_shared<Material> material) :
+	StaticMesh::StaticMesh(Vertices vertices, Indices indices, Material material) :
 		mVertices(vertices),
 		mIndices(indices),
 		mMaterial(material)
@@ -14,7 +14,7 @@ namespace hvk {
 	StaticMesh::StaticMesh(Vertices vertices, Indices indices) :
 		mVertices(vertices),
 		mIndices(indices),
-		mMaterial(std::make_shared<Material>())
+		mMaterial()
 	{
 	}
 

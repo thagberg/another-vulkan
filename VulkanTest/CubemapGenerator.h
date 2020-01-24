@@ -2,10 +2,9 @@
 
 #include "DrawlistGenerator.h"
 #include "Camera.h"
-#include "RenderObject.h"
 #include "CubeMesh.h"
 #include "types.h"
-
+#include "RenderObject.h"
 #include "stb_image.h"
 #include "shapes.h"
 #include "descriptor-util.h"

@@ -6,5 +6,5 @@
 namespace hvk
 {
 	extern tinygltf::TinyGLTF ModelLoader;
-	HVK_unique<StaticMesh> createMeshFromGltf(const std::string& filename);
+	std::vector<StaticMesh> createMeshFromGltf(const std::string& filename);
 }

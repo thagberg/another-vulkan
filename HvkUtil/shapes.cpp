@@ -80,7 +80,7 @@ namespace hvk
 
     std::shared_ptr<CubeMesh> createEnvironmentCube()
     {
-        auto vertices = std::shared_ptr<HVK_vector<CubeVertex>>();
+        auto vertices = std::make_shared<HVK_vector<CubeVertex>>();
         vertices->reserve(8);
 
         for (size_t i = 0; i < cubePositions.size(); ++i)
@@ -100,15 +100,15 @@ namespace hvk
         return std::make_shared<CubeMesh>(vertices, indices);
     }
 
-    std::shared_ptr<StaticMesh> createStaticCube()
-    {
-        auto vertices = std::make_shared<std::vector<Vertex>>();
-        vertices->reserve(24);
+    //std::shared_ptr<StaticMesh> createStaticCube()
+    //{
+    //    auto vertices = std::make_shared<std::vector<Vertex>>();
+    //    vertices->reserve(24);
 
-        //for (size_t i = 0; i < cubePositions.size(); ++i)
-        //{
-        //    const auto& pos = cubePositions[i];
-        //    const auto&
-        //}
-    }
+    //    //for (size_t i = 0; i < cubePositions.size(); ++i)
+    //    //{
+    //    //    const auto& pos = cubePositions[i];
+    //    //    const auto&
+    //    //}
+    //}
 }
