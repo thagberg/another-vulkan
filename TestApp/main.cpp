@@ -181,15 +181,13 @@ public:
 		PBRMesh boxPbrMesh;
 		PBRMaterial boxPbrMaterial;
 		entt::entity floorEntity = mRegistry.create();
+		auto floorTransform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(10.f, 0.1f, 10.f)), glm::vec3(0.f, -2.5f, 0.f));
 		mRegistry.assign<SceneNode>(floorEntity, mSceneEntity, "Floor");
-		mRegistry.assign<NodeTransform>(floorEntity, glm::mat4(1.f));
+		mRegistry.assign<NodeTransform>(floorEntity, floorTransform);
 		getModelPipeline().loadAndFetchModel(staticBoxMesh, "boxMesh", boxPbrMesh, boxPbrMaterial);
 		mRegistry.assign<PBRMesh>(floorEntity, boxPbrMesh);
 		const auto& boxMaterialComp = mRegistry.assign<PBRMaterial>(floorEntity, boxPbrMaterial);
 		mRegistry.assign<PBRBinding>(floorEntity, mPBRMeshRenderer->createPBRBinding(boxMaterialComp));
-		//getModelPipeline().loadAndFetchDebugModel(*boxMesh, "cube", floorBoxMesh);
-		//mRegistry.assign<DebugDrawMesh>(floorEntity, floorBoxMesh);
-		//mRegistry.assign<DebugDrawBinding>(floorEntity, mDebugRenderer->createDebugDrawBinding());
 
         mCameraController = CameraController(mCamera, 1.f);
 	}
