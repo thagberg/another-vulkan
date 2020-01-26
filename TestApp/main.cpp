@@ -188,7 +188,7 @@ public:
 
 		// directional light
 		mRegistry.assign<SceneNode>(mSkyEntity, mSceneEntity, "DirectionalLight");
-		mRegistry.assign<LightColor>(mSkyEntity, glm::vec3(250.f, 211.f, 57.f));
+		mRegistry.assign<LightColor>(mSkyEntity, glm::vec3(250.f, 211.f, 57.f), 1.f);
 		mRegistry.assign<Direction>(mSkyEntity, glm::vec3(3.f, -4.f, -1.f));
 
         mCameraController = CameraController(mCamera, 1.f);
