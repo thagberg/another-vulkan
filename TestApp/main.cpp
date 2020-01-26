@@ -57,7 +57,6 @@ class TestApp : public UserApp
 private:
     CameraController mCameraController;
 	bool mSceneDirty;
-	entt::entity mSceneEntity;
 	entt::entity mModelEntity;
 
 	void markSceneDirty()
@@ -115,8 +114,7 @@ public:
 	TestApp(uint32_t windowWidth, uint32_t windowHeight, const char* windowTitle) :
 		UserApp(windowWidth, windowHeight, windowTitle),
         mCameraController(nullptr),
-		mSceneDirty(false),
-		mSceneEntity()
+		mSceneDirty(false)
 	{
 		mRegistry.on_construct<SceneNode>().connect<&TestApp::markSceneDirty>(*this);
 		mRegistry.on_destroy<SceneNode>().connect<&TestApp::markSceneDirty>(*this);
@@ -134,7 +132,6 @@ public:
         glm::mat4 duckTransform = glm::mat4(1.f);
 		StaticMesh staticBoxMesh(hvk::createMeshFromGltf("resources/box/box.gltf")[0]);
 
-		mSceneEntity = mRegistry.create();
 		mModelEntity = mRegistry.create();
 
 		mRegistry.assign<SceneNode>(mSceneEntity, entt::null, "Scene");
@@ -188,6 +185,11 @@ public:
 		mRegistry.assign<PBRMesh>(floorEntity, boxPbrMesh);
 		const auto& boxMaterialComp = mRegistry.assign<PBRMaterial>(floorEntity, boxPbrMaterial);
 		mRegistry.assign<PBRBinding>(floorEntity, mPBRMeshRenderer->createPBRBinding(boxMaterialComp));
+
+		// directional light
+		mRegistry.assign<SceneNode>(mSkyEntity, mSceneEntity, "DirectionalLight");
+		mRegistry.assign<LightColor>(mSkyEntity, glm::vec3(250.f, 211.f, 57.f));
+		mRegistry.assign<Direction>(mSkyEntity, glm::vec3(3.f, -4.f, -1.f));
 
         mCameraController = CameraController(mCamera, 1.f);
 	}

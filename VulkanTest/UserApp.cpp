@@ -79,7 +79,9 @@ namespace hvk
         mExposureSettings(),
         mSkySettings(),
         mCamera(nullptr),
-        mAmbientLight{glm::vec3(1.f), 0.3f}
+        mAmbientLight{glm::vec3(1.f), 0.3f},
+        mSceneEntity(mRegistry.create()),
+        mSkyEntity(mRegistry.create())
     {
         VkApplicationInfo appInfo = {};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -509,6 +511,7 @@ namespace hvk
         //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
         auto pbrGroup = mRegistry.group<PBRMesh, PBRBinding>(entt::get<WorldTransform>);
         auto lightGroup = mRegistry.group<LightColor>(entt::get<WorldTransform>);
+        const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
         pbrCommandBuffers.push_back(mPBRMeshRenderer->drawElements(
             pbrInheritanceInfo,
             viewport,
@@ -518,7 +521,8 @@ namespace hvk
             mGammaSettings,
             mPBRWeight,
             pbrGroup,
-            lightGroup));
+            lightGroup,
+            skyLightComponents));
 
         auto debugGroup = mRegistry.group<DebugDrawMesh, DebugDrawBinding>(entt::get<WorldTransform>);
         pbrCommandBuffers.push_back(mDebugRenderer->drawElements(

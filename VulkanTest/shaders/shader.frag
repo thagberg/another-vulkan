@@ -1,15 +1,23 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-struct AmbientLight {
+struct LightColor {
 	vec3 color;
 	float intensity;
 };
 
-struct Light {
+struct AmbientLight {
+	LightColor lightColor;
+};
+
+struct DirectionalLight {
+	vec3 direction;
+	LightColor lightColor;
+};
+
+struct PointLight {
 	vec3 pos;
-	vec3 color;
-	float intensity;
+	LightColor lightColor;
 };
 
 layout(location = 0) in vec2 fragTexCoord;
@@ -18,8 +26,9 @@ layout(location = 3) in mat3 inTBN;
 
 layout(std140, set = 0, binding = 0) uniform UniformLight {
 	uint numLights;
-	Light lights[10];
+	PointLight lights[10];
 	AmbientLight ambient;
+	DirectionalLight directional;
 } lbo;
 
 layout(set = 1, binding = 0) uniform UniformBufferObject {
@@ -118,6 +127,44 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
     return ggx1 * ggx2;
 }
 
+
+vec3 calculateDynamicRadiance(
+	vec3 lightDir, 
+	vec3 lightRadiance, 
+	vec3 surfaceNormal, 
+	vec3 viewDir, 
+	vec3 F0,
+	vec3 environmentColor,
+	vec3 albedo,
+	float roughness,
+	float metallic) 
+{
+
+	vec3 lightReflect = reflect(-lightDir, surfaceNormal);
+	vec3 halfVec = normalize(lightDir + viewDir);
+
+	vec3 F = getSchlickFresnel(max(dot(halfVec, viewDir), 0.0), F0);
+
+	float NDF = getDistributionGGX(surfaceNormal, halfVec, roughness);
+	float G = GeometrySmith(surfaceNormal, viewDir, lightDir, roughness);
+
+	vec3 numerator = NDF * G * F;
+	// TODO: this formula is part of Cook-Torrance, but I don't actually understand the justification
+	//	should eventually read some papers about that...
+	float denominator = 4.0 * max(dot(surfaceNormal, viewDir), 0.0) * max(dot(surfaceNormal, lightDir), 0.0);
+	vec3 specular = numerator / max(denominator, 0.001);
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic;
+
+	float NdotL = max(dot(surfaceNormal, lightDir), 0.0);
+//		albedo.rgb = mix(albedo.rgb, environmentColor, 1.0 - roughness);
+	//vec3 lambert = albedo / PI;
+	vec3 lambert = albedo.rgb;
+	return (kD * lambert + specular) * lightRadiance * NdotL;
+}
+
 void main() {
     vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 
@@ -135,7 +182,7 @@ void main() {
 
 	//vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
 	vec3 imageIrradiance = texture(irradianceSampler, surfaceNormal).rgb;
-	vec3 ambientLight = lbo.ambient.intensity * lbo.ambient.color;
+	vec3 ambientLight = lbo.ambient.lightColor.intensity * lbo.ambient.lightColor.color;
 
     vec3 environmentReflect = reflect(-viewDir, surfaceNormal);
     vec3 environmentColor = textureLod(environmentSampler, environmentReflect, roughness * MAX_REFLECTION_LOD).rgb;
@@ -162,34 +209,35 @@ void main() {
     vec3 dynamicRadiance = vec3(0.0);
     for (int i = 0; i < lbo.numLights; i++)
     {
-        Light thisLight = lbo.lights[i];
+        PointLight thisLight = lbo.lights[i];
         
         vec3 lightDir = normalize(thisLight.pos - fragPos);
-        vec3 lightReflect = reflect(-lightDir, surfaceNormal);
-        vec3 lightRadiance = thisLight.color * thisLight.intensity;
-		vec3 halfVec = normalize(lightDir + viewDir);
+        vec3 lightRadiance = thisLight.lightColor.color * thisLight.lightColor.intensity;
 
-        vec3 F = getSchlickFresnel(max(dot(halfVec, viewDir), 0.0), F0);
-
-        float NDF = getDistributionGGX(surfaceNormal, halfVec, roughness);
-        float G = GeometrySmith(surfaceNormal, viewDir, lightDir, roughness);
-
-        vec3 numerator = NDF * G * F;
-		// TODO: this formula is part of Cook-Torrance, but I don't actually understand the justification
-		//	should eventually read some papers about that...
-        float denominator = 4.0 * max(dot(surfaceNormal, viewDir), 0.0) * max(dot(surfaceNormal, lightDir), 0.0);
-        vec3 specular = numerator / max(denominator, 0.001);
-
-        vec3 kS = F;
-        vec3 kD = vec3(1.0) - kS;
-        kD *= 1.0 - metallic;
-
-        float NdotL = max(dot(surfaceNormal, lightDir), 0.0);
-//		albedo.rgb = mix(albedo.rgb, environmentColor, glossiness);
-		//vec3 lambert = albedo.rgb / PI;
-		vec3 lambert = albedo.rgb;
-        dynamicRadiance += (kD * lambert + specular) * lightRadiance * NdotL;
+		dynamicRadiance += calculateDynamicRadiance(
+			lightDir, 
+			lightRadiance, 
+			surfaceNormal, 
+			viewDir, 
+			F0, 
+			environmentColor, 
+			albedo.rgb, 
+			roughness, 
+			metallic);
     }
+
+	DirectionalLight directional = lbo.directional;
+	vec3 lightRadiance = directional.lightColor.color * directional.lightColor.intensity;
+	dynamicRadiance += calculateDynamicRadiance(
+		-(directional.direction),
+		lightRadiance,
+		surfaceNormal,
+		viewDir,
+		F0,
+		environmentColor,
+		albedo.rgb,
+		roughness,
+		metallic);
 
     vec4 ambientColor = albedo * vec4(ambientLight, 1.0);
     outColor = occlusion * ambientColor + vec4(imageRadiance, 0.0) + vec4(dynamicRadiance, 0.0);

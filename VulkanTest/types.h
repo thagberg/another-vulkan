@@ -92,11 +92,18 @@ namespace hvk {
 		float lightIntensity;
 	};
 
+	struct DirectionalLight {
+		COMP3_4_ALIGN(float) glm::vec3 lightColor;
+		COMP3_4_ALIGN(float) glm::vec3 direction;
+		COMP1_ALIGN(float) float lightIntensity;
+	};
+
 	template<size_t n>
 	struct UniformLightObject {
 		COMP1_ALIGN(uint32_t) uint32_t numLights;
 		COMP3_4_ALIGN(float) std::array<UniformLight, n> lights;
 		COMP3_4_ALIGN(float) AmbientLight ambient;
+		COMP3_4_ALIGN(float) DirectionalLight directional;
 	};
 
 	struct UiPushConstant {

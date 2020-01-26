@@ -80,6 +80,8 @@ namespace hvk
 		SkySettings mSkySettings;
 		std::shared_ptr<Camera> mCamera;
 		AmbientLight mAmbientLight;
+		entt::entity mSceneEntity;
+		entt::entity mSkyEntity;
 
     private:
 		void createPBRRenderPass();

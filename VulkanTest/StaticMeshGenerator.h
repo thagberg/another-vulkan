@@ -47,7 +47,7 @@ namespace hvk
 		void updateRenderPass(VkRenderPass renderPass);
 		PBRBinding createPBRBinding(const PBRMaterial& material);
 
-		template <typename PBRGroupType, typename LightGroupType>
+		template <typename PBRGroupType, typename LightGroupType, typename DirectionalLightType>
 		VkCommandBuffer& drawElements(
 			const VkCommandBufferInheritanceInfo& inheritance,
 			const VkViewport& viewport,
@@ -57,11 +57,12 @@ namespace hvk
 			const GammaSettings& gammaSettings,
 			const PBRWeight& pbrWeight,
 			PBRGroupType& elements,
-			LightGroupType& lights);
+			LightGroupType& lights,
+			DirectionalLightType& directionalLight);
 	};
 
 
-	template <typename PBRGroupType, typename LightGroupType>
+	template <typename PBRGroupType, typename LightGroupType, typename DirectionalLightType>
 	VkCommandBuffer& StaticMeshGenerator::drawElements(
 		const VkCommandBufferInheritanceInfo& inheritance,
 		const VkViewport& viewport,
@@ -71,7 +72,8 @@ namespace hvk
 		const GammaSettings& gammaSettings,
 		const PBRWeight& pbrWeight,
 		PBRGroupType& elements,
-		LightGroupType& lights)
+		LightGroupType& lights,
+		DirectionalLightType& directionalLight)
 	{
 		 // update lights
 		int memOffset = 0;
@@ -88,6 +90,12 @@ namespace hvk
 			++i;
 		});
 		uboLights.numLights = static_cast<uint32_t>(i);
+		auto directionalColor = std::get<0>(directionalLight);
+		auto directionalDirection = std::get<1>(directionalLight);
+		uboLights.directional.lightColor = directionalColor.color;
+		uboLights.directional.lightIntensity = directionalColor.intensity;
+		uboLights.directional.direction = directionalDirection.direction;
+
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };

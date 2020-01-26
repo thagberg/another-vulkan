@@ -1,12 +1,7 @@
 #pragma once
 
-#include "entt/entt.hpp"
-#include "glm/glm.hpp"
-
-//namespace entt
-//{
-//	enum class entity;
-//}
+#include <entt/entt.hpp>
+#include <glm/glm.hpp>
 
 namespace hvk
 {
@@ -30,5 +25,10 @@ namespace hvk
 	struct WorldDirty
 	{
 
+	};
+
+	struct Direction
+	{
+		glm::vec3 direction;
 	};
 }
