@@ -14,6 +14,13 @@ namespace hvk
 		float intensity;
 	};
 
+	struct LightAttenuation
+	{
+		float constant;
+		float linear;
+		float quadratic;
+	};
+
 	struct LightBinding
 	{
 		RuntimeResource<VkBuffer> ubo;

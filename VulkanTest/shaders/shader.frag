@@ -6,6 +6,12 @@ struct LightColor {
 	float intensity;
 };
 
+struct LightAttenuation {
+	float constant;
+	float linear;
+	float quadratic;
+};
+
 struct AmbientLight {
 	LightColor lightColor;
 };
@@ -18,6 +24,7 @@ struct DirectionalLight {
 struct PointLight {
 	vec3 pos;
 	LightColor lightColor;
+	LightAttenuation attenuation;
 };
 
 layout(location = 0) in vec2 fragTexCoord;
@@ -165,6 +172,11 @@ vec3 calculateDynamicRadiance(
 	return (kD * lambert + specular) * lightRadiance * NdotL;
 }
 
+float distanceFalloff(float distance, LightAttenuation a)
+{
+	return 1.0 / (a.constant + a.linear * distance + a.quadratic * pow(distance, 2.0));	
+}
+
 void main() {
     vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 
@@ -211,8 +223,10 @@ void main() {
     {
         PointLight thisLight = lbo.lights[i];
         
-        vec3 lightDir = normalize(thisLight.pos - fragPos);
-        vec3 lightRadiance = thisLight.lightColor.color * thisLight.lightColor.intensity;
+        vec3 lightDir = fragPos - thisLight.pos;
+		float lightDistance = length(lightDir);
+        lightDir = -normalize(lightDir);
+        vec3 lightRadiance = thisLight.lightColor.color * thisLight.lightColor.intensity * distanceFalloff(lightDistance, thisLight.attenuation);
 
 		dynamicRadiance += calculateDynamicRadiance(
 			lightDir, 
@@ -229,7 +243,7 @@ void main() {
 	DirectionalLight directional = lbo.directional;
 	vec3 lightRadiance = directional.lightColor.color * directional.lightColor.intensity;
 	dynamicRadiance += calculateDynamicRadiance(
-		-(directional.direction),
+		-normalize(directional.direction),
 		lightRadiance,
 		surfaceNormal,
 		viewDir,

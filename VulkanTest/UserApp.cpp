@@ -510,7 +510,7 @@ namespace hvk
         std::vector<VkCommandBuffer> pbrCommandBuffers;
         //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
         auto pbrGroup = mRegistry.group<PBRMesh, PBRBinding>(entt::get<WorldTransform>);
-        auto lightGroup = mRegistry.group<LightColor>(entt::get<WorldTransform>);
+        auto lightGroup = mRegistry.group<LightColor, LightAttenuation>(entt::get<WorldTransform>);
         const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
         pbrCommandBuffers.push_back(mPBRMeshRenderer->drawElements(
             pbrInheritanceInfo,

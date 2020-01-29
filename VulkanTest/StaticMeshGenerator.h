@@ -82,10 +82,13 @@ namespace hvk
         uboLights.ambient = ambientLight;
 		UniformLight lightUbo = {};
 		size_t i = 0;
-		lights.each([&](auto entity, const auto& color, const auto& transform) {
+		lights.each([&](auto entity, const auto& color, const auto& attenuation, const auto& transform) {
 			lightUbo.lightPos = transform.transform[3];
 			lightUbo.lightColor = color.color;
 			lightUbo.lightIntensity = color.intensity;
+			lightUbo.constant = attenuation.constant;
+			lightUbo.linear = attenuation.linear;
+			lightUbo.quadratic = attenuation.quadratic;
 			uboLights.lights[i] = lightUbo;
 			++i;
 		});

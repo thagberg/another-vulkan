@@ -173,6 +173,7 @@ public:
 		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder, "Light");
 		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
+		mRegistry.assign<LightAttenuation>(lightEntity, 1.f, 0.7f, 1.8f);
 
 		// Floor
 		PBRMesh boxPbrMesh;
@@ -457,6 +458,22 @@ protected:
 				if (colorChanged || intensityChanged)
 				{
 					mRegistry.replace<LightColor>(activeEntity, color, intensity);
+				}
+			}
+
+			if (mRegistry.has<LightAttenuation>(activeEntity))
+			{
+				const auto& attenuation = mRegistry.get<LightAttenuation>(activeEntity);
+				float c = attenuation.constant;
+				float l = attenuation.linear;
+				float q = attenuation.quadratic;
+				ImGui::Text("Attenuation");
+				bool changed = ImGui::DragFloat("Constant", &c, 0.001f, 0.0000001f, 2.f);
+				changed |= ImGui::DragFloat("Linear", &l, 0.001f, 0.0000001f, 1.f);
+				changed |= ImGui::DragFloat("Quadratic", &q, 0.001f, 0.0000001f, 2.f);
+				if (changed)
+				{
+					mRegistry.replace<LightAttenuation>(activeEntity, c, l, q);
 				}
 			}
 
