@@ -84,6 +84,9 @@ namespace hvk {
 	struct UniformLight {
 		COMP3_4_ALIGN(float) glm::vec3 lightPos;
 		COMP3_4_ALIGN(float) glm::vec3 lightColor;
+        COMP3_4_ALIGN(float) glm::vec3 lightDirection;
+        COMP1_ALIGN(float) float umbra;
+        COMP1_ALIGN(float) float penumbra;
 		COMP1_ALIGN(float) float lightIntensity;
 		COMP1_ALIGN(float) float constant;
 		COMP1_ALIGN(float) float linear;

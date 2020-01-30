@@ -12,6 +12,12 @@ struct LightAttenuation {
 	float quadratic;
 };
 
+struct SpotLight {
+    vec3 direction;
+    float umbra;
+    float penumbra;
+};
+
 struct AmbientLight {
 	LightColor lightColor;
 };
@@ -21,9 +27,10 @@ struct DirectionalLight {
 	LightColor lightColor;
 };
 
-struct PointLight {
+struct DynamicLight {
 	vec3 pos;
 	LightColor lightColor;
+    SpotLight spotlight;
 	LightAttenuation attenuation;
 };
 
@@ -33,7 +40,7 @@ layout(location = 3) in mat3 inTBN;
 
 layout(std140, set = 0, binding = 0) uniform UniformLight {
 	uint numLights;
-	PointLight lights[10];
+	DynamicLight lights[10];
 	AmbientLight ambient;
 	DirectionalLight directional;
 } lbo;
@@ -177,6 +184,11 @@ float distanceFalloff(float distance, LightAttenuation a)
 	return 1.0 / (a.constant + a.linear * distance + a.quadratic * pow(distance, 2.0));	
 }
 
+float spotlightFalloff(float theta, float umbra, float penumbra)
+{
+    return clamp((theta - umbra) / (penumbra - umbra), 0.0, 1.0);
+}
+
 void main() {
     vec3 viewDir = normalize(ubo.cameraPos - fragPos);
 
@@ -221,12 +233,18 @@ void main() {
     vec3 dynamicRadiance = vec3(0.0);
     for (int i = 0; i < lbo.numLights; i++)
     {
-        PointLight thisLight = lbo.lights[i];
+        DynamicLight thisLight = lbo.lights[i];
         
         vec3 lightDir = fragPos - thisLight.pos;
 		float lightDistance = length(lightDir);
         lightDir = -normalize(lightDir);
-        vec3 lightRadiance = thisLight.lightColor.color * thisLight.lightColor.intensity * distanceFalloff(lightDistance, thisLight.attenuation);
+        float spotlightIntensity = 1.0;
+        if (thisLight.spotlight.umbra > 0.0)
+        {
+            float spotlightTheta = dot(lightDir, normalize(thisLight.spotlight.direction));
+            spotlightIntensity = spotlightFalloff(spotlightTheta, thisLight.spotlight.umbra, thisLight.spotlight.penumbra);
+        }
+        vec3 lightRadiance = thisLight.lightColor.color * thisLight.lightColor.intensity * spotlightIntensity * distanceFalloff(lightDistance, thisLight.attenuation);
 
 		dynamicRadiance += calculateDynamicRadiance(
 			lightDir, 

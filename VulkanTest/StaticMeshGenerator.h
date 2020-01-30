@@ -86,6 +86,9 @@ namespace hvk
 			lightUbo.lightPos = transform.transform[3];
 			lightUbo.lightColor = color.color;
 			lightUbo.lightIntensity = color.intensity;
+            lightUbo.lightDirection = glm::vec3(0.f);
+            lightUbo.umbra = 0.f;
+            lightUbo.penumbra = 0.f;
 			lightUbo.constant = attenuation.constant;
 			lightUbo.linear = attenuation.linear;
 			lightUbo.quadratic = attenuation.quadratic;

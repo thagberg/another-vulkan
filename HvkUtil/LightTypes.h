@@ -25,4 +25,10 @@ namespace hvk
 	{
 		RuntimeResource<VkBuffer> ubo;
 	};
+
+    struct SpotLight
+    {
+        float umbra;
+        float penumbra;
+    };
 }
