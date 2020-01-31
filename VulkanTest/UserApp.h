@@ -57,6 +57,7 @@ namespace hvk
 		entt::registry mRegistry;
 		VkRenderPass mPBRRenderPass;
 		VkRenderPass mFinalRenderPass;
+        VkRenderPass mShadowRenderPass;
 		Swapchain mSwapchain;
 		std::vector<VkImage> mSwapchainImages;
 		std::vector<VkImageView> mSwapchainViews;
@@ -87,6 +88,7 @@ namespace hvk
 		void createPBRRenderPass();
 		void createPBRFramebuffers();
 		void createFinalRenderPass();
+        void createShadowRenderPass();
 		void createSwapFramebuffers();
         void drawFrame(double frametime);
 		void cleanupSwapchain();

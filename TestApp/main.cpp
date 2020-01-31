@@ -208,7 +208,7 @@ public:
 		entt::entity spotlight = mRegistry.create();
 		mRegistry.assign<SceneNode>(spotlight, spotlightHolder, "Spotlight");
 		mRegistry.assign<NodeTransform>(spotlight, glm::mat4(1.f));
-		mRegistry.assign<LightColor>(spotlight, glm::vec3(0.f, 1.f, 0.f));
+		mRegistry.assign<LightColor>(spotlight, glm::vec3(0.f, 1.f, 0.f), 0.5f);
 		mRegistry.assign<LightAttenuation>(spotlight, 1.f, 0.7f, 1.8f);
 		mRegistry.assign<SpotLight>(spotlight, 1.22173f, 1.0472f);
 

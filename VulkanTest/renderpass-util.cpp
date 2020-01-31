@@ -28,7 +28,9 @@ namespace hvk
 			}
 
 
-			VkAttachmentDescription createDepthAttachment()
+			VkAttachmentDescription createDepthAttachment(
+                VkImageLayout initialLayout,
+                VkImageLayout finalLayout)
 			{
 				VkAttachmentDescription depthAttachment = {};
 				depthAttachment.format = VK_FORMAT_D32_SFLOAT;  // TODO: make this dynamic
@@ -37,8 +39,8 @@ namespace hvk
 				depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 				depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 				depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-				depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-				depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+				depthAttachment.initialLayout = initialLayout;
+				depthAttachment.finalLayout = finalLayout;
 
 				return depthAttachment;
 			}
@@ -46,7 +48,6 @@ namespace hvk
 
 			VkRenderPass createRenderPass(
 				VkDevice device, 
-				VkFormat swapchainImageFormat, 
 				std::vector<VkSubpassDependency>& subpassDependencies,
 				const VkAttachmentDescription* pColorAttachment, 
 				const VkAttachmentDescription* pDepthAttachment)
@@ -55,16 +56,24 @@ namespace hvk
 
 				VkSubpassDescription subpass = {};
 				subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-				subpass.colorAttachmentCount = 1;
+				subpass.colorAttachmentCount = (pColorAttachment) ? 1 : 0;
 
 				std::vector<VkAttachmentDescription> attachments;
-				if (pColorAttachment != nullptr && pDepthAttachment != nullptr) {
-					attachments.reserve(2);
-				}
+                size_t numAttachments = 0;
+                if (pColorAttachment)
+                {
+                    numAttachments++;
+                }
+                if (pDepthAttachment)
+                {
+                    numAttachments++;
+                }
+                attachments.reserve(numAttachments);
 
+                uint32_t currentAttachment = 0;
 				VkAttachmentReference colorAttachmentRef = {};
 				if (pColorAttachment != nullptr) {
-					colorAttachmentRef.attachment = 0;
+					colorAttachmentRef.attachment = currentAttachment++;
 					colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 					attachments.push_back(*pColorAttachment);
@@ -76,7 +85,7 @@ namespace hvk
 
 				VkAttachmentReference depthAttachmentRef = {};
 				if (pDepthAttachment != nullptr) {
-					depthAttachmentRef.attachment = 1;
+					depthAttachmentRef.attachment = currentAttachment++;
 					depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 					attachments.push_back(*pDepthAttachment);

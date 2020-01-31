@@ -169,17 +169,15 @@ namespace hvk {
         mInstance = vulkanInstance;
 
 		// load Renderdoc API
-		HMODULE renderMod = LoadLibraryA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll");
-		if (HMODULE mod = GetModuleHandleA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll"))
-		{
-			pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-			int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&rdoc_api);
-			assert(ret == 1);
-		}
+		//HMODULE renderMod = LoadLibraryA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll");
+		//if (HMODULE mod = GetModuleHandleA("C:\\\\Program Files\\RenderDoc\\renderdoc.dll"))
+		//{
+		//	pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
+		//	int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_4_0, (void**)&rdoc_api);
+		//	assert(ret == 1);
+		//}
 
         try {
-			ResourceManager::initialize(200 * 1000 * 1000);
-    	
             enableVulkanValidationLayers();
             std::cout << "init device" << std::endl;
             initializeDevice();
@@ -317,7 +315,7 @@ namespace hvk {
 			VK_IMAGE_TYPE_2D, 
 			0, 
 			VK_FORMAT_R32G32B32A32_SFLOAT);
-		auto hdrMap = HVK_make_shared<TextureMap>(TextureMap{
+		auto hdrMap = std::make_shared<TextureMap>(TextureMap{
 			hdrImage,
 			util::image::createImageView(mDevice, hdrImage.memoryResource, VK_FORMAT_R32G32B32A32_SFLOAT),
 			util::image::createImageSampler(mDevice)});

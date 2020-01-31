@@ -18,11 +18,12 @@ namespace hvk
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
 
-			VkAttachmentDescription createDepthAttachment();
+			VkAttachmentDescription createDepthAttachment(
+                VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+                VkImageLayout finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 
 			VkRenderPass createRenderPass(
 				VkDevice device, 
-				VkFormat swapchainImageFormat, 
 				std::vector<VkSubpassDependency>& subpassDependencies,
 				const VkAttachmentDescription* pColorAttachment, 
 				const VkAttachmentDescription* pDepthAttachment=nullptr);

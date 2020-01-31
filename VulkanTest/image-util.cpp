@@ -288,7 +288,7 @@ namespace hvk
 				}
 				layerSize = copySize / fileNames.size();
 
-				copyTo = static_cast<unsigned char*>(ResourceManager::alloc(copySize, alignof(unsigned char)));
+                copyTo = static_cast<unsigned char*>(_aligned_malloc(copySize, alignof(unsigned char)));
 				for (size_t i = 0; i < 6; ++i)
 				{
 					void* dst = copyTo + copyOffset;
@@ -318,7 +318,7 @@ namespace hvk
 					VK_IMAGE_VIEW_TYPE_CUBE);
 				cubeMap.sampler = createImageSampler(device);
 
-				ResourceManager::free(copyTo, copySize);
+                free(copyTo);
 
 				return cubeMap;
 			}

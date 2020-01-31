@@ -6,8 +6,6 @@
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
-#include "ResourceManager.h"
-//#include "StaticMesh.h"
 #include "tiny_gltf.h"
 #include "imgui/imgui.h"
 
@@ -33,11 +31,11 @@ namespace hvk
     template <typename T>
     using HVK_unique = std::unique_ptr<T, void(*)(T*)>;
 
-	template <typename T, typename... Args>
-	HVK_shared<T> HVK_make_shared(Args&& ... args) {
-		Hallocator<T> alloc;
-		return std::allocate_shared<T>(alloc, args...);
-	}
+	//template <typename T, typename... Args>
+	//HVK_shared<T> HVK_make_shared(Args&& ... args) {
+	//	Hallocator<T> alloc;
+	//	return std::allocate_shared<T>(alloc, args...);
+	//}
 
 	template <typename T>
 	using HVK_vector = std::vector<T>;

@@ -24,7 +24,7 @@ namespace hvk {
         mParent(parent),
 		mChildren()
     {
-        mTransform = HVK_make_shared<Transform>(Transform{ transform });
+        mTransform = std::make_shared<Transform>(Transform{ transform });
     }
 
     Node::~Node() 

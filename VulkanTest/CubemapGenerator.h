@@ -86,7 +86,7 @@ namespace hvk
 
 		//auto cube = createColoredCube(glm::vec3(0.f, 1.f, 0.f));
         auto cube = createEnvironmentCube();
-		mCubeRenderable.renderObject = HVK_make_shared<CubeMeshRenderObject>(
+		mCubeRenderable.renderObject = std::make_shared<CubeMeshRenderObject>(
 			"Sky Box",
 			nullptr,
 			glm::mat4(1.f),

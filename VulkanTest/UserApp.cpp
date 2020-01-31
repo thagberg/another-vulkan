@@ -57,6 +57,7 @@ namespace hvk
         mRegistry(),
         mPBRRenderPass(VK_NULL_HANDLE),
         mFinalRenderPass(VK_NULL_HANDLE),
+        mShadowRenderPass(VK_NULL_HANDLE),
         mSwapchain(),
         mSwapchainImages(),
         mSwapchainViews(),
@@ -132,6 +133,7 @@ namespace hvk
         // initialize render passes
         createFinalRenderPass();
         createPBRRenderPass();
+        createShadowRenderPass();
 
         // initialize framebuffers
         createPBRFramebuffers();
@@ -330,9 +332,39 @@ namespace hvk
 
         mPBRRenderPass = util::renderpass::createRenderPass(
             GpuManager::getDevice(),
-            VK_FORMAT_R16G16B16A16_SFLOAT,
             pbrPassDependencies,
             &colorAttachment,
+            &depthAttachment);
+    }
+
+    void UserApp::createShadowRenderPass()
+    {
+        std::vector<VkSubpassDependency> shadowpassDependencies = { 
+            util::renderpass::createSubpassDependency(
+                VK_SUBPASS_EXTERNAL,
+                0,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT),
+            util::renderpass::createSubpassDependency(
+                0,
+                VK_SUBPASS_EXTERNAL,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT) 
+        };
+        auto depthAttachment = util::renderpass::createDepthAttachment(
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        mShadowRenderPass = util::renderpass::createRenderPass(
+            GpuManager::getDevice(), 
+            shadowpassDependencies, 
+            nullptr, 
             &depthAttachment);
     }
 
@@ -342,7 +374,6 @@ namespace hvk
 		std::vector<VkSubpassDependency> finalPassDependencies = { util::renderpass::createSubpassDependency() };
         mFinalRenderPass = util::renderpass::createRenderPass(
             GpuManager::getDevice(),
-            mSwapchain.swapchainImageFormat, 
             finalPassDependencies, 
             &finalColorAttachment);
     }

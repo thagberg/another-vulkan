@@ -28,7 +28,7 @@ namespace hvk
 				HVK_shared<TextureMap> outMap,
 				std::array<std::string, 2>& shaderFiles)
 			{
-				auto fbMap = HVK_make_shared<TextureMap>(image::createImageMap(
+				auto fbMap = std::make_shared<TextureMap>(image::createImageMap(
 					device,
 					allocator,
 					commandPool,
@@ -47,7 +47,6 @@ namespace hvk
 				};
 				auto fbRenderPass = renderpass::createRenderPass(
 					device,
-					outFormat,
 					fbColorPassDependencies, 
 					&fbColorAttachment);
 				VkExtent2D fbExtent = {
@@ -229,7 +228,7 @@ namespace hvk
 				const std::vector<PushT>& pushSettings,
 				uint32_t mipLevels=1)
 			{
-				auto cubeMap = HVK_make_shared<TextureMap>(image::createImageMap(
+				auto cubeMap = std::make_shared<TextureMap>(image::createImageMap(
 					device,
 					allocator,
 					commandPool,
@@ -248,7 +247,6 @@ namespace hvk
 				};
 				auto cubeRenderPass = renderpass::createRenderPass(
 					device,
-					outFormat,
 					cubeColorPassDependencies, 
 					&cubeColorAttachment);
 				VkExtent2D cubeExtent = {
