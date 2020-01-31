@@ -192,6 +192,26 @@ public:
 		mRegistry.assign<LightColor>(mSkyEntity, glm::vec3(0.98f, 0.83f, 0.22f), 1.f);
 		mRegistry.assign<Direction>(mSkyEntity, glm::vec3(3.f, -4.f, -1.f));
 
+		// Spotlight holder
+		entt::entity spotlightHolder = mRegistry.create();
+		mRegistry.assign<SceneNode>(spotlightHolder, mSceneEntity, "SpotlightHolder");
+		mRegistry.assign<NodeTransform>(spotlightHolder, glm::mat4(1.f));
+
+		// Spotlight box
+		entt::entity spotlightBox = mRegistry.create();
+		mRegistry.assign<DebugDrawMesh>(spotlightBox, lightBoxMesh);
+		mRegistry.assign<SceneNode>(spotlightBox, spotlightHolder, "SpotlightBox");
+		mRegistry.assign<NodeTransform>(spotlightBox, glm::scale(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.1f)));
+		mRegistry.assign<DebugDrawBinding>(spotlightBox, mDebugRenderer->createDebugDrawBinding());
+
+		// Spotlight
+		entt::entity spotlight = mRegistry.create();
+		mRegistry.assign<SceneNode>(spotlight, spotlightHolder, "Spotlight");
+		mRegistry.assign<NodeTransform>(spotlight, glm::mat4(1.f));
+		mRegistry.assign<LightColor>(spotlight, glm::vec3(0.f, 1.f, 0.f));
+		mRegistry.assign<LightAttenuation>(spotlight, 1.f, 0.7f, 1.8f);
+		mRegistry.assign<SpotLight>(spotlight, 1.22173f, 1.0472f);
+
         mCameraController = CameraController(mCamera, 1.f);
 	}
 

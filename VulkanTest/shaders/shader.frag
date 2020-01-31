@@ -28,10 +28,19 @@ struct DirectionalLight {
 };
 
 struct DynamicLight {
+	float umbra;
+	float penumbra;
+	float intensity;
+	float constant;
+	float linear;
+	float quadratic;
 	vec3 pos;
-	LightColor lightColor;
-    SpotLight spotlight;
-	LightAttenuation attenuation;
+	vec3 color;
+	vec3 direction;
+
+	//LightColor lightColor;
+    //SpotLight spotlight;
+	//LightAttenuation attenuation;
 };
 
 layout(location = 0) in vec2 fragTexCoord;
@@ -179,9 +188,9 @@ vec3 calculateDynamicRadiance(
 	return (kD * lambert + specular) * lightRadiance * NdotL;
 }
 
-float distanceFalloff(float distance, LightAttenuation a)
+float distanceFalloff(float distance, float constant, float linear, float quadratic)
 {
-	return 1.0 / (a.constant + a.linear * distance + a.quadratic * pow(distance, 2.0));	
+	return 1.0 / (constant + linear * distance + quadratic * pow(distance, 2.0));	
 }
 
 float spotlightFalloff(float theta, float umbra, float penumbra)
@@ -239,12 +248,12 @@ void main() {
 		float lightDistance = length(lightDir);
         lightDir = -normalize(lightDir);
         float spotlightIntensity = 1.0;
-        if (thisLight.spotlight.umbra > 0.0)
+        if (thisLight.umbra > 0.0)
         {
-            float spotlightTheta = dot(lightDir, normalize(thisLight.spotlight.direction));
-            spotlightIntensity = spotlightFalloff(spotlightTheta, thisLight.spotlight.umbra, thisLight.spotlight.penumbra);
+            float spotlightTheta = dot(lightDir, normalize(thisLight.direction));
+            spotlightIntensity = spotlightFalloff(spotlightTheta, thisLight.umbra, thisLight.penumbra);
         }
-        vec3 lightRadiance = thisLight.lightColor.color * thisLight.lightColor.intensity * spotlightIntensity * distanceFalloff(lightDistance, thisLight.attenuation);
+        vec3 lightRadiance = thisLight.color * thisLight.intensity * spotlightIntensity * distanceFalloff(lightDistance, thisLight.constant, thisLight.linear, thisLight.quadratic);
 
 		dynamicRadiance += calculateDynamicRadiance(
 			lightDir, 

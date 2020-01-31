@@ -47,7 +47,7 @@ namespace hvk
 		void updateRenderPass(VkRenderPass renderPass);
 		PBRBinding createPBRBinding(const PBRMaterial& material);
 
-		template <typename PBRGroupType, typename LightGroupType, typename DirectionalLightType>
+		template <typename PBRGroupType, typename LightGroupType, typename SpotlightGroupType, typename DirectionalLightType>
 		VkCommandBuffer& drawElements(
 			const VkCommandBufferInheritanceInfo& inheritance,
 			const VkViewport& viewport,
@@ -58,11 +58,12 @@ namespace hvk
 			const PBRWeight& pbrWeight,
 			PBRGroupType& elements,
 			LightGroupType& lights,
+			SpotlightGroupType& spotlights,
 			DirectionalLightType& directionalLight);
 	};
 
 
-	template <typename PBRGroupType, typename LightGroupType, typename DirectionalLightType>
+		template <typename PBRGroupType, typename LightGroupType, typename SpotlightGroupType, typename DirectionalLightType>
 	VkCommandBuffer& StaticMeshGenerator::drawElements(
 		const VkCommandBufferInheritanceInfo& inheritance,
 		const VkViewport& viewport,
@@ -73,6 +74,7 @@ namespace hvk
 		const PBRWeight& pbrWeight,
 		PBRGroupType& elements,
 		LightGroupType& lights,
+		SpotlightGroupType& spotlights,
 		DirectionalLightType& directionalLight)
 	{
 		 // update lights
@@ -89,6 +91,19 @@ namespace hvk
             lightUbo.lightDirection = glm::vec3(0.f);
             lightUbo.umbra = 0.f;
             lightUbo.penumbra = 0.f;
+			lightUbo.constant = attenuation.constant;
+			lightUbo.linear = attenuation.linear;
+			lightUbo.quadratic = attenuation.quadratic;
+			uboLights.lights[i] = lightUbo;
+			++i;
+		});
+		spotlights.each([&](auto entity, const auto& color, const auto& attenuation, const auto& spotlight, const auto& transform) {
+			lightUbo.lightPos = transform.transform[3];
+			lightUbo.lightColor = color.color;
+			lightUbo.lightIntensity = color.intensity;
+			lightUbo.lightDirection = glm::vec3(transform.transform[2]);
+            lightUbo.umbra = glm::cos(spotlight.umbra);
+            lightUbo.penumbra = glm::cos(spotlight.penumbra);
 			lightUbo.constant = attenuation.constant;
 			lightUbo.linear = attenuation.linear;
 			lightUbo.quadratic = attenuation.quadratic;

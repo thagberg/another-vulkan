@@ -510,7 +510,8 @@ namespace hvk
         std::vector<VkCommandBuffer> pbrCommandBuffers;
         //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
         auto pbrGroup = mRegistry.group<PBRMesh, PBRBinding>(entt::get<WorldTransform>);
-        auto lightGroup = mRegistry.group<LightColor, LightAttenuation>(entt::get<WorldTransform>);
+        auto lightGroup = mRegistry.group<>(entt::get<LightColor, LightAttenuation, WorldTransform>, entt::exclude<SpotLight>);
+        auto spotlightGroup = mRegistry.group<>(entt::get<LightColor, LightAttenuation, SpotLight, WorldTransform>);
         const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
         pbrCommandBuffers.push_back(mPBRMeshRenderer->drawElements(
             pbrInheritanceInfo,
@@ -522,6 +523,7 @@ namespace hvk
             mPBRWeight,
             pbrGroup,
             lightGroup,
+            spotlightGroup,
             skyLightComponents));
 
         auto debugGroup = mRegistry.group<DebugDrawMesh, DebugDrawBinding>(entt::get<WorldTransform>);
