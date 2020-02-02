@@ -15,7 +15,7 @@ namespace hvk
 				VkDevice device,
 				const VkRenderPass& renderPass,
 				const VkExtent2D& extent,
-				const VkImageView& imageView,
+				const VkImageView* pImageView,
 				const VkImageView* pDepthView,
 				VkFramebuffer* oFramebuffer);
 		}

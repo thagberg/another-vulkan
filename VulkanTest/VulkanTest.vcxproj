@@ -191,6 +191,7 @@
     <ClInclude Include="CubemapGenerator.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="renderpass-util.h" />
+    <ClInclude Include="ShadowGenerator.h" />
     <ClInclude Include="signal-util.h" />
     <ClInclude Include="StaticMeshGenerator.h" />
     <ClInclude Include="pch.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="QuadGenerator.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="renderpass-util.cpp" />
+    <ClCompile Include="ShadowGenerator.cpp" />
     <ClCompile Include="signal-util.cpp" />
     <ClCompile Include="StaticMeshGenerator.cpp" />
     <ClCompile Include="Subscription.cpp" />
@@ -247,6 +249,8 @@
     <None Include="shaders\quad.vert" />
     <None Include="shaders\shader.frag" />
     <None Include="shaders\shader.vert" />
+    <None Include="shaders\shadow.frag" />
+    <None Include="shaders\shadow.vert" />
     <None Include="shaders\sky.frag" />
     <None Include="shaders\sky.vert" />
     <None Include="shaders\ui.frag" />

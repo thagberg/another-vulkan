@@ -15,3 +15,5 @@ C:/VulkanSDK/1.1.126.0/Bin/glslangValidator.exe -o shaders/compiled/convolution_
 C:/VulkanSDK/1.1.126.0/Bin/glslangValidator.exe -o shaders/compiled/prefiltered-environment_frag.spv -V shaders/prefiltered-environment.frag
 C:/VulkanSDK/1.1.126.0/Bin/glslangValidator.exe -o shaders/compiled/prefiltered-environment_vert.spv -V shaders/prefiltered-environment.vert
 C:/VulkanSDK/1.1.126.0/Bin/glslangValidator.exe -o shaders/compiled/brdfLUT_frag.spv -V shaders/brdfLUT.frag
+C:/VulkanSDK/1.1.126.0/Bin/glslangValidator.exe -o shaders/compiled/shadow_vert.spv -V shaders/shadow.vert
+C:/VulkanSDK/1.1.126.0/Bin/glslangValidator.exe -o shaders/compiled/shadow_frag.spv -V shaders/shadow.frag

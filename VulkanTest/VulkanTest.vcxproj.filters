@@ -150,6 +150,9 @@
     <ClInclude Include="NormalDrawGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ShadowGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vulkanapp.cpp">
@@ -233,6 +236,9 @@
     <ClCompile Include="NormalDrawGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ShadowGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.vert">
@@ -284,6 +290,12 @@
       <Filter>Source Files\shaders</Filter>
     </None>
     <None Include="shaders\brdfLUT.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\shadow.frag">
+      <Filter>Source Files\shaders</Filter>
+    </None>
+    <None Include="shaders\shadow.vert">
       <Filter>Source Files\shaders</Filter>
     </None>
   </ItemGroup>

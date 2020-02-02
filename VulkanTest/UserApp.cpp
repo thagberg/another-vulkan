@@ -12,6 +12,7 @@
 #include "framebuffer-util.h"
 #include "Camera.h"
 #include "LightTypes.h"
+#include "ShadowGenerator.h"
 
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
@@ -66,11 +67,15 @@ namespace hvk
         mPBRPassMap(nullptr),
         mPBRDepthImage(),
         mPBRDepthView(VK_NULL_HANDLE),
+        mShadowFramebuffer(VK_NULL_HANDLE),
+        mShadowDepthImage(),
+        mShadowDepthView(VK_NULL_HANDLE),
         mPBRMeshRenderer(nullptr),
         mUiRenderer(nullptr),
         mDebugRenderer(nullptr),
         mSkyboxRenderer(nullptr),
         mQuadRenderer(nullptr),
+        mShadowRenderer(nullptr),
         mEnvironmentMap(nullptr),
         mIrradianceMap(nullptr),
         mPrefilteredMap(nullptr),
@@ -138,6 +143,7 @@ namespace hvk
         // initialize framebuffers
         createPBRFramebuffers();
         createSwapFramebuffers();
+        createShadowFramebuffer();
 
         // Initialize various rendering settings
 		// Initialize gamma settings
@@ -201,6 +207,10 @@ namespace hvk
 
 		mDebugRenderer = std::make_shared<DebugDrawGenerator>(
             mPBRRenderPass, 
+            GpuManager::getCommandPool());
+
+        mShadowRenderer = std::make_shared<ShadowGenerator>(
+            mShadowRenderPass,
             GpuManager::getCommandPool());
 
 		//std::array<std::string, 2> skyboxShaders = {
@@ -294,9 +304,68 @@ namespace hvk
             GpuManager::getDevice(),
             mPBRRenderPass,
 			mSwapchain.swapchainExtent, 
-			mPBRPassMap->view, 
+			&mPBRPassMap->view, 
 			&mPBRDepthView, 
 			&mPBRFramebuffer);
+    }
+
+    void UserApp::createShadowFramebuffer()
+    {
+        // create depth image and view
+        VkImageCreateInfo depthImageCreate = {
+            VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,            // sType
+            nullptr,                                        // pNext
+            0,                                              // flags
+            VK_IMAGE_TYPE_2D,                               // imageType
+            VK_FORMAT_D32_SFLOAT,                           // format
+            VkExtent3D{2048, 2048, 1},                      // extent
+            1,                                              // mipLevels
+            1,                                              // arrayLayers
+            VK_SAMPLE_COUNT_1_BIT,                          // samples
+            VK_IMAGE_TILING_OPTIMAL,                        // tiling
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,    // usage
+            VK_SHARING_MODE_EXCLUSIVE,                      // sharingMode
+            0,                                              // queueFamilyIndexCount
+            nullptr,                                        // pQueueFamilyIndices
+            VK_IMAGE_LAYOUT_UNDEFINED                       // initialLayout
+        };
+			//VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
+
+        VmaAllocationCreateInfo depthImageAllocationCreate = {};
+        depthImageAllocationCreate.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        vmaCreateImage(
+            GpuManager::getAllocator(),
+            &depthImageCreate,
+            &depthImageAllocationCreate,
+            &mShadowDepthImage.memoryResource,
+            &mShadowDepthImage.allocation,
+            nullptr);
+
+        mShadowDepthView = util::image::createImageView(
+            GpuManager::getDevice(),
+            mShadowDepthImage.memoryResource,
+            VK_FORMAT_D32_SFLOAT,
+            VK_IMAGE_ASPECT_DEPTH_BIT);
+        auto commandBuffer = util::command::beginSingleTimeCommand(GpuManager::getDevice(), GpuManager::getCommandPool());
+        util::image::transitionImageLayout(
+            commandBuffer,
+            mShadowDepthImage.memoryResource,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+        util::command::endSingleTimeCommand(
+            GpuManager::getDevice(),
+            GpuManager::getCommandPool(),
+            commandBuffer,
+            GpuManager::getGraphicsQueue());
+
+        util::framebuffer::createFramebuffer(
+            GpuManager::getDevice(),
+            mShadowRenderPass,
+            VkExtent2D{ 2048, 2048 },
+            nullptr,
+            &mShadowDepthView,
+            &mShadowFramebuffer);
     }
 
     void UserApp::createPBRRenderPass()
@@ -344,14 +413,14 @@ namespace hvk
                 VK_SUBPASS_EXTERNAL,
                 0,
                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 VK_ACCESS_SHADER_READ_BIT,
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 VK_DEPENDENCY_BY_REGION_BIT),
             util::renderpass::createSubpassDependency(
                 0,
                 VK_SUBPASS_EXTERNAL,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
                 VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 VK_ACCESS_SHADER_READ_BIT,
@@ -402,7 +471,7 @@ namespace hvk
                 GpuManager::getDevice(),
 				mFinalRenderPass, 
 				mSwapchain.swapchainExtent, 
-				mSwapchainViews[i], 
+				&mSwapchainViews[i], 
 				nullptr, 
 				&mSwapFramebuffers[i]);
         }
@@ -497,6 +566,58 @@ namespace hvk
     {
         uint32_t swapIndex = mApp->renderPrepare(mSwapchain.swapchain);
 
+        // prepare shadow render pass
+        VkRect2D shadowScissor = {
+            {0, 0},
+            VkExtent2D{2048, 2048}
+        };
+
+        VkViewport shadowViewport = {
+            0.f,
+            2048.f,
+            2048.f,
+            -2048.f,
+            0.f,
+            1.f
+        };
+
+        VkClearValue shadowClear;
+        shadowClear.depthStencil = { 1.f, 0 };
+
+        VkRenderPassBeginInfo shadowRenderBegin = {
+            VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+            nullptr,
+            mShadowRenderPass,
+            mShadowFramebuffer,
+            shadowScissor,
+            1,
+            &shadowClear
+        };
+
+        auto shadowInheritanceInfo = mApp->renderpassBegin(shadowRenderBegin);
+        std::vector<VkCommandBuffer> shadowCommandBuffers;
+        auto shadowableGroup = mRegistry.group<>(entt::get<PBRMesh, ShadowBinding, WorldTransform>);
+        auto lightCameraGroup = mRegistry.group<>(entt::get<WorldTransform, Projection>);
+        shadowCommandBuffers.reserve(lightCameraGroup.size());
+        //lightCameraGroup.each([&](auto entity, const auto& transform, const auto& projection) {
+        //    auto view = glm::inverse(transform.transform);
+        //});
+        for (const auto entity : lightCameraGroup)
+        {
+        //const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
+            const auto& lightCamera = mRegistry.get<WorldTransform, Projection>(entity);
+            shadowCommandBuffers.push_back(mShadowRenderer->drawElements(
+                shadowInheritanceInfo,
+                shadowViewport,
+                shadowScissor,
+                lightCamera,
+                shadowableGroup));
+        }
+        if (shadowCommandBuffers.size())
+        {
+			mApp->renderpassExecuteAndClose(shadowCommandBuffers);
+        }
+
         // prepare PBR render pass
         std::array<VkClearValue, 2> clearValues = {};
         clearValues[0].color = { 0.2f, 0.2f, 0.2f, 1.f };
@@ -540,7 +661,7 @@ namespace hvk
         auto pbrInheritanceInfo = mApp->renderpassBegin(pbrRenderBegin);
         std::vector<VkCommandBuffer> pbrCommandBuffers;
         //pbrCommandBuffers.push_back(mPBRMeshRenderer->drawEl)
-        auto pbrGroup = mRegistry.group<PBRMesh, PBRBinding>(entt::get<WorldTransform>);
+        auto pbrGroup = mRegistry.group<>(entt::get<PBRMesh, PBRBinding, WorldTransform>);
         auto lightGroup = mRegistry.group<>(entt::get<LightColor, LightAttenuation, WorldTransform>, entt::exclude<SpotLight>);
         auto spotlightGroup = mRegistry.group<>(entt::get<LightColor, LightAttenuation, SpotLight, WorldTransform>);
         const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
@@ -565,7 +686,10 @@ namespace hvk
             *mCamera,
             debugGroup));
 
-        mApp->renderpassExecuteAndClose(pbrCommandBuffers);
+        if (pbrCommandBuffers.size())
+        {
+			mApp->renderpassExecuteAndClose(pbrCommandBuffers);
+        }
 
         // prepare final render pass
         VkRenderPassBeginInfo finalRenderBegin = {

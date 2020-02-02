@@ -58,7 +58,7 @@ namespace hvk
 					device,
 					fbRenderPass,
 					fbExtent,
-					fbMap->view, 
+					&fbMap->view, 
 					nullptr, 
 					&framebuffer);
 
@@ -258,7 +258,7 @@ namespace hvk
 					device,
 					cubeRenderPass,
 					cubeExtent,
-					cubeMap->view, 
+					&cubeMap->view, 
 					nullptr, 
 					&cubeFrameBuffer);
 
@@ -348,7 +348,7 @@ namespace hvk
 							device,
 							cubeRenderPass,
 							cubeExtent,
-							cubeMap->view, 
+							&cubeMap->view, 
 							nullptr, 
 							&cubeFrameBuffer);
 

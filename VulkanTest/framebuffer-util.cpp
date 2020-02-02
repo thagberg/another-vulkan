@@ -14,12 +14,14 @@ namespace hvk
 				VkDevice device,
 				const VkRenderPass& renderPass,
 				const VkExtent2D& extent,
-				const VkImageView& imageView,
+				const VkImageView* pImageView,
 				const VkImageView* pDepthView,
 				VkFramebuffer* oFramebuffer)
 			{
 				std::vector<VkImageView> attachments;
-				attachments.push_back(imageView);
+				if (pImageView != nullptr) {
+					attachments.push_back(*pImageView);
+				}
 				if (pDepthView != nullptr) {
 					attachments.push_back(*pDepthView);
 				}

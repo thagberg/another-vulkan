@@ -27,6 +27,7 @@
 #include "SceneTypes.h"
 #include "StaticMeshGenerator.h"
 #include "DebugDrawGenerator.h"
+#include "ShadowGenerator.h"
 #include "LightTypes.h"
 #include "math-util.h"
 #include "ToolsTypes.h"
@@ -148,6 +149,7 @@ public:
         mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
 		const auto& materialComp = mRegistry.get<PBRMaterial>(modelEntity);
 		mRegistry.assign<PBRBinding>(modelEntity, mPBRMeshRenderer->createPBRBinding(materialComp));
+		mRegistry.assign<ShadowBinding>(modelEntity, mShadowRenderer->createBinding());
 
 		// Point light holder
 		entt::entity lightBoxHolder = mRegistry.create();
@@ -211,6 +213,7 @@ public:
 		mRegistry.assign<LightColor>(spotlight, glm::vec3(0.f, 1.f, 0.f), 0.5f);
 		mRegistry.assign<LightAttenuation>(spotlight, 1.f, 0.7f, 1.8f);
 		mRegistry.assign<SpotLight>(spotlight, 1.22173f, 1.0472f);
+		mRegistry.assign<Projection>(spotlight, glm::perspective(1.22173f, 1.f, 0.01f, 100.f));
 
         mCameraController = CameraController(mCamera, 1.f);
 	}

@@ -31,4 +31,9 @@ namespace hvk
 	{
 		glm::vec3 direction;
 	};
+
+	struct Projection
+	{
+		glm::mat4 projection;
+	};
 }

@@ -29,6 +29,7 @@ namespace hvk
 	class UiDrawGenerator;
 	class DebugDrawGenerator;
 	class QuadGenerator;
+	class ShadowGenerator;
 	struct AmbientLight;
 	struct GammaSettings;
 	struct PBRWeight;
@@ -66,11 +67,15 @@ namespace hvk
 		std::shared_ptr<TextureMap> mPBRPassMap;
 		RuntimeResource<VkImage> mPBRDepthImage;
 		VkImageView mPBRDepthView;
+		VkFramebuffer mShadowFramebuffer;
+		RuntimeResource<VkImage> mShadowDepthImage;
+		VkImageView mShadowDepthView;
 		std::shared_ptr<StaticMeshGenerator> mPBRMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;
 		std::shared_ptr<CubemapGenerator<SkySettings>> mSkyboxRenderer;
 		std::shared_ptr<QuadGenerator> mQuadRenderer;
+		std::shared_ptr<ShadowGenerator> mShadowRenderer;
 		std::shared_ptr<TextureMap> mEnvironmentMap;
 		std::shared_ptr<TextureMap> mIrradianceMap;
 		std::shared_ptr<TextureMap> mPrefilteredMap;
@@ -88,8 +93,9 @@ namespace hvk
 		void createPBRRenderPass();
 		void createPBRFramebuffers();
 		void createFinalRenderPass();
-        void createShadowRenderPass();
 		void createSwapFramebuffers();
+        void createShadowRenderPass();
+		void createShadowFramebuffer();
         void drawFrame(double frametime);
 		void cleanupSwapchain();
 		void recreateSwapchain();
