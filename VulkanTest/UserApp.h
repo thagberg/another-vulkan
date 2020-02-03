@@ -68,8 +68,8 @@ namespace hvk
 		RuntimeResource<VkImage> mPBRDepthImage;
 		VkImageView mPBRDepthView;
 		VkFramebuffer mShadowFramebuffer;
-		RuntimeResource<VkImage> mShadowDepthImage;
-		VkImageView mShadowDepthView;
+		std::shared_ptr<TextureMap> mShadowDepthMap;
+		std::shared_ptr<TextureMap> mShadowSampleMap;
 		std::shared_ptr<StaticMeshGenerator> mPBRMeshRenderer;
 		std::shared_ptr<UiDrawGenerator> mUiRenderer;
 		std::shared_ptr<DebugDrawGenerator> mDebugRenderer;

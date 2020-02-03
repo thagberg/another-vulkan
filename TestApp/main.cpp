@@ -189,6 +189,15 @@ public:
 		const auto& boxMaterialComp = mRegistry.assign<PBRMaterial>(floorEntity, boxPbrMaterial);
 		mRegistry.assign<PBRBinding>(floorEntity, mPBRMeshRenderer->createPBRBinding(boxMaterialComp));
 
+		// Another box
+		entt::entity shadowBox = mRegistry.create();
+		mRegistry.assign<SceneNode>(shadowBox, mSceneEntity, "ShadowBox");
+		mRegistry.assign<NodeTransform>(shadowBox, glm::mat4(1.f));
+		mRegistry.assign<PBRMesh>(shadowBox, boxPbrMesh);
+		const auto& shadowboxMaterialComp = mRegistry.assign<PBRMaterial>(shadowBox, boxPbrMaterial);
+		mRegistry.assign<PBRBinding>(shadowBox, mPBRMeshRenderer->createPBRBinding(shadowboxMaterialComp));
+		mRegistry.assign<ShadowBinding>(shadowBox, mShadowRenderer->createBinding());
+
 		// directional light
 		mRegistry.assign<SceneNode>(mSkyEntity, mSceneEntity, "DirectionalLight");
 		mRegistry.assign<LightColor>(mSkyEntity, glm::vec3(0.98f, 0.83f, 0.22f), 1.f);

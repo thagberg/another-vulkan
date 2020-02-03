@@ -68,8 +68,8 @@ namespace hvk
         mPBRDepthImage(),
         mPBRDepthView(VK_NULL_HANDLE),
         mShadowFramebuffer(VK_NULL_HANDLE),
-        mShadowDepthImage(),
-        mShadowDepthView(VK_NULL_HANDLE),
+        mShadowDepthMap(nullptr),
+        mShadowSampleMap(nullptr),
         mPBRMeshRenderer(nullptr),
         mUiRenderer(nullptr),
         mDebugRenderer(nullptr),
@@ -311,61 +311,63 @@ namespace hvk
 
     void UserApp::createShadowFramebuffer()
     {
-        // create depth image and view
-        VkImageCreateInfo depthImageCreate = {
-            VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,            // sType
-            nullptr,                                        // pNext
-            0,                                              // flags
-            VK_IMAGE_TYPE_2D,                               // imageType
-            VK_FORMAT_D32_SFLOAT,                           // format
-            VkExtent3D{2048, 2048, 1},                      // extent
-            1,                                              // mipLevels
-            1,                                              // arrayLayers
-            VK_SAMPLE_COUNT_1_BIT,                          // samples
-            VK_IMAGE_TILING_OPTIMAL,                        // tiling
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,    // usage
-            VK_SHARING_MODE_EXCLUSIVE,                      // sharingMode
-            0,                                              // queueFamilyIndexCount
-            nullptr,                                        // pQueueFamilyIndices
-            VK_IMAGE_LAYOUT_UNDEFINED                       // initialLayout
-        };
-			//VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT));
-
-        VmaAllocationCreateInfo depthImageAllocationCreate = {};
-        depthImageAllocationCreate.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-        vmaCreateImage(
+        mShadowDepthMap = std::make_shared<TextureMap>(util::image::createImageMap(
+            GpuManager::getDevice(),
             GpuManager::getAllocator(),
-            &depthImageCreate,
-            &depthImageAllocationCreate,
-            &mShadowDepthImage.memoryResource,
-            &mShadowDepthImage.allocation,
-            nullptr);
-
-        mShadowDepthView = util::image::createImageView(
-            GpuManager::getDevice(),
-            mShadowDepthImage.memoryResource,
-            VK_FORMAT_D32_SFLOAT,
-            VK_IMAGE_ASPECT_DEPTH_BIT);
-        auto commandBuffer = util::command::beginSingleTimeCommand(GpuManager::getDevice(), GpuManager::getCommandPool());
-        util::image::transitionImageLayout(
-            commandBuffer,
-            mShadowDepthImage.memoryResource,
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-        util::command::endSingleTimeCommand(
-            GpuManager::getDevice(),
             GpuManager::getCommandPool(),
-            commandBuffer,
-            GpuManager::getGraphicsQueue());
+            GpuManager::getGraphicsQueue(),
+            VK_FORMAT_D32_SFLOAT,
+            2048,
+            2048,
+            0,
+            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            1,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_VIEW_TYPE_2D,
+            1,
+            VK_IMAGE_ASPECT_DEPTH_BIT));
 
         util::framebuffer::createFramebuffer(
             GpuManager::getDevice(),
             mShadowRenderPass,
             VkExtent2D{ 2048, 2048 },
             nullptr,
-            &mShadowDepthView,
+            &mShadowDepthMap->view,
             &mShadowFramebuffer);
+
+        // TODO: move this somewhere else once there's more than one light casting shadows
+        mShadowSampleMap = std::make_shared<TextureMap>(util::image::createImageMap(
+            GpuManager::getDevice(),
+            GpuManager::getAllocator(),
+            GpuManager::getCommandPool(),
+            GpuManager::getGraphicsQueue(),
+            VK_FORMAT_D32_SFLOAT,
+            2048,
+            2048,
+            0,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            1,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_VIEW_TYPE_2D,
+            1,
+            VK_IMAGE_ASPECT_DEPTH_BIT));
+
+		auto onetime = util::command::beginSingleTimeCommand(GpuManager::getDevice(), GpuManager::getCommandPool());
+        util::image::transitionImageLayout(
+			onetime,
+			mShadowSampleMap->texture.memoryResource,
+			VK_IMAGE_LAYOUT_UNDEFINED,
+			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            1,
+            0,
+            1,
+            0,
+            VK_IMAGE_ASPECT_DEPTH_BIT);
+		util::command::endSingleTimeCommand(
+            GpuManager::getDevice(), 
+            GpuManager::getCommandPool(), 
+            onetime, 
+            GpuManager::getGraphicsQueue());
     }
 
     void UserApp::createPBRRenderPass()

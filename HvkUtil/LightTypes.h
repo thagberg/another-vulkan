@@ -31,4 +31,10 @@ namespace hvk
         float umbra;
         float penumbra;
     };
+
+	struct ShadowCaster
+	{
+		TextureMap shadowMap;
+		VkFramebuffer framebuffer;
+	};
 }
