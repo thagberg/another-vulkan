@@ -383,7 +383,8 @@ namespace hvk
 				uint32_t arrayLayers,
 				VkImageLayout initialLayout,
 				VkImageViewType viewType,
-				uint32_t mipLevels)
+				uint32_t mipLevels,
+				VkImageAspectFlags aspectFlags)
 			{
 				TextureMap imageMap;
 				uint32_t bitDepth = 4;
@@ -420,7 +421,7 @@ namespace hvk
 					device,
 					imageMap.texture.memoryResource,
 					imageFormat,
-					VK_IMAGE_ASPECT_COLOR_BIT,
+					aspectFlags,
 					arrayLayers,
 					viewType,
 					mipLevels);
@@ -439,7 +440,8 @@ namespace hvk
 				uint32_t numLayers /* 1 */,
 				uint32_t baseLayer /* 0 */,
 				uint32_t mipLevels /* 1 */,
-				uint32_t baseMipLevel /* 0 */) {
+				uint32_t baseMipLevel /* 0 */,
+				VkImageAspectFlags aspectMask /* VK_IMAGE_ASPECT_COLOR_BIT */) {
 
 				VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 				barrier.oldLayout = oldLayout;
@@ -448,12 +450,14 @@ namespace hvk
 				barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 				barrier.image = image;
 
+				barrier.subresourceRange.aspectMask = aspectMask;
 				if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
 					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 					// TODO: potentially |= VK_IMAGE_ASPECT_STENCIL_BIT if the format supports stencil
-				} else {
-					barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-				}
+				} 
+				//else {
+				//	barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+				//}
 
 				barrier.subresourceRange.baseMipLevel = baseMipLevel;
 				barrier.subresourceRange.levelCount = mipLevels;
@@ -511,6 +515,72 @@ namespace hvk
 				destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
 				vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+			}
+
+			void framebufferImageToTexture(
+				VkDevice device,
+				VmaAllocator allocator,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
+				const TextureMap& framebufferImage,
+				TextureMap& copyMap)
+			{
+				//auto copiedMap = createImageMap(
+				//	device,
+				//	allocator,
+				//	commandPool,
+				//	graphicsQueue,
+				//	VK_FORMAT_D32_SFLOAT,
+				//	2048,
+				//	2048,
+				//	0,
+				//	VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
+
+				auto onetime = command::beginSingleTimeCommand(device, commandPool);
+				transitionImageLayout(
+					onetime,
+					copyMap.texture.memoryResource,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
+
+				// copy framebuffer to the new texture
+				VkImageCopy copyRegion = {};
+				copyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				copyRegion.srcSubresource.baseArrayLayer = 0;
+				copyRegion.srcSubresource.mipLevel = 0;
+				copyRegion.srcSubresource.layerCount = 1;
+				copyRegion.srcOffset = { 0, 0, 0 };
+
+				copyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+				copyRegion.dstSubresource.baseArrayLayer = 0;
+				copyRegion.dstSubresource.mipLevel = 0;
+				copyRegion.dstSubresource.layerCount = 1;
+				copyRegion.dstOffset = { 0, 0, 0 };
+
+				copyRegion.extent.width = 2048;
+				copyRegion.extent.height = 2048;
+				copyRegion.extent.depth = 1;
+
+				onetime = command::beginSingleTimeCommand(device, commandPool);
+				vkCmdCopyImage(
+					onetime,
+					framebufferImage.texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					copyMap.texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					1,
+					&copyRegion);
+				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
+
+				// transition image for shader read
+				onetime = command::beginSingleTimeCommand(device, commandPool);
+				transitionImageLayout(
+					onetime,
+					copyMap.texture.memoryResource,
+					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
 			}
 		}
 	}

@@ -34,7 +34,8 @@ namespace hvk
 				uint32_t numLayers=1,
 				uint32_t baseLayer=0,
 				uint32_t mipLevels=1,
-				uint32_t baseMipLevel=0);
+				uint32_t baseMipLevel=0,
+				VkImageAspectFlags=VK_IMAGE_ASPECT_COLOR_BIT);
 
 			TextureMap createImageMap(
 				VkDevice device,
@@ -49,7 +50,8 @@ namespace hvk
 				uint32_t arrayLayers = 1,
 				VkImageLayout initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 				VkImageViewType viewType=VK_IMAGE_VIEW_TYPE_2D,
-				uint32_t mipLevels = 1);
+				uint32_t mipLevels = 1,
+				VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT);
 
 			RuntimeResource<VkImage> createTextureImage(
 				VkDevice device,
@@ -105,6 +107,13 @@ namespace hvk
 				uint32_t height,
 				size_t numFaces = 1,
 				size_t faceSize = 0);
+
+			void framebufferImageToTexture(
+				VkDevice device,
+				VkCommandPool commandPool,
+				VkQueue graphicsQueue,
+				const TextureMap& framebufferImage,
+				TextureMap& copyMap);
 		}
 	}
 }
