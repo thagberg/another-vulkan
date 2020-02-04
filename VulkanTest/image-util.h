@@ -109,9 +109,7 @@ namespace hvk
 				size_t faceSize = 0);
 
 			void framebufferImageToTexture(
-				VkDevice device,
-				VkCommandPool commandPool,
-				VkQueue graphicsQueue,
+				VkCommandBuffer commandBuffer,
 				const TextureMap& framebufferImage,
 				TextureMap& copyMap);
 		}

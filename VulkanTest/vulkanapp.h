@@ -77,5 +77,6 @@ namespace hvk {
 		void renderFinish();
 		void renderSubmit();
 		void renderPresent(uint32_t swapIndex, VkSwapchainKHR swapchain);
+		VkCommandBuffer getPrimaryCommandBuffer() { return mPrimaryCommandBuffer; }
 	};
 }

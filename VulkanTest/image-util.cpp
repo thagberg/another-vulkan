@@ -518,10 +518,7 @@ namespace hvk
 			}
 
 			void framebufferImageToTexture(
-				VkDevice device,
-				VmaAllocator allocator,
-				VkCommandPool commandPool,
-				VkQueue graphicsQueue,
+				VkCommandBuffer commandBuffer,
 				const TextureMap& framebufferImage,
 				TextureMap& copyMap)
 			{
@@ -536,13 +533,13 @@ namespace hvk
 				//	0,
 				//	VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
 
-				auto onetime = command::beginSingleTimeCommand(device, commandPool);
-				transitionImageLayout(
-					onetime,
-					copyMap.texture.memoryResource,
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
+				//auto onetime = command::beginSingleTimeCommand(device, commandPool);
+				//transitionImageLayout(
+				//	onetime,
+				//	copyMap.texture.memoryResource,
+				//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				//	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				//command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
 
 				// copy framebuffer to the new texture
 				VkImageCopy copyRegion = {};
@@ -562,25 +559,30 @@ namespace hvk
 				copyRegion.extent.height = 2048;
 				copyRegion.extent.depth = 1;
 
-				onetime = command::beginSingleTimeCommand(device, commandPool);
+				//auto onetime = command::beginSingleTimeCommand(device, commandPool);
 				vkCmdCopyImage(
-					onetime,
+					commandBuffer,
 					framebufferImage.texture.memoryResource,
 					VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 					copyMap.texture.memoryResource,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 					1,
 					&copyRegion);
-				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
+				//command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
 
 				// transition image for shader read
-				onetime = command::beginSingleTimeCommand(device, commandPool);
+				//onetime = command::beginSingleTimeCommand(device, commandPool);
 				transitionImageLayout(
-					onetime,
+					commandBuffer,
 					copyMap.texture.memoryResource,
 					VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-				command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					1,
+					0,
+					1,
+					0,
+					VK_IMAGE_ASPECT_DEPTH_BIT);
+				//command::endSingleTimeCommand(device, commandPool, onetime, graphicsQueue);
 			}
 		}
 	}

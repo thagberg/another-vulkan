@@ -95,18 +95,33 @@ namespace hvk
 					subpass.pDepthStencilAttachment = nullptr;
 				}
 
+				std::vector<VkSubpassDescription> subpasses = {
+					subpass
+				};
+				return createRenderPass(device, subpasses, subpassDependencies, attachments);
+
+			}
+
+			VkRenderPass createRenderPass(
+				VkDevice device,
+				const std::vector<VkSubpassDescription>& subpassDescriptions,
+				const std::vector<VkSubpassDependency>& subpassDependencies,
+				const std::vector<VkAttachmentDescription>& attachmentDescriptions)
+			{
+				VkRenderPass renderpass;
+
 				VkRenderPassCreateInfo createInfo = {};
 				createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-				createInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
-				createInfo.pAttachments = attachments.data();
-				createInfo.subpassCount = 1;
-				createInfo.pSubpasses = &subpass;
+				createInfo.attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size());
+				createInfo.pAttachments = attachmentDescriptions.data();
+				createInfo.subpassCount = subpassDescriptions.size();
+				createInfo.pSubpasses = subpassDescriptions.data();
 				createInfo.dependencyCount = subpassDependencies.size();
 				createInfo.pDependencies = subpassDependencies.data();
 
-				assert(vkCreateRenderPass(device, &createInfo, nullptr, &renderPass) == VK_SUCCESS);
+				assert(vkCreateRenderPass(device, &createInfo, nullptr, &renderpass) == VK_SUCCESS);
 
-				return renderPass;
+				return renderpass;
 			}
 
 
@@ -129,6 +144,24 @@ namespace hvk
 				dependency.dependencyFlags = dependencyFlags;
 
 				return dependency;
+			}
+
+			VkSubpassDescription createSubpassDescription(
+				const std::vector<VkAttachmentReference>& colorAttachments,
+				const std::vector<VkAttachmentReference>& inputAttachments,
+				const VkAttachmentReference* depthStencilAttachment /* nullptr */,
+				VkPipelineBindPoint bindPoint /* VK_PIPELINE_BIND_POINT_GRAPHICS */)
+			{
+				VkSubpassDescription newDescription = {};
+
+				newDescription.pipelineBindPoint = bindPoint;
+				newDescription.inputAttachmentCount = inputAttachments.size();
+				newDescription.pInputAttachments = inputAttachments.data();
+				newDescription.colorAttachmentCount = colorAttachments.size();
+				newDescription.pColorAttachments = colorAttachments.data();
+				newDescription.pDepthStencilAttachment = depthStencilAttachment;
+
+				return newDescription;
 			}
 		}
 	}

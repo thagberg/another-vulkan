@@ -320,7 +320,7 @@ namespace hvk
             2048,
             2048,
             0,
-            VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
             1,
             VK_IMAGE_LAYOUT_UNDEFINED,
             VK_IMAGE_VIEW_TYPE_2D,
@@ -410,33 +410,48 @@ namespace hvk
 
     void UserApp::createShadowRenderPass()
     {
+        std::vector<VkAttachmentDescription> shadowpassAttachments = {
+            util::renderpass::createDepthAttachment(
+                VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+        };
+
+        VkAttachmentReference depthReference = {
+			0,                                                  // attachment
+			VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL    // layout
+        };
+
         std::vector<VkSubpassDependency> shadowpassDependencies = { 
             util::renderpass::createSubpassDependency(
                 VK_SUBPASS_EXTERNAL,
                 0,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                VK_ACCESS_SHADER_READ_BIT,
+                VK_ACCESS_TRANSFER_READ_BIT,
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
                 VK_DEPENDENCY_BY_REGION_BIT),
             util::renderpass::createSubpassDependency(
                 0,
                 VK_SUBPASS_EXTERNAL,
                 VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                VK_ACCESS_SHADER_READ_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT) 
+                VK_ACCESS_TRANSFER_READ_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT)
         };
-        auto depthAttachment = util::renderpass::createDepthAttachment(
-            VK_IMAGE_LAYOUT_UNDEFINED,
-            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+        std::vector<VkSubpassDescription> shadowpassDescriptions = {
+            util::renderpass::createSubpassDescription(
+                std::vector<VkAttachmentReference>(),
+                std::vector<VkAttachmentReference>(),
+                &depthReference),
+        };
 
         mShadowRenderPass = util::renderpass::createRenderPass(
-            GpuManager::getDevice(), 
-            shadowpassDependencies, 
-            nullptr, 
-            &depthAttachment);
+            GpuManager::getDevice(),
+            shadowpassDescriptions,
+            shadowpassDependencies,
+            shadowpassAttachments);
     }
 
     void UserApp::createFinalRenderPass()
@@ -618,6 +633,11 @@ namespace hvk
         if (shadowCommandBuffers.size())
         {
 			mApp->renderpassExecuteAndClose(shadowCommandBuffers);
+            // copy shadow map from framebuffer to texture image
+            util::image::framebufferImageToTexture(
+                mApp->getPrimaryCommandBuffer(),
+                *mShadowDepthMap,
+                *mShadowSampleMap);
         }
 
         // prepare PBR render pass
