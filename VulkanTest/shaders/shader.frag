@@ -54,6 +54,8 @@ layout(std140, set = 0, binding = 0) uniform UniformLight {
 	DirectionalLight directional;
 } lbo;
 
+layout(set = 0, binding = 2) uniform sampler2D shadowMaps[10];
+
 layout(set = 1, binding = 0) uniform UniformBufferObject {
 	mat4 model;
 	mat4 view;

@@ -47,7 +47,11 @@ namespace hvk
 		void updateRenderPass(VkRenderPass renderPass);
 		PBRBinding createPBRBinding(const PBRMaterial& material);
 
-		template <typename PBRGroupType, typename LightGroupType, typename SpotlightGroupType, typename DirectionalLightType>
+		template <typename PBRGroupType, 
+				  typename LightGroupType, 
+				  typename SpotlightGroupType, 
+				  typename DirectionalLightType,
+				  typename ShadowViewType>
 		VkCommandBuffer& drawElements(
 			const VkCommandBufferInheritanceInfo& inheritance,
 			const VkViewport& viewport,
@@ -59,11 +63,16 @@ namespace hvk
 			PBRGroupType& elements,
 			LightGroupType& lights,
 			SpotlightGroupType& spotlights,
-			DirectionalLightType& directionalLight);
+			DirectionalLightType& directionalLight,
+			ShadowViewType& shadowMaps);
 	};
 
 
-		template <typename PBRGroupType, typename LightGroupType, typename SpotlightGroupType, typename DirectionalLightType>
+	template <typename PBRGroupType, 
+			  typename LightGroupType, 
+			  typename SpotlightGroupType, 
+			  typename DirectionalLightType,
+			  typename ShadowViewType>
 	VkCommandBuffer& StaticMeshGenerator::drawElements(
 		const VkCommandBufferInheritanceInfo& inheritance,
 		const VkViewport& viewport,
@@ -75,7 +84,8 @@ namespace hvk
 		PBRGroupType& elements,
 		LightGroupType& lights,
 		SpotlightGroupType& spotlights,
-		DirectionalLightType& directionalLight)
+		DirectionalLightType& directionalLight,
+		ShadowViewType& shadowMaps)
 	{
 		 // update lights
 		int memOffset = 0;
@@ -111,6 +121,7 @@ namespace hvk
 			++i;
 		});
 		uboLights.numLights = static_cast<uint32_t>(i);
+		uboLights.numShadowMaps = shadowMaps.size();
 		auto directionalColor = std::get<0>(directionalLight);
 		auto directionalDirection = std::get<1>(directionalLight);
 		uboLights.directional.lightColor = directionalColor.color;
@@ -118,6 +129,18 @@ namespace hvk
 		uboLights.directional.direction = directionalDirection.direction;
 
 		memcpy(copyaddr, &uboLights, sizeof(uboLights));
+
+		// update shadow maps
+		std::vector<VkDescriptorImageInfo> shadowmapWrites;
+		shadowmapWrites.reserve(uboLights.numShadowMaps);
+		shadowMaps.each([&](auto entity, const auto& shadowMap) {
+			shadowmapWrites.push_back(VkDescriptorImageInfo{
+					shadowMap.shadowMap.sampler,
+					shadowMap.shadowMap.view,
+					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+				});
+		});
+		util::descriptor::createDescriptorImageWrite()
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;

@@ -5,6 +5,8 @@
 #include "pipeline-util.h"
 #include "image-util.h"
 
+const uint32_t MAX_SHADOWMAPS = 10;
+
 namespace hvk
 {
 	StaticMeshGenerator::StaticMeshGenerator(
@@ -77,8 +79,10 @@ namespace hvk
 		 Create Lights descriptor set
 		******************/
 		VkDescriptorSetLayoutBinding lightLayoutBinding = util::descriptor::generateUboLayoutBinding(0, 1, VK_SHADER_STAGE_FRAGMENT_BIT);
+		VkDescriptorSetLayoutBinding shadowMapsBinding = util::descriptor::generateSamplerLayoutBinding(2, MAX_SHADOWMAPS);
 		std::vector<decltype(lightLayoutBinding)> lightBindings = {
-			lightLayoutBinding
+			lightLayoutBinding,
+			shadowMapsBinding
 		};
 		util::descriptor::createDescriptorSetLayout(device, lightBindings, mLightsDescriptorSetLayout);
 

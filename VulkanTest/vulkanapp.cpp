@@ -241,9 +241,19 @@ namespace hvk {
 		return inheritanceInfo;
 	}
 
-	void VulkanApp::renderpassExecuteAndClose(std::vector<VkCommandBuffer>& secondaryBuffers)
+	void VulkanApp::renderpassExecuteAndClose(const std::vector<VkCommandBuffer>& secondaryBuffers)
 	{
 		vkCmdExecuteCommands(mPrimaryCommandBuffer, static_cast<uint32_t>(secondaryBuffers.size()), secondaryBuffers.data());
+		vkCmdEndRenderPass(mPrimaryCommandBuffer);
+	}
+
+	void VulkanApp::renderpassExecute(const std::vector<VkCommandBuffer>& secondaryBuffers)
+	{
+		vkCmdExecuteCommands(mPrimaryCommandBuffer, static_cast<uint32_t>(secondaryBuffers.size()), secondaryBuffers.data());
+	}
+
+	void VulkanApp::renderpassClose()
+	{
 		vkCmdEndRenderPass(mPrimaryCommandBuffer);
 	}
 

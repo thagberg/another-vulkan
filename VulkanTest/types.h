@@ -107,6 +107,7 @@ namespace hvk {
 	template<size_t n>
 	struct UniformLightObject {
 		COMP1_ALIGN(uint32_t) uint32_t numLights;
+		COMP1_ALIGN(uint32_t) uint32_t numShadowMaps;
 		COMP3_4_ALIGN(float) std::array<UniformLight, n> lights;
 		COMP3_4_ALIGN(float) AmbientLight ambient;
 		DirectionalLight directional;

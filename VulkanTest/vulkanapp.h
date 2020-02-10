@@ -73,7 +73,9 @@ namespace hvk {
 		// new render paradigm
 		uint32_t renderPrepare(VkSwapchainKHR& swapchain);
 		VkCommandBufferInheritanceInfo renderpassBegin(const VkRenderPassBeginInfo& renderBegin);
-		void renderpassExecuteAndClose(std::vector<VkCommandBuffer>& secondaryBuffers);
+		void renderpassExecuteAndClose(const std::vector<VkCommandBuffer>& secondaryBuffers);
+		void renderpassExecute(const std::vector<VkCommandBuffer>& secondaryBuffers);
+		void renderpassClose();
 		void renderFinish();
 		void renderSubmit();
 		void renderPresent(uint32_t swapIndex, VkSwapchainKHR swapchain);

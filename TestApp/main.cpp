@@ -31,6 +31,7 @@
 #include "LightTypes.h"
 #include "math-util.h"
 #include "ToolsTypes.h"
+#include "image-util.h"
 
 using namespace hvk;
 
@@ -50,6 +51,25 @@ void createWorldTransform(entt::entity entity, entt::registry& registry, NodeTra
 void createEditorRotation(entt::entity entity, entt::registry& registry, NodeTransform& localTransform)
 {
 	registry.assign<EditorRotation>(entity, glm::vec3(0.f));
+}
+
+TextureMap createShadowMap()
+{
+	return util::image::createImageMap(
+		GpuManager::getDevice(),
+		GpuManager::getAllocator(),
+		GpuManager::getCommandPool(),
+		GpuManager::getGraphicsQueue(),
+		VK_FORMAT_D32_SFLOAT,
+		2048,
+		2048,
+		0,
+		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+		1,
+		VK_IMAGE_LAYOUT_UNDEFINED,
+		VK_IMAGE_VIEW_TYPE_2D,
+		1,
+		VK_IMAGE_ASPECT_DEPTH_BIT);
 }
 
 
@@ -223,6 +243,7 @@ public:
 		mRegistry.assign<LightAttenuation>(spotlight, 1.f, 0.7f, 1.8f);
 		mRegistry.assign<SpotLight>(spotlight, 1.22173f, 1.0472f);
 		mRegistry.assign<Projection>(spotlight, glm::perspective(1.22173f, 1.f, 0.01f, 100.f));
+		mRegistry.assign<ShadowCaster>(spotlight, createShadowMap());
 
         mCameraController = CameraController(mCamera, 1.f);
 	}

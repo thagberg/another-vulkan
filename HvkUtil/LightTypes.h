@@ -35,6 +35,5 @@ namespace hvk
 	struct ShadowCaster
 	{
 		TextureMap shadowMap;
-		VkFramebuffer framebuffer;
 	};
 }

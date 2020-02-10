@@ -611,33 +611,34 @@ namespace hvk
             &shadowClear
         };
 
-        auto shadowInheritanceInfo = mApp->renderpassBegin(shadowRenderBegin);
         std::vector<VkCommandBuffer> shadowCommandBuffers;
         auto shadowableGroup = mRegistry.group<>(entt::get<PBRMesh, ShadowBinding, WorldTransform>);
-        auto lightCameraGroup = mRegistry.group<>(entt::get<WorldTransform, Projection>);
-        shadowCommandBuffers.reserve(lightCameraGroup.size());
+        auto lightCameraGroup = mRegistry.group<>(entt::get<WorldTransform, Projection, ShadowCaster>);
+        //shadowCommandBuffers.reserve(lightCameraGroup.size());
         //lightCameraGroup.each([&](auto entity, const auto& transform, const auto& projection) {
         //    auto view = glm::inverse(transform.transform);
         //});
         for (const auto entity : lightCameraGroup)
         {
         //const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
+			auto shadowInheritanceInfo = mApp->renderpassBegin(shadowRenderBegin);
             const auto& lightCamera = mRegistry.get<WorldTransform, Projection>(entity);
-            shadowCommandBuffers.push_back(mShadowRenderer->drawElements(
-                shadowInheritanceInfo,
-                shadowViewport,
-                shadowScissor,
-                lightCamera,
-                shadowableGroup));
-        }
-        if (shadowCommandBuffers.size())
-        {
-			mApp->renderpassExecuteAndClose(shadowCommandBuffers);
+            auto& shadowMap = mRegistry.get<ShadowCaster>(entity);
+            mApp->renderpassExecuteAndClose(
+                {
+					mShadowRenderer->drawElements(
+						shadowInheritanceInfo,
+						shadowViewport,
+						shadowScissor,
+						lightCamera,
+						shadowableGroup)
+				}
+            );
             // copy shadow map from framebuffer to texture image
             util::image::framebufferImageToTexture(
                 mApp->getPrimaryCommandBuffer(),
                 *mShadowDepthMap,
-                *mShadowSampleMap);
+                shadowMap.shadowMap);
         }
 
         // prepare PBR render pass
@@ -687,6 +688,7 @@ namespace hvk
         auto lightGroup = mRegistry.group<>(entt::get<LightColor, LightAttenuation, WorldTransform>, entt::exclude<SpotLight>);
         auto spotlightGroup = mRegistry.group<>(entt::get<LightColor, LightAttenuation, SpotLight, WorldTransform>);
         const auto& skyLightComponents = mRegistry.get<LightColor, Direction>(mSkyEntity);
+        auto shadowmapView = mRegistry.view<ShadowCaster>();
         pbrCommandBuffers.push_back(mPBRMeshRenderer->drawElements(
             pbrInheritanceInfo,
             viewport,
@@ -698,7 +700,8 @@ namespace hvk
             pbrGroup,
             lightGroup,
             spotlightGroup,
-            skyLightComponents));
+            skyLightComponents,
+            shadowmapView));
 
         auto debugGroup = mRegistry.group<DebugDrawMesh, DebugDrawBinding>(entt::get<WorldTransform>);
         pbrCommandBuffers.push_back(mDebugRenderer->drawElements(
