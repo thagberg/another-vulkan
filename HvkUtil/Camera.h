@@ -38,5 +38,7 @@ namespace hvk {
 		glm::mat4 getViewTransform() const;
 		void rotate(float radPitch, float radYaw);
 		void updateProjection(float fov, float aspectRatio, float nearPlane, float farPlane);
+		float getNear() { return mNearPlane; }
+		float getFar() { return mFarPlane; }
     };
 }

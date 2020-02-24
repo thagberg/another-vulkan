@@ -1,3 +1,5 @@
+#include <math.h>
+
 #include "UserApp.h"
 #include "vulkanapp.h"
 #include "InputManager.h"
@@ -234,6 +236,47 @@ namespace hvk
 			"Main Camera",
 			nullptr,
             glm::mat4(1.f));
+
+        // calculate AABBs for clusters
+        const size_t X_TILES = 16;
+        const size_t Y_TILES = 16;
+        const size_t Z_SLICES = 24;
+
+        // iterate from near slice to far slice
+        float cameraNear = mCamera->getNear();
+        float cameraFar = mCamera->getFar();
+        for (size_t slice = 0; slice < Z_SLICES; ++slice)
+        {
+            // For each slice, create tiles across and down the screen.
+            // Cast a ray from the camera and through the camera near plane at
+            // the corners of each tile, onto the near and far planes of the
+            // slice volume.  Construct an AABB which encompasses the entirety
+            // of each intersected cluster
+
+            const float nearSliceDepth = cameraNear * std::pow((cameraFar / cameraNear), (slice / static_cast<float>(Z_SLICES)));
+            const float farSliceDepth = cameraNear * std::pow((cameraFar / cameraNear), (slice + 1 / static_cast<float>(Z_SLICES)));
+            for (size_t x = 0; x < X_TILES; ++x)
+            {
+                const float xLeftScreen = WIDTH * (x / static_cast<float>(X_TILES));
+                const float xRightScreen = WIDTH * (x + 1 / static_cast<float>(X_TILES));
+                for (size_t y = 0; y < Y_TILES; ++y)
+                {
+                    const float yTopScreen = HEIGHT * (y / static_cast<float>(Y_TILES));
+                    const float yBottomScreen = HEIGHT * (y + 1 / static_cast<float>(Y_TILES));
+
+                    auto frontLeftBottom = glm::vec3(xLeftScreen, yBottomScreen, nearSliceDepth);
+                    auto frontRightBottom = glm::vec3(xRightScreen, yBottomScreen, nearSliceDepth);
+                    auto frontLeftTop = glm::vec3(xLeftScreen, yTopScreen, nearSliceDepth);
+                    auto frontRightTop = glm::vec3(xRightScreen, yTopScreen, nearSliceDepth);
+
+                    auto backLeftBottom = glm::vec3(xLeftScreen, yBottomScreen, farSliceDepth);
+                    auto backRightBottom = glm::vec3(xRightScreen, yBottomScreen, farSliceDepth);
+                    auto backLeftTop = glm::vec3(xLeftScreen, yTopScreen, farSliceDepth);
+                    auto backRightTop = glm::vec3(xRightScreen, yTopScreen, farSliceDepth);
+                }
+            }
+        }
+
     }
 
     UserApp::~UserApp()

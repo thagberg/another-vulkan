@@ -140,7 +140,7 @@ namespace hvk
 					VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 				});
 		});
-		util::descriptor::createDescriptorImageWrite()
+		//util::descriptor::createDescriptorImageWrite()
 
 		VkCommandBufferBeginInfo commandBegin = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         commandBegin.flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
