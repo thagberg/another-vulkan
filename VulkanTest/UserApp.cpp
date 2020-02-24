@@ -1,4 +1,5 @@
 #include <math.h>
+#include <algorithm>
 
 #include "UserApp.h"
 #include "vulkanapp.h"
@@ -15,6 +16,7 @@
 #include "Camera.h"
 #include "LightTypes.h"
 #include "ShadowGenerator.h"
+#include "math-util.h"
 
 const uint32_t HEIGHT = 1024;
 const uint32_t WIDTH = 1024;
@@ -242,6 +244,9 @@ namespace hvk
         const size_t Y_TILES = 16;
         const size_t Z_SLICES = 24;
 
+        std::vector<util::math::AABB> clusters;
+        clusters.reserve(X_TILES * Y_TILES * Z_SLICES);
+
         // iterate from near slice to far slice
         float cameraNear = mCamera->getNear();
         float cameraFar = mCamera->getFar();
@@ -255,24 +260,69 @@ namespace hvk
 
             const float nearSliceDepth = cameraNear * std::pow((cameraFar / cameraNear), (slice / static_cast<float>(Z_SLICES)));
             const float farSliceDepth = cameraNear * std::pow((cameraFar / cameraNear), (slice + 1 / static_cast<float>(Z_SLICES)));
+            util::math::Plane clusterNearPlane{ glm::vec3(0.f, 0.f, nearSliceDepth), glm::vec3(0.f, 0.f, 1.f) };
+            util::math::Plane clusterFarPlane{ glm::vec3(0.f, 0.f, farSliceDepth), glm::vec3(0.f, 0.f, 1.f) };
             for (size_t x = 0; x < X_TILES; ++x)
             {
                 const float xLeftScreen = WIDTH * (x / static_cast<float>(X_TILES));
-                const float xRightScreen = WIDTH * (x + 1 / static_cast<float>(X_TILES));
+                const float xRightScreen = WIDTH * ((x + 1) / static_cast<float>(X_TILES));
                 for (size_t y = 0; y < Y_TILES; ++y)
                 {
                     const float yTopScreen = HEIGHT * (y / static_cast<float>(Y_TILES));
-                    const float yBottomScreen = HEIGHT * (y + 1 / static_cast<float>(Y_TILES));
+                    const float yBottomScreen = HEIGHT * ((y + 1) / static_cast<float>(Y_TILES));
 
-                    auto frontLeftBottom = glm::vec3(xLeftScreen, yBottomScreen, nearSliceDepth);
-                    auto frontRightBottom = glm::vec3(xRightScreen, yBottomScreen, nearSliceDepth);
-                    auto frontLeftTop = glm::vec3(xLeftScreen, yTopScreen, nearSliceDepth);
-                    auto frontRightTop = glm::vec3(xRightScreen, yTopScreen, nearSliceDepth);
+                    auto frontLeftBottom = glm::normalize(glm::vec3(xLeftScreen, yBottomScreen, -nearSliceDepth));
+                    auto frontRightBottom = glm::normalize(glm::vec3(xRightScreen, yBottomScreen, -nearSliceDepth));
+                    auto frontLeftTop = glm::normalize(glm::vec3(xLeftScreen, yTopScreen, -nearSliceDepth));
+                    auto frontRightTop = glm::normalize(glm::vec3(xRightScreen, yTopScreen, -nearSliceDepth));
 
-                    auto backLeftBottom = glm::vec3(xLeftScreen, yBottomScreen, farSliceDepth);
-                    auto backRightBottom = glm::vec3(xRightScreen, yBottomScreen, farSliceDepth);
-                    auto backLeftTop = glm::vec3(xLeftScreen, yTopScreen, farSliceDepth);
-                    auto backRightTop = glm::vec3(xRightScreen, yTopScreen, farSliceDepth);
+                    auto backLeftBottom = glm::normalize(glm::vec3(xLeftScreen, yBottomScreen, -farSliceDepth));
+                    auto backRightBottom = glm::normalize(glm::vec3(xRightScreen, yBottomScreen, -farSliceDepth));
+                    auto backLeftTop = glm::normalize(glm::vec3(xLeftScreen, yTopScreen, -farSliceDepth));
+                    auto backRightTop = glm::normalize(glm::vec3(xRightScreen, yTopScreen, -farSliceDepth));
+
+                    glm::vec3 frontLeftBottomIntersect,
+                        frontRightBottomIntersect,
+                        frontLeftTopIntersect,
+                        frontRightTopIntersect,
+                        backLeftBottomIntersect,
+                        backRightBottomIntersect,
+                        backLeftTopIntersect,
+                        backRightTopIntersect;
+
+                    util::math::Ray cameraRay{ mCamera->getWorldPosition(), frontLeftBottom };
+                    util::math::rayPlaneIntersection(cameraRay, clusterNearPlane, frontLeftBottom);
+
+                    cameraRay.direction = frontRightBottom;
+                    util::math::rayPlaneIntersection(cameraRay, clusterNearPlane, frontRightBottom);
+
+                    cameraRay.direction = frontLeftTop;
+                    util::math::rayPlaneIntersection(cameraRay, clusterNearPlane, frontLeftTop);
+
+                    cameraRay.direction = frontRightTop;
+                    util::math::rayPlaneIntersection(cameraRay, clusterNearPlane, frontRightTop);
+
+                    cameraRay.direction = backLeftBottom;
+                    util::math::rayPlaneIntersection(cameraRay, clusterFarPlane, backLeftBottom);
+
+                    cameraRay.direction = backRightBottom;
+                    util::math::rayPlaneIntersection(cameraRay, clusterFarPlane, backRightBottom);
+
+                    cameraRay.direction = backLeftTop;
+                    util::math::rayPlaneIntersection(cameraRay, clusterFarPlane, backLeftTop);
+
+                    cameraRay.direction = backRightTop;
+                    util::math::rayPlaneIntersection(cameraRay, clusterFarPlane, backRightTop);
+
+                    float minX, minY, maxX, maxY;
+                    //util::math::AABB clus;
+
+                    minX = std::min(frontLeftBottom.x, std::min(backLeftBottom.x, backLeftTop.x));
+                    maxX = std::max(frontRightBottom.x, std::max(backRightBottom.x, backRightTop.x));
+                    minY = std::min(frontLeftBottom.y, std::min(backLeftBottom.y, backRightBottom.y));
+                    maxY = std::max(frontLeftTop.y, std::min(backLeftTop.y, backRightTop.y));
+
+                    clusters.push_back({ glm::vec3(minX, minY, nearSliceDepth), glm::vec3(maxX, maxY, farSliceDepth) });
                 }
             }
         }
