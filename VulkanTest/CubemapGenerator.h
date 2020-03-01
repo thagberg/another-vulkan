@@ -221,9 +221,8 @@ namespace hvk
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		mPipelineInfo.vertShaderFile = shaderFiles[0];
 		mPipelineInfo.fragShaderFile = shaderFiles[1];
-		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState(true, true);
+		mPipelineInfo.rasterizationState = util::pipeline::createRasterizationState();
 
 		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 		

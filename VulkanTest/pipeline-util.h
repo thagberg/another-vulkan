@@ -21,15 +21,20 @@ namespace hvk
 				float maxDepthBounds = 1.f,
 				VkCompareOp depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL);
 
+			VkPipelineRasterizationStateCreateInfo createRasterizationState(
+				VkPolygonMode polygonMode = VK_POLYGON_MODE_FILL,
+				VkFrontFace frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE,
+				VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT);
+
 			VkPipeline createGraphicsPipeline(
 				VkDevice device,
 				VkRenderPass renderPass,
 				VkPipelineLayout pipelineLayout,
-				VkFrontFace frontFace,
 				const std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
 				const VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
 				const VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
 				const VkPipelineDepthStencilStateCreateInfo& depthStencilInfo,
+				const VkPipelineRasterizationStateCreateInfo& rasterizationInfo,
 				const std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments);
 
 			template <typename T>

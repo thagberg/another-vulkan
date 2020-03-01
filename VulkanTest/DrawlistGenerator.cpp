@@ -44,11 +44,11 @@ namespace hvk
 			device,
 			renderPass,
 			pipelineInfo.pipelineLayout,
-			pipelineInfo.frontFace,
 			modelShaderStages,
 			pipelineInfo.vertexInfo.vertexInputInfo,
 			modelInputAssembly,
 			pipelineInfo.depthStencilState,
+			pipelineInfo.rasterizationState,
 			pipelineInfo.blendAttachments);
 
 		vkDestroyShaderModule(device, modelVertShaderModule, nullptr);

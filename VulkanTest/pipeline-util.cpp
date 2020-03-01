@@ -8,12 +8,12 @@ namespace hvk
 		namespace pipeline
 		{
 			VkPipelineDepthStencilStateCreateInfo createDepthStencilState (
-				bool depthTest,
-				bool depthWrite,
-				bool stencilTest,
-				float minDepthBounds,
-				float maxDepthBounds,
-				VkCompareOp depthCompareOp)
+				bool depthTest /* VK_TRUE */,
+				bool depthWrite /* VK_TRUE */,
+				bool stencilTest /* VK_FALSE */,
+				float minDepthBounds /* 0.f */,
+				float maxDepthBounds /* 1.f */,
+				VkCompareOp depthCompareOp /* VK_COMPARE_OP_LESS_OR_EQUAL */)
 			{
 				VkPipelineDepthStencilStateCreateInfo depthCreate = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 				depthCreate.depthTestEnable = depthTest;
@@ -27,16 +27,36 @@ namespace hvk
 				return depthCreate;
 			}
 
+			VkPipelineRasterizationStateCreateInfo createRasterizationState(
+				VkPolygonMode polygonMode /* VK_POLYGON_MODE_FILL */,
+				VkFrontFace frontFace /* VK_FRONT_FACE_COUNTER_CLOCKWISE */,
+				VkCullModeFlags cullMode /* VK_CULL_MODE_BACK_BIT */)
+			{
+				VkPipelineRasterizationStateCreateInfo rasterizer = {};
+				rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+				rasterizer.depthClampEnable = VK_FALSE;
+				rasterizer.rasterizerDiscardEnable = VK_FALSE;
+				rasterizer.polygonMode = polygonMode;
+				rasterizer.lineWidth = 1.0f;
+				rasterizer.cullMode = cullMode;
+				rasterizer.frontFace = frontFace;
+				rasterizer.depthBiasEnable = VK_FALSE;
+				rasterizer.depthBiasConstantFactor = 0.0f;
+				rasterizer.depthBiasClamp = 0.0f;
+				rasterizer.depthBiasSlopeFactor = 0.0f;
+
+				return rasterizer;
+			}
 
 			VkPipeline createGraphicsPipeline(
 				VkDevice device,
 				VkRenderPass renderPass,
 				VkPipelineLayout pipelineLayout,
-				VkFrontFace frontFace,
 				const std::vector<VkPipelineShaderStageCreateInfo>& shaderStages,
 				const VkPipelineVertexInputStateCreateInfo& vertexInputInfo,
 				const VkPipelineInputAssemblyStateCreateInfo& inputAssembly,
 				const VkPipelineDepthStencilStateCreateInfo& depthStencilInfo,
+				const VkPipelineRasterizationStateCreateInfo& rasterizationInfo,
 				const std::vector<VkPipelineColorBlendAttachmentState>& blendAttachments) {
 
 				VkPipeline graphicsPipeline;
@@ -47,19 +67,6 @@ namespace hvk
 				viewportState.pViewports = nullptr;
 				viewportState.scissorCount = 1;
 				viewportState.pScissors = nullptr;
-
-				VkPipelineRasterizationStateCreateInfo rasterizer = {};
-				rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-				rasterizer.depthClampEnable = VK_FALSE;
-				rasterizer.rasterizerDiscardEnable = VK_FALSE;
-				rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
-				rasterizer.lineWidth = 1.0f;
-				rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
-				rasterizer.frontFace = frontFace;
-				rasterizer.depthBiasEnable = VK_FALSE;
-				rasterizer.depthBiasConstantFactor = 0.0f;
-				rasterizer.depthBiasClamp = 0.0f;
-				rasterizer.depthBiasSlopeFactor = 0.0f;
 
 				VkPipelineMultisampleStateCreateInfo multisampling = {};
 				multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -89,7 +96,7 @@ namespace hvk
 				pipelineInfo.pVertexInputState = &vertexInputInfo;
 				pipelineInfo.pInputAssemblyState = &inputAssembly;
 				pipelineInfo.pViewportState = &viewportState;
-				pipelineInfo.pRasterizationState = &rasterizer;
+				pipelineInfo.pRasterizationState = &rasterizationInfo;
 				pipelineInfo.pMultisampleState = &multisampling;
 				pipelineInfo.pDepthStencilState = &depthStencilInfo;
 				pipelineInfo.pColorBlendState = &colorBlending;

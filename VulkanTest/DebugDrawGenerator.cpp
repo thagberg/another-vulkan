@@ -61,9 +61,8 @@ namespace hvk
 		mPipelineInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		mPipelineInfo.vertShaderFile = "shaders/compiled/normal_v.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/normal_f.spv";
-		mPipelineInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
+		mPipelineInfo.rasterizationState = util::pipeline::createRasterizationState(VK_POLYGON_MODE_LINE);
 
 		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 

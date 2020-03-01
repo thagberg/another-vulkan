@@ -21,15 +21,13 @@ namespace hvk
 	struct RenderPipelineInfo 
 	{
 		VkPrimitiveTopology topology;
-		//const char* vertShaderFile;
-		//const char* fragShaderFile;
 		std::string vertShaderFile;
 		std::string fragShaderFile;
 		VertexInfo vertexInfo;
 		VkPipelineLayout pipelineLayout;
 		std::vector<VkPipelineColorBlendAttachmentState> blendAttachments;
-		VkFrontFace frontFace;
 		VkPipelineDepthStencilStateCreateInfo depthStencilState;
+		VkPipelineRasterizationStateCreateInfo rasterizationState;
 	};
 
 	VkPipeline generatePipeline(

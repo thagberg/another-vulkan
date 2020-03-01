@@ -31,6 +31,12 @@
     <Filter Include="Source Files\util">
       <UniqueIdentifier>{2c8aa55e-b0bc-427f-b1cb-93fbdca879d6}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\DrawGenerators">
+      <UniqueIdentifier>{0f3154de-1746-4517-9697-5a20184ba112}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\DrawGenerators">
+      <UniqueIdentifier>{cdc8ef28-74a5-4212-bc53-6683214eadd9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="targetver.h">
@@ -72,25 +78,7 @@
     <ClInclude Include="Inputs.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="DrawlistGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="StaticMeshGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="UiDrawGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="DebugDrawGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="UserApp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="QuadGenerator.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="CubemapGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="image-util.h">
@@ -147,11 +135,29 @@
     <ClInclude Include="RenderObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="DebugDrawGenerator.h">
+      <Filter>Header Files\DrawGenerators</Filter>
+    </ClInclude>
+    <ClInclude Include="CubemapGenerator.h">
+      <Filter>Header Files\DrawGenerators</Filter>
+    </ClInclude>
+    <ClInclude Include="DrawlistGenerator.h">
+      <Filter>Header Files\DrawGenerators</Filter>
+    </ClInclude>
     <ClInclude Include="NormalDrawGenerator.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\DrawGenerators</Filter>
     </ClInclude>
     <ClInclude Include="ShadowGenerator.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\DrawGenerators</Filter>
+    </ClInclude>
+    <ClInclude Include="StaticMeshGenerator.h">
+      <Filter>Header Files\DrawGenerators</Filter>
+    </ClInclude>
+    <ClInclude Include="UiDrawGenerator.h">
+      <Filter>Header Files\DrawGenerators</Filter>
+    </ClInclude>
+    <ClInclude Include="QuadGenerator.h">
+      <Filter>Header Files\DrawGenerators</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -176,22 +182,7 @@
     <ClCompile Include="Subscription.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DrawlistGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="StaticMeshGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="UiDrawGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DebugDrawGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="UserApp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="QuadGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="image-util.cpp">
@@ -233,11 +224,29 @@
     <ClCompile Include="RenderObject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="NormalDrawGenerator.cpp">
+    <ClCompile Include="math-util.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DebugDrawGenerator.cpp">
+      <Filter>Source Files\DrawGenerators</Filter>
+    </ClCompile>
+    <ClCompile Include="DrawlistGenerator.cpp">
+      <Filter>Source Files\DrawGenerators</Filter>
+    </ClCompile>
+    <ClCompile Include="NormalDrawGenerator.cpp">
+      <Filter>Source Files\DrawGenerators</Filter>
+    </ClCompile>
+    <ClCompile Include="QuadGenerator.cpp">
+      <Filter>Source Files\DrawGenerators</Filter>
+    </ClCompile>
     <ClCompile Include="ShadowGenerator.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\DrawGenerators</Filter>
+    </ClCompile>
+    <ClCompile Include="StaticMeshGenerator.cpp">
+      <Filter>Source Files\DrawGenerators</Filter>
+    </ClCompile>
+    <ClCompile Include="UiDrawGenerator.cpp">
+      <Filter>Source Files\DrawGenerators</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
