@@ -246,6 +246,9 @@ namespace hvk
         const size_t Z_SLICES = 24;
         mLightClusters.reserve(X_TILES* Y_TILES* Z_SLICES);
 
+        std::vector<util::math::AABB> clusters;
+        clusters.reserve(X_TILES * Y_TILES * Z_SLICES);
+
         // iterate from near slice to far slice
         float cameraNear = mCamera->getNear();
         float cameraFar = mCamera->getFar();
