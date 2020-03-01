@@ -11,6 +11,7 @@
 #include "HvkUtil.h"
 #include "CubemapGenerator.h"
 #include "entt/entt.hpp"
+#include "math-util.h"
 /*
 #include "RenderObject.h"
 #include "Light.h"
@@ -88,6 +89,7 @@ namespace hvk
 		AmbientLight mAmbientLight;
 		entt::entity mSceneEntity;
 		entt::entity mSkyEntity;
+		std::vector<util::math::AABB> mLightClusters;
 
     private:
 		void createPBRRenderPass();

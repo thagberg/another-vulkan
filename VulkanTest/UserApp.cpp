@@ -91,7 +91,8 @@ namespace hvk
         mCamera(nullptr),
         mAmbientLight{glm::vec3(1.f), 0.3f},
         mSceneEntity(mRegistry.create()),
-        mSkyEntity(mRegistry.create())
+        mSkyEntity(mRegistry.create()),
+        mLightClusters()
     {
         VkApplicationInfo appInfo = {};
         appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -230,10 +231,10 @@ namespace hvk
 		//	skyboxShaders);
 
         mCamera = std::make_shared<Camera>(
-            90.f,
+            60.f,
             //WIDTH / static_cast<float>(HEIGHT),
             HEIGHT / static_cast<float>(WIDTH),
-            0.001f,
+            0.1f,
             1000.f,
 			"Main Camera",
 			nullptr,
@@ -243,13 +244,14 @@ namespace hvk
         const size_t X_TILES = 16;
         const size_t Y_TILES = 16;
         const size_t Z_SLICES = 24;
-
-        std::vector<util::math::AABB> clusters;
-        clusters.reserve(X_TILES * Y_TILES * Z_SLICES);
+        mLightClusters.reserve(X_TILES* Y_TILES* Z_SLICES);
 
         // iterate from near slice to far slice
         float cameraNear = mCamera->getNear();
         float cameraFar = mCamera->getFar();
+		const glm::mat4 inverseProjection = glm::inverse(mCamera->getProjection());
+        const glm::vec2 screenDimensions = glm::vec2(WIDTH, HEIGHT);
+        const float step = (cameraFar - cameraNear) / Z_SLICES;
         for (size_t slice = 0; slice < Z_SLICES; ++slice)
         {
             // For each slice, create tiles across and down the screen.
@@ -258,8 +260,10 @@ namespace hvk
             // slice volume.  Construct an AABB which encompasses the entirety
             // of each intersected cluster
 
-            const float nearSliceDepth = cameraNear * std::pow((cameraFar / cameraNear), (slice / static_cast<float>(Z_SLICES)));
-            const float farSliceDepth = cameraNear * std::pow((cameraFar / cameraNear), (slice + 1 / static_cast<float>(Z_SLICES)));
+            const float nearSliceDepth = -cameraNear * std::pow((cameraFar / cameraNear), (slice / static_cast<float>(Z_SLICES)));
+            const float farSliceDepth = -cameraNear * std::pow((cameraFar / cameraNear), ((slice + 1) / static_cast<float>(Z_SLICES)));
+            //const float nearSliceDepth = -(cameraNear + (slice*step));
+            //const float farSliceDepth = -(cameraNear + ((slice+1)*step));
             util::math::Plane clusterNearPlane{ glm::vec3(0.f, 0.f, nearSliceDepth), glm::vec3(0.f, 0.f, 1.f) };
             util::math::Plane clusterFarPlane{ glm::vec3(0.f, 0.f, farSliceDepth), glm::vec3(0.f, 0.f, 1.f) };
             for (size_t x = 0; x < X_TILES; ++x)
@@ -271,15 +275,27 @@ namespace hvk
                     const float yTopScreen = HEIGHT * (y / static_cast<float>(Y_TILES));
                     const float yBottomScreen = HEIGHT * ((y + 1) / static_cast<float>(Y_TILES));
 
-                    auto frontLeftBottom = glm::normalize(glm::vec3(xLeftScreen, yBottomScreen, -nearSliceDepth));
-                    auto frontRightBottom = glm::normalize(glm::vec3(xRightScreen, yBottomScreen, -nearSliceDepth));
-                    auto frontLeftTop = glm::normalize(glm::vec3(xLeftScreen, yTopScreen, -nearSliceDepth));
-                    auto frontRightTop = glm::normalize(glm::vec3(xRightScreen, yTopScreen, -nearSliceDepth));
+                    const glm::vec2 screenSpaceBottomLeft = glm::vec2(xLeftScreen, yBottomScreen);
+                    const glm::vec2 screenSpaceTopRight = glm::vec2(xRightScreen, yTopScreen);
 
-                    auto backLeftBottom = glm::normalize(glm::vec3(xLeftScreen, yBottomScreen, -farSliceDepth));
-                    auto backRightBottom = glm::normalize(glm::vec3(xRightScreen, yBottomScreen, -farSliceDepth));
-                    auto backLeftTop = glm::normalize(glm::vec3(xLeftScreen, yTopScreen, -farSliceDepth));
-                    auto backRightTop = glm::normalize(glm::vec3(xRightScreen, yTopScreen, -farSliceDepth));
+                    const glm::vec4 viewSpaceBottomLeft = util::math::screenToView(
+                        screenSpaceBottomLeft, 
+                        screenDimensions, 
+                        inverseProjection);
+                    const glm::vec4 viewSpaceTopRight = util::math::screenToView(
+                        screenSpaceTopRight,
+                        screenDimensions,
+                        inverseProjection);
+
+                    auto frontLeftBottom = glm::normalize(glm::vec3(viewSpaceBottomLeft.x, viewSpaceBottomLeft.y, -cameraNear));
+                    auto frontRightBottom = glm::normalize(glm::vec3(viewSpaceTopRight.x, viewSpaceBottomLeft.y, -cameraNear));
+                    auto frontLeftTop = glm::normalize(glm::vec3(viewSpaceBottomLeft.x, viewSpaceTopRight.y, -cameraNear));
+                    auto frontRightTop = glm::normalize(glm::vec3(viewSpaceTopRight.x, viewSpaceTopRight.y, -cameraNear));
+
+                    auto backLeftBottom = glm::normalize(glm::vec3(viewSpaceBottomLeft.x, viewSpaceBottomLeft.y, -cameraNear));
+                    auto backRightBottom = glm::normalize(glm::vec3(viewSpaceTopRight.x, viewSpaceBottomLeft.y, -cameraNear));
+                    auto backLeftTop = glm::normalize(glm::vec3(viewSpaceBottomLeft.x, viewSpaceTopRight.y, -cameraNear));
+                    auto backRightTop = glm::normalize(glm::vec3(viewSpaceTopRight.x, viewSpaceTopRight.y, -cameraNear));
 
                     glm::vec3 frontLeftBottomIntersect,
                         frontRightBottomIntersect,
@@ -322,11 +338,10 @@ namespace hvk
                     minY = std::min(frontLeftBottom.y, std::min(backLeftBottom.y, backRightBottom.y));
                     maxY = std::max(frontLeftTop.y, std::min(backLeftTop.y, backRightTop.y));
 
-                    clusters.push_back({ glm::vec3(minX, minY, nearSliceDepth), glm::vec3(maxX, maxY, farSliceDepth) });
+                    mLightClusters.push_back({ glm::vec3(minX, minY, nearSliceDepth), glm::vec3(maxX, maxY, farSliceDepth) });
                 }
             }
         }
-
     }
 
     UserApp::~UserApp()

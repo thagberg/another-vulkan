@@ -66,24 +66,24 @@ namespace hvk
 		const auto& allocator = GpuManager::getAllocator();
 
 		elements.each([&](auto entity, const auto& mesh, const auto& binding, const auto& transform) {
-			vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
-			ubo.model = transform.transform;
-			ubo.model[1][1] *= -1;
-			ubo.modelViewProj = viewProj * ubo.model;
-			memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));
+			//vmaGetAllocationInfo(allocator, binding.ubo.allocation, &allocInfo);
+			//ubo.model = transform.transform;
+			//ubo.model[1][1] *= -1;
+			//ubo.modelViewProj = viewProj * ubo.model;
+			//memcpy(allocInfo.pMappedData, &ubo, sizeof(ubo));
 
-			vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mesh.vbo.memoryResource, offsets);
-			vkCmdBindIndexBuffer(mCommandBuffer, mesh.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
-			vkCmdBindDescriptorSets(
-				mCommandBuffer,
-				VK_PIPELINE_BIND_POINT_GRAPHICS,
-				mPipelineInfo.pipelineLayout,
-				0,
-				1,
-				&binding.descriptorSet,
-				0,
-				nullptr);
-			vkCmdDrawIndexed(mCommandBuffer, mesh.numIndices, 1, 0, 0, 0);
+			//vkCmdBindVertexBuffers(mCommandBuffer, 0, 1, &mesh.vbo.memoryResource, offsets);
+			//vkCmdBindIndexBuffer(mCommandBuffer, mesh.ibo.memoryResource, 0, VK_INDEX_TYPE_UINT16);
+			//vkCmdBindDescriptorSets(
+			//	mCommandBuffer,
+			//	VK_PIPELINE_BIND_POINT_GRAPHICS,
+			//	mPipelineInfo.pipelineLayout,
+			//	0,
+			//	1,
+			//	&binding.descriptorSet,
+			//	0,
+			//	nullptr);
+			//vkCmdDrawIndexed(mCommandBuffer, mesh.numIndices, 1, 0, 0, 0);
 		});
 
 		assert(vkEndCommandBuffer(mCommandBuffer) == VK_SUCCESS);

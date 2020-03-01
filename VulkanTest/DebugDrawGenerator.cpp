@@ -37,8 +37,10 @@ namespace hvk
 
 		assert(vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &mDescriptorSetLayout) == VK_SUCCESS);
 
-		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(MAX_UBOS);
-		util::descriptor::createDescriptorPool(device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		//auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(MAX_UBOS);
+		//util::descriptor::createDescriptorPool(device, poolSizes, MAX_DESCRIPTORS, mDescriptorPool);
+		auto poolSizes = util::descriptor::createPoolSizes<VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER>(10000);
+		util::descriptor::createDescriptorPool(device, poolSizes, 10000, mDescriptorPool);
 
 		/**************
 		Set up pipeline
@@ -62,7 +64,7 @@ namespace hvk
 		mPipelineInfo.vertShaderFile = "shaders/compiled/normal_v.spv";
 		mPipelineInfo.fragShaderFile = "shaders/compiled/normal_f.spv";
 		mPipelineInfo.depthStencilState = util::pipeline::createDepthStencilState();
-		mPipelineInfo.rasterizationState = util::pipeline::createRasterizationState(VK_POLYGON_MODE_LINE);
+		mPipelineInfo.rasterizationState = util::pipeline::createRasterizationState();
 
 		mPipeline = generatePipeline(mColorRenderPass, mPipelineInfo);
 

@@ -49,7 +49,7 @@ namespace hvk
                 float denom = glm::dot(r.direction, p.normal);
                 if (gt_zero(denom))
                 {
-                    float t = glm::dot(r.origin - p.position, p.normal) / denom;
+                    float t = glm::dot(p.position - r.origin, p.normal) / denom;
                     if (t >= 0)
                     {
                         intersectsAt = t * r.direction + r.origin;
@@ -59,6 +59,32 @@ namespace hvk
 
                 return intersects;
             }
+
+			glm::vec4 screenToClip(const glm::vec2& screenCoord, const glm::vec2& screenDimensions)
+			{
+				glm::vec4 clipCoord;
+
+				auto ndc = screenCoord / screenDimensions;
+				ndc.y = 1.f - ndc.y;
+				ndc = ndc * 2.f - 1.f;
+				clipCoord = glm::vec4(ndc.x, ndc.y, -1.f, 1.f);
+
+				return clipCoord;
+			}
+
+			glm::vec4 clipToView(const glm::vec4& clipCoord, const glm::mat4& inverseProjection)
+			{
+				glm::vec4 view = inverseProjection * clipCoord;
+				view = view / view.w;
+
+				return view;
+			}
+
+			glm::vec4 screenToView(const glm::vec2& screenCoord, const glm::vec2& screenDimensions, const glm::mat4& inverseProjection)
+			{
+				auto clip = screenToClip(screenCoord, screenDimensions);
+				return clipToView(clip, inverseProjection);
+			}
         }
     }
 }

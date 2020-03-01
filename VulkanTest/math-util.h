@@ -46,6 +46,12 @@ namespace hvk
             glm::vec3 getEulerAnglesFromMatrix(const glm::mat4& transform);
 
             bool rayPlaneIntersection(const Ray& r, const Plane& p, glm::vec3& intersectsAt);
+
+            glm::vec4 screenToClip(const glm::vec2& screenCoord, const glm::vec2& screenDimensions);
+
+            glm::vec4 clipToView(const glm::vec4& clipCoord, const glm::mat4& inverseProjection);
+
+            glm::vec4 screenToView(const glm::vec2& screenCoord, const glm::vec2& screenDimensions, const glm::mat4& inverseProjection);
 		}
 	}
 }

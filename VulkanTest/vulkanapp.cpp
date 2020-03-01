@@ -84,6 +84,7 @@ namespace hvk {
         mPhysicalDevice = VK_NULL_HANDLE;
         VkPhysicalDeviceFeatures deviceFeatures = {};
         deviceFeatures.samplerAnisotropy = VK_TRUE;     // enable anisotropic filtering
+		deviceFeatures.fillModeNonSolid = VK_TRUE;		// enable wireframe, etc.
         uint32_t deviceCount = 0;
         vkEnumeratePhysicalDevices(mInstance, &deviceCount, nullptr);
         std::vector<VkPhysicalDevice> devices(deviceCount);

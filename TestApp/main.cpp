@@ -163,7 +163,7 @@ public:
         PBRMaterial duckPbrMaterial;
 		entt::entity modelEntity = mModelEntity;
 		mRegistry.assign<SceneNode>(modelEntity, mSceneEntity, "Bottle");
-		mRegistry.assign<NodeTransform>(modelEntity, duckTransform);
+		//mRegistry.assign<NodeTransform>(modelEntity, duckTransform);
         getModelPipeline().loadAndFetchModel(duckMesh, "Duck", duckPbrMesh, duckPbrMaterial);
         mRegistry.assign<PBRMesh>(modelEntity, duckPbrMesh);
         mRegistry.assign<PBRMaterial>(modelEntity, duckPbrMaterial);
@@ -175,7 +175,7 @@ public:
 		entt::entity lightBoxHolder = mRegistry.create();
 		auto lightBoxTransform = glm::mat4(1.f);
 		mRegistry.assign<SceneNode>(lightBoxHolder, mSceneEntity, "LightHolder");
-		mRegistry.assign<NodeTransform>(lightBoxHolder, lightBoxTransform);
+		//mRegistry.assign<NodeTransform>(lightBoxHolder, lightBoxTransform);
 
 		// Point light box
 		entt::entity boxEntity = mRegistry.create();
@@ -186,14 +186,14 @@ public:
 		getModelPipeline().loadAndFetchDebugModel(*boxMesh, "cube", lightBoxMesh);
 		mRegistry.assign<DebugDrawMesh>(boxEntity, lightBoxMesh);
 		mRegistry.assign<SceneNode>(boxEntity, lightBoxHolder, "LightBox");
-		mRegistry.assign<NodeTransform>(boxEntity, boxTransform);
+		//mRegistry.assign<NodeTransform>(boxEntity, boxTransform);
 		mRegistry.assign<DebugDrawBinding>(boxEntity, mDebugRenderer->createDebugDrawBinding());
 		
 		// Point light
 		entt::entity lightEntity = mRegistry.create();
 		auto lightTransform = glm::mat4(1.f);
 		mRegistry.assign<SceneNode>(lightEntity, lightBoxHolder, "Light");
-		mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
+		//mRegistry.assign<NodeTransform>(lightEntity, lightTransform);
 		mRegistry.assign<LightColor>(lightEntity, glm::vec3(188.f, 0.f, 255.f), 0.01f);
 		mRegistry.assign<LightAttenuation>(lightEntity, 1.f, 0.7f, 1.8f);
 
@@ -203,7 +203,7 @@ public:
 		entt::entity floorEntity = mRegistry.create();
 		auto floorTransform = glm::translate(glm::scale(glm::mat4(1.f), glm::vec3(10.f, 0.1f, 10.f)), glm::vec3(0.f, -2.5f, 0.f));
 		mRegistry.assign<SceneNode>(floorEntity, mSceneEntity, "Floor");
-		mRegistry.assign<NodeTransform>(floorEntity, floorTransform);
+		//mRegistry.assign<NodeTransform>(floorEntity, floorTransform);
 		getModelPipeline().loadAndFetchModel(staticBoxMesh, "boxMesh", boxPbrMesh, boxPbrMaterial);
 		mRegistry.assign<PBRMesh>(floorEntity, boxPbrMesh);
 		const auto& boxMaterialComp = mRegistry.assign<PBRMaterial>(floorEntity, boxPbrMaterial);
@@ -212,7 +212,7 @@ public:
 		// Another box
 		entt::entity shadowBox = mRegistry.create();
 		mRegistry.assign<SceneNode>(shadowBox, mSceneEntity, "ShadowBox");
-		mRegistry.assign<NodeTransform>(shadowBox, glm::mat4(1.f));
+		//mRegistry.assign<NodeTransform>(shadowBox, glm::mat4(1.f));
 		mRegistry.assign<PBRMesh>(shadowBox, boxPbrMesh);
 		const auto& shadowboxMaterialComp = mRegistry.assign<PBRMaterial>(shadowBox, boxPbrMaterial);
 		mRegistry.assign<PBRBinding>(shadowBox, mPBRMeshRenderer->createPBRBinding(shadowboxMaterialComp));
@@ -226,26 +226,49 @@ public:
 		// Spotlight holder
 		entt::entity spotlightHolder = mRegistry.create();
 		mRegistry.assign<SceneNode>(spotlightHolder, mSceneEntity, "SpotlightHolder");
-		mRegistry.assign<NodeTransform>(spotlightHolder, glm::mat4(1.f));
+		//mRegistry.assign<NodeTransform>(spotlightHolder, glm::mat4(1.f));
 
 		// Spotlight box
 		entt::entity spotlightBox = mRegistry.create();
 		mRegistry.assign<DebugDrawMesh>(spotlightBox, lightBoxMesh);
 		mRegistry.assign<SceneNode>(spotlightBox, spotlightHolder, "SpotlightBox");
-		mRegistry.assign<NodeTransform>(spotlightBox, glm::scale(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.1f)));
+		//mRegistry.assign<NodeTransform>(spotlightBox, glm::scale(glm::mat4(1.f), glm::vec3(0.1f, 0.1f, 0.1f)));
 		mRegistry.assign<DebugDrawBinding>(spotlightBox, mDebugRenderer->createDebugDrawBinding());
 
 		// Spotlight
 		entt::entity spotlight = mRegistry.create();
 		mRegistry.assign<SceneNode>(spotlight, spotlightHolder, "Spotlight");
-		mRegistry.assign<NodeTransform>(spotlight, glm::mat4(1.f));
+		//mRegistry.assign<NodeTransform>(spotlight, glm::mat4(1.f));
 		mRegistry.assign<LightColor>(spotlight, glm::vec3(0.f, 1.f, 0.f), 0.5f);
 		mRegistry.assign<LightAttenuation>(spotlight, 1.f, 0.7f, 1.8f);
 		mRegistry.assign<SpotLight>(spotlight, 1.22173f, 1.0472f);
 		mRegistry.assign<Projection>(spotlight, glm::perspective(1.22173f, 1.f, 0.01f, 100.f));
 		mRegistry.assign<ShadowCaster>(spotlight, createShadowMap());
 
-        mCameraController = CameraController(mCamera, 1.f);
+        entt::entity clusterParentEntity = mRegistry.create();
+        mRegistry.assign<SceneNode>(clusterParentEntity, mSceneEntity, "Clusters");
+		mRegistry.assign<NodeTransform>(clusterParentEntity, glm::mat4(1.f));
+        for (size_t i = 0; i < mLightClusters.size(); ++i)
+        {
+            const auto& cluster = mLightClusters[i];
+            entt::entity clusterEntity = mRegistry.create();
+            mRegistry.assign<SceneNode>(clusterEntity, clusterParentEntity, "Cluster-" + std::to_string(i));
+			glm::mat4 clusterTransform(1.f);
+			auto min = cluster.min;
+			auto max = cluster.max;
+			clusterTransform = glm::translate(clusterTransform, (max + min) / 2.f);
+			auto scale = max - min;
+			clusterTransform = glm::scale(clusterTransform, scale);
+			mRegistry.assign<NodeTransform>(clusterEntity, clusterTransform);
+			auto clusterMesh = createColoredCube(glm::vec3(i / static_cast<float>(mLightClusters.size()), 0.f, 0.f));
+			DebugDrawMesh clusterBoxMesh;
+			getModelPipeline().loadAndFetchDebugModel(*clusterMesh, "cluster" + std::to_string(i), clusterBoxMesh);
+			mRegistry.assign<DebugDrawMesh>(clusterEntity, clusterBoxMesh);
+			mRegistry.assign<DebugDrawBinding>(clusterEntity, mDebugRenderer->createDebugDrawBinding());
+        }
+
+
+        mCameraController = CameraController(mCamera, 20.f);
 	}
 
 	virtual ~TestApp() = default;
